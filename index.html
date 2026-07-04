@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chris's Daily Arcade</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0a14; color:#eee; font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; }
+  header { text-align:center; padding:56px 20px 28px; }
+  h1 { font-size:clamp(28px,6vw,44px); letter-spacing:3px; background:linear-gradient(135deg,#ff5f6d,#ffc371); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  header p { color:#8a8aa3; margin-top:10px; font-size:15px; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; max-width:960px; margin:0 auto; padding:20px; }
+  .card { display:block; text-decoration:none; color:inherit; background:#14142280; border:1px solid #262640; border-radius:16px; padding:22px; transition:transform .15s, border-color .15s, box-shadow .15s; }
+  .card:hover { transform:translateY(-3px); border-color:#ffb347; box-shadow:0 8px 24px rgba(255,140,80,.15); }
+  .emoji { font-size:38px; }
+  .card h2 { font-size:19px; margin:10px 0 6px; }
+  .card .date { color:#7a7a94; font-size:12px; letter-spacing:1px; text-transform:uppercase; }
+  .card p { color:#b9b9cc; font-size:14px; margin-top:8px; line-height:1.45; }
+  footer { text-align:center; color:#55556e; font-size:13px; padding:40px 20px; }
+  #empty { text-align:center; color:#7a7a94; padding:60px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CHRIS'S DAILY ARCADE</h1>
+  <p>A brand-new app every day. Built by Claude. Free forever.</p>
+</header>
+<div id="grid"></div>
+<footer>New app drops daily at 10am · Made with Claude</footer>
+<script>
+fetch('apps.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(apps => {
+    const grid = document.getElementById('grid');
+    apps.sort((a,b) => b.date.localeCompare(a.date));
+    if (!apps.length) { grid.innerHTML = '<div id="empty">First app coming soon…</div>'; return; }
+    for (const a of apps) {
+      const el = document.createElement('a');
+      el.className = 'card'; el.href = a.file;
+      el.innerHTML = '<div class="emoji">' + a.emoji + '</div><h2>' + a.name +
+        '</h2><div class="date">' + a.date + '</div><p>' + a.blurb + '</p>';
+      grid.appendChild(el);
+    }
+  });
+</script>
+</body>
+</html>

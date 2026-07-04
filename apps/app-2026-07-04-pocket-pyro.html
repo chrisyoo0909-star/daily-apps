@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pocket Pyro — Fireworks Show Designer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: #06060f; font-family: 'Segoe UI', system-ui, sans-serif; }
+  #sky { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; pointer-events: none;
+  }
+  #title { color: #fff; font-weight: 700; letter-spacing: 2px; font-size: 15px; opacity: .85; text-shadow: 0 0 12px rgba(255,180,80,.6); }
+  #title span { color: #ffb347; }
+  #hint {
+    position: absolute; top: 44%; width: 100%; text-align: center;
+    color: rgba(255,255,255,.55); font-size: 15px; letter-spacing: 1px;
+    pointer-events: none; transition: opacity 1s;
+  }
+  #controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+    padding: 12px 10px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, rgba(6,6,15,.92) 40%);
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .chip {
+    border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.07);
+    color: #eee; border-radius: 20px; padding: 7px 14px; font-size: 13px;
+    cursor: pointer; user-select: none; transition: all .15s;
+  }
+  .chip.on { background: rgba(255,179,71,.25); border-color: #ffb347; color: #ffd9a0; box-shadow: 0 0 10px rgba(255,179,71,.35); }
+  .swatch {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: transform .15s, border .15s;
+  }
+  .swatch.on { border-color: #fff; transform: scale(1.18); }
+  #finale {
+    background: linear-gradient(135deg, #ff5f6d, #ffc371); border: none; color: #1a1a2e;
+    font-weight: 700; font-size: 14px; letter-spacing: 1px; border-radius: 22px;
+    padding: 10px 26px; cursor: pointer; box-shadow: 0 0 18px rgba(255,140,90,.5);
+  }
+  #finale:active { transform: scale(.95); }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div id="hud"><div id="title">POCKET <span>PYRO</span></div></div>
+<div id="hint">tap anywhere in the sky to launch a firework</div>
+
+<div id="controls">
+  <div class="row" id="colors"></div>
+  <div class="row" id="styles"></div>
+  <div class="row">
+    <button class="chip" id="autoBtn">▶ Auto show</button>
+    <button id="finale">🎆 FINALE</button>
+    <button class="chip" id="soundBtn">🔊 Sound</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let W, H, DPR;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  // ---------- state ----------
+  const PALETTES = [
+    { name: 'gold',    colors: ['#ffd27d', '#ffb347', '#fff3c9'] },
+    { name: 'red',     colors: ['#ff4d4d', '#ff8080', '#ffd6d6'] },
+    { name: 'blue',    colors: ['#5aa2ff', '#8ec5ff', '#dceaff'] },
+    { name: 'violet',  colors: ['#c07cff', '#e0b3ff', '#f3e3ff'] },
+    { name: 'green',   colors: ['#57e88a', '#a5f7c3', '#e2ffe9'] },
+    { name: 'rainbow', colors: null } // random hues
+  ];
+  const STYLES = ['peony', 'ring', 'willow', 'crackle'];
+  let palette = 0, style = 'peony', auto = false, sound = false;
+  const rockets = [], sparks = [];
+
+  // ---------- audio ----------
+  let AC = null;
+  function boom(intensity) {
+    if (!sound) return;
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    const len = AC.sampleRate * 0.4;
+    const buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const g = AC.createGain(); g.gain.value = 0.12 * intensity;
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700 + Math.random() * 500;
+    src.connect(f); f.connect(g); g.connect(AC.destination); src.start();
+  }
+
+  // ---------- helpers ----------
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function pickColor() {
+    const p = PALETTES[palette];
+    if (!p.colors) return `hsl(${Math.floor(rand(0, 360))}, 90%, 65%)`;
+    return p.colors[Math.floor(Math.random() * p.colors.length)];
+  }
+
+  // ---------- fireworks ----------
+  function launch(tx, ty) {
+    const sx = tx + rand(-30, 30);
+    rockets.push({
+      x: sx, y: H + 8, tx, ty: Math.min(ty, H * 0.72),
+      vx: (tx - sx) / 60, vy: -Math.sqrt(2 * 0.18 * (H - ty)) - rand(1, 2.5),
+      color: pickColor(), style, pal: palette, trail: []
+    });
+    hideHint();
+  }
+
+  function explode(r) {
+    const col = () => { const old = palette; palette = r.pal; const c = pickColor(); palette = old; return c; };
+    const n = r.style === 'ring' ? 60 : r.style === 'willow' ? 90 : 80;
+    boom(r.style === 'crackle' ? 0.8 : 1);
+    for (let i = 0; i < n; i++) {
+      const ang = (r.style === 'ring') ? (i / n) * Math.PI * 2 : rand(0, Math.PI * 2);
+      const spd = r.style === 'ring' ? rand(4.2, 4.8)
+                : r.style === 'willow' ? rand(1, 5)
+                : rand(0.8, 6.2);
+      sparks.push({
+        x: r.x, y: r.y,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        life: 1, decay: r.style === 'willow' ? rand(0.004, 0.008) : rand(0.010, 0.022),
+        drag: r.style === 'willow' ? 0.985 : 0.965,
+        grav: r.style === 'willow' ? 0.045 : 0.03,
+        size: rand(1.4, 2.6), color: col(),
+        crackle: r.style === 'crackle' && Math.random() < 0.35,
+        pal: r.pal
+      });
+    }
+  }
+
+  function miniCrackle(s) {
+    boom(0.15);
+    for (let i = 0; i < 6; i++) {
+      const ang = rand(0, Math.PI * 2), spd = rand(0.5, 2);
+      sparks.push({
+        x: s.x, y: s.y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        life: 0.7, decay: rand(0.02, 0.04), drag: 0.96, grav: 0.03,
+        size: rand(0.8, 1.5), color: '#fff3c9', crackle: false, pal: s.pal
+      });
+    }
+  }
+
+  // ---------- loop ----------
+  let lastAuto = 0;
+  function tick(t) {
+    // fade layer for trails
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(6,6,15,0.22)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+
+    // stars
+    // (cheap twinkle: a few fixed pseudo-random stars)
+    for (let i = 0; i < 40; i++) {
+      const sx = (i * 97.3) % W, sy = (i * 53.7) % (H * 0.6);
+      const tw = 0.25 + 0.2 * Math.sin(t / 900 + i);
+      ctx.fillStyle = `rgba(255,255,255,${tw})`;
+      ctx.fillRect(sx, sy, 1.2, 1.2);
+    }
+
+    // rockets
+    for (let i = rockets.length - 1; i >= 0; i--) {
+      const r = rockets[i];
+      r.x += r.vx; r.y += r.vy; r.vy += 0.18;
+      r.trail.push({ x: r.x, y: r.y });
+      if (r.trail.length > 8) r.trail.shift();
+      ctx.strokeStyle = 'rgba(255,220,160,0.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      r.trail.forEach((p, j) => j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+      ctx.stroke();
+      if (r.vy >= -0.5 || r.y <= r.ty) { explode(r); rockets.splice(i, 1); }
+    }
+
+    // sparks
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.x += s.vx; s.y += s.vy;
+      s.vx *= s.drag; s.vy = s.vy * s.drag + s.grav;
+      s.life -= s.decay;
+      if (s.crackle && s.life < 0.55) { s.crackle = false; miniCrackle(s); }
+      if (s.life <= 0) { sparks.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(s.life, 0);
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * (0.5 + s.life * 0.7), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // auto show
+    if (auto && t - lastAuto > rand(500, 1100)) {
+      lastAuto = t;
+      launch(rand(W * 0.12, W * 0.88), rand(H * 0.12, H * 0.45));
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ---------- input ----------
+  canvas.addEventListener('pointerdown', e => launch(e.clientX, e.clientY));
+
+  let hintHidden = false;
+  function hideHint() {
+    if (hintHidden) return; hintHidden = true;
+    document.getElementById('hint').style.opacity = 0;
+  }
+
+  // ---------- UI ----------
+  const colorsRow = document.getElementById('colors');
+  PALETTES.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'swatch' + (i === palette ? ' on' : '');
+    el.style.background = p.colors
+      ? p.colors[0]
+      : 'conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)';
+    el.title = p.name;
+    el.onclick = () => {
+      palette = i;
+      [...colorsRow.children].forEach((c, j) => c.classList.toggle('on', j === i));
+    };
+    colorsRow.appendChild(el);
+  });
+
+  const stylesRow = document.getElementById('styles');
+  STYLES.forEach(s => {
+    const el = document.createElement('button');
+    el.className = 'chip' + (s === style ? ' on' : '');
+    el.textContent = s;
+    el.onclick = () => {
+      style = s;
+      [...stylesRow.children].forEach(c => c.classList.toggle('on', c.textContent === s));
+    };
+    stylesRow.appendChild(el);
+  });
+
+  const autoBtn = document.getElementById('autoBtn');
+  autoBtn.onclick = () => {
+    auto = !auto;
+    autoBtn.classList.toggle('on', auto);
+    autoBtn.textContent = auto ? '⏸ Auto show' : '▶ Auto show';
+    hideHint();
+  };
+
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.onclick = () => {
+    sound = !sound;
+    soundBtn.classList.toggle('on', sound);
+    soundBtn.textContent = sound ? '🔊 Sound on' : '🔇 Sound off';
+  };
+  soundBtn.textContent = '🔇 Sound off';
+
+  document.getElementById('finale').onclick = () => {
+    hideHint();
+    let count = 0;
+    const iv = setInterval(() => {
+      launch(rand(W * 0.08, W * 0.92), rand(H * 0.08, H * 0.5));
+      if (++count >= 14) clearInterval(iv);
+    }, 130);
+  };
+})();
+</script>
+</body>
+</html>
