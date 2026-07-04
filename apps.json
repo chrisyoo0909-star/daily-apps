@@ -2,15 +2,22 @@
   {
     "file": "apps/app-2026-07-04-pocket-pyro.html",
     "name": "Pocket Pyro",
-    "emoji": "🎆",
+    "emoji": "\ud83c\udf86",
     "date": "2026-07-04",
-    "blurb": "Design your own fireworks show — tap the sky, pick burst styles, unleash the finale."
+    "blurb": "Design your own fireworks show \u2014 tap the sky, pick burst styles, unleash the finale."
   },
   {
     "file": "apps/app-2026-07-04-orbit-runner.html",
     "name": "Orbit Runner",
-    "emoji": "🛸",
+    "emoji": "\ud83d\udef8",
     "date": "2026-07-04",
     "blurb": "One-tap arcade: reverse your orbit to dodge red arcs and snag gold sparks as the ring speeds up."
+  },
+  {
+    "file": "apps/app-2026-07-04-fairshare.html",
+    "name": "FairShare",
+    "emoji": "\ud83e\uddfe",
+    "date": "2026-07-04",
+    "blurb": "Split any bill by what each person actually ordered \u2014 tax and tip divided proportionally, pennies always add up."
   }
 ]

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FairShare — Split the Bill Fairly</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f4f5f7; color:#1c2333; font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; padding-bottom:60px; }
+  .wrap { max-width:560px; margin:0 auto; padding:20px 16px; }
+  h1 { font-size:26px; letter-spacing:.5px; }
+  h1 span { color:#0e9f6e; }
+  .sub { color:#6b7280; font-size:14px; margin:4px 0 20px; }
+  .card { background:#fff; border-radius:14px; padding:16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,30,60,.07); }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:1.2px; color:#8a91a3; margin-bottom:12px; }
+  .prow { display:flex; gap:8px; flex-wrap:wrap; }
+  .ptag { display:flex; align-items:center; gap:6px; background:#eef2f7; border-radius:18px; padding:6px 12px; font-size:14px; font-weight:600; }
+  .ptag .dot { width:10px; height:10px; border-radius:50%; }
+  .ptag button { border:none; background:none; color:#9aa1b3; font-size:15px; cursor:pointer; line-height:1; }
+  .addrow { display:flex; gap:8px; margin-top:10px; }
+  input, select { border:1.5px solid #dde1ea; border-radius:10px; padding:10px 12px; font-size:15px; width:100%; outline:none; background:#fff; color:#1c2333; }
+  input:focus { border-color:#0e9f6e; }
+  .btn { border:none; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:600; cursor:pointer; background:#0e9f6e; color:#fff; white-space:nowrap; }
+  .btn.gray { background:#eef2f7; color:#3a4256; }
+  .item { border-top:1px solid #f0f2f6; padding:12px 0; }
+  .item:first-of-type { border-top:none; }
+  .itop { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .iname { font-weight:600; font-size:15px; }
+  .iprice { font-weight:700; font-size:15px; }
+  .idel { border:none; background:none; color:#c2c8d6; cursor:pointer; font-size:16px; }
+  .who { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .chip { border:1.5px solid #dde1ea; background:#fff; border-radius:16px; padding:4px 12px; font-size:13px; font-weight:600; color:#6b7280; cursor:pointer; transition:all .12s; }
+  .chip.on { color:#fff; border-color:transparent; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  label { font-size:12px; color:#8a91a3; font-weight:600; display:block; margin-bottom:4px; }
+  .results .person { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #f0f2f6; }
+  .results .person:first-child { border-top:none; }
+  .pname { display:flex; align-items:center; gap:8px; font-weight:600; }
+  .owe { font-size:18px; font-weight:800; }
+  .detail { font-size:12px; color:#8a91a3; text-align:right; }
+  .total-line { display:flex; justify-content:space-between; font-size:14px; color:#6b7280; padding:4px 0; }
+  .total-line.big { font-size:16px; font-weight:800; color:#1c2333; border-top:2px solid #eef2f7; margin-top:6px; padding-top:10px; }
+  .warn { background:#fff7e6; color:#92600a; border-radius:10px; padding:10px 12px; font-size:13px; margin-top:10px; display:none; }
+  .empty { color:#a8aebd; font-size:14px; text-align:center; padding:10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fair<span>Share</span></h1>
+  <div class="sub">Split the bill by what each person actually had — tax &amp; tip included, proportionally.</div>
+
+  <div class="card">
+    <h2>1 · Who's splitting?</h2>
+    <div class="prow" id="people"></div>
+    <div class="addrow">
+      <input id="pname" placeholder="Add a name" maxlength="14">
+      <button class="btn" onclick="addPerson()">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · What did you order?</h2>
+    <div id="items"><div class="empty" id="itemsEmpty">No items yet — add the first dish below.</div></div>
+    <div class="addrow">
+      <input id="iname" placeholder="Item (e.g. Pad Thai)">
+      <input id="iprice" placeholder="$" inputmode="decimal" style="max-width:90px">
+      <button class="btn" onclick="addItem()">Add</button>
+    </div>
+    <div class="warn" id="warnUnassigned">⚠️ Some items have no one assigned — tap names under each item.</div>
+  </div>
+
+  <div class="card">
+    <h2>3 · Tax &amp; tip</h2>
+    <div class="grid2">
+      <div><label>Tax amount ($)</label><input id="tax" inputmode="decimal" placeholder="0.00" oninput="render()"></div>
+      <div><label>Tip</label>
+        <select id="tipmode" onchange="render()">
+          <option value="18">18%</option>
+          <option value="20" selected>20%</option>
+          <option value="22">22%</option>
+          <option value="25">25%</option>
+          <option value="0">No tip</option>
+          <option value="custom">Custom $</option>
+        </select>
+      </div>
+    </div>
+    <div id="customTipWrap" style="display:none; margin-top:10px;">
+      <label>Custom tip ($)</label><input id="customTip" inputmode="decimal" placeholder="0.00" oninput="render()">
+    </div>
+  </div>
+
+  <div class="card results">
+    <h2>4 · Everyone owes</h2>
+    <div id="results"><div class="empty">Add people and items to see the split.</div></div>
+    <div id="totals"></div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#0e9f6e','#3b82f6','#ef4444','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+let people = [];   // {id, name, color}
+let items = [];    // {id, name, price, sharers:Set(personId)}
+let nextId = 1;
+
+const $ = id => document.getElementById(id);
+const money = n => '$' + (Math.round(n * 100) / 100).toFixed(2);
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function addPerson() {
+  const name = $('pname').value.trim();
+  if (!name) return;
+  if (people.some(p => p.name.toLowerCase() === name.toLowerCase())) { $('pname').value=''; return; }
+  people.push({ id: nextId++, name, color: COLORS[people.length % COLORS.length] });
+  $('pname').value = ''; $('pname').focus();
+  render();
+}
+function removePerson(id) {
+  people = people.filter(p => p.id !== id);
+  items.forEach(it => it.sharers.delete(id));
+  render();
+}
+function addItem() {
+  const name = $('iname').value.trim();
+  const price = parseFloat($('iprice').value);
+  if (!name || !(price >= 0)) return;
+  // default: everyone shares (common case), can tap to toggle off
+  items.push({ id: nextId++, name, price, sharers: new Set(people.map(p => p.id)) });
+  $('iname').value = ''; $('iprice').value = ''; $('iname').focus();
+  render();
+}
+function removeItem(id) { items = items.filter(i => i.id !== id); render(); }
+function toggleShare(itemId, personId) {
+  const it = items.find(i => i.id === itemId);
+  if (it.sharers.has(personId)) it.sharers.delete(personId); else it.sharers.add(personId);
+  render();
+}
+
+['pname','iname','iprice'].forEach(id =>
+  $(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') (id === 'pname' ? addPerson : addItem)();
+  })
+);
+$('tipmode').addEventListener('change', () => {
+  $('customTipWrap').style.display = $('tipmode').value === 'custom' ? 'block' : 'none';
+});
+
+function render() {
+  // people chips
+  $('people').innerHTML = people.map(p =>
+    `<span class="ptag"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}
+     <button onclick="removePerson(${p.id})" title="remove">✕</button></span>`
+  ).join('') || '<div class="empty">Add at least two names.</div>';
+
+  // items with sharer chips
+  $('items').innerHTML = items.length ? items.map(it => `
+    <div class="item">
+      <div class="itop">
+        <span class="iname">${esc(it.name)}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="iprice">${money(it.price)}</span>
+          <button class="idel" onclick="removeItem(${it.id})">🗑</button>
+        </span>
+      </div>
+      <div class="who">${people.map(p =>
+        `<span class="chip ${it.sharers.has(p.id) ? 'on' : ''}"
+           style="${it.sharers.has(p.id) ? 'background:' + p.color : ''}"
+           onclick="toggleShare(${it.id},${p.id})">${esc(p.name)}</span>`).join('')}
+      </div>
+    </div>`).join('')
+    : '<div class="empty">No items yet — add the first dish below.</div>';
+
+  // math
+  const subtotal = items.reduce((s, i) => s + i.price, 0);
+  const tax = parseFloat($('tax').value) || 0;
+  const tipMode = $('tipmode').value;
+  const tip = tipMode === 'custom' ? (parseFloat($('customTip').value) || 0)
+            : subtotal * (parseFloat(tipMode) / 100);
+
+  const shares = {}; // personId -> food subtotal
+  people.forEach(p => shares[p.id] = 0);
+  let unassigned = false;
+  items.forEach(it => {
+    const n = it.sharers.size;
+    if (n === 0) { unassigned = true; return; }
+    const per = it.price / n;
+    it.sharers.forEach(pid => { if (pid in shares) shares[pid] += per; });
+  });
+  $('warnUnassigned').style.display = unassigned ? 'block' : 'none';
+
+  // proportional tax+tip, with rounding fix so pennies always add up
+  const grand = subtotal + tax + tip;
+  let rows = '', allocated = 0;
+  const owes = people.map(p => {
+    const frac = subtotal > 0 ? shares[p.id] / subtotal : (people.length ? 1 / people.length : 0);
+    return { p, food: shares[p.id], owe: grand * frac };
+  });
+  // round to cents; give remainder to the largest share so total matches exactly
+  owes.forEach(o => { o.cents = Math.round(o.owe * 100); allocated += o.cents; });
+  const diff = Math.round(grand * 100) - allocated;
+  if (owes.length && diff !== 0) {
+    owes.reduce((a, b) => a.cents >= b.cents ? a : b).cents += diff;
+  }
+
+  $('results').innerHTML = (people.length && items.length) ? owes.map(o => `
+    <div class="person">
+      <span class="pname"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${o.p.color}"></span>${esc(o.p.name)}</span>
+      <span style="text-align:right">
+        <div class="owe">${money(o.cents / 100)}</div>
+        <div class="detail">food ${money(o.food)} + share of tax/tip</div>
+      </span>
+    </div>`).join('')
+    : '<div class="empty">Add people and items to see the split.</div>';
+
+  $('totals').innerHTML = items.length ? `
+    <div class="total-line" style="margin-top:10px"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+    <div class="total-line"><span>Tax</span><span>${money(tax)}</span></div>
+    <div class="total-line"><span>Tip${tipMode !== 'custom' ? ' (' + tipMode + '%)' : ''}</span><span>${money(tip)}</span></div>
+    <div class="total-line big"><span>Total</span><span>${money(grand)}</span></div>` : '';
+}
+render();
+</script>
+</body>
+</html>
