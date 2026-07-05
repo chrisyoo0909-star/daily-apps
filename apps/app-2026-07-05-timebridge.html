@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TimeBridge — find the meeting hour that works everywhere</title>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#181c30; --panel2:#1f2440; --ink:#eef0fa; --mut:#8b91b3;
+    --good:#2dd4a7; --ok:#f5b942; --bad:#3a3f5e; --accent:#7c8cff; --line:#2a2f4d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;padding:16px 12px 60px}
+  .wrap{max-width:860px;margin:0 auto}
+  header{text-align:center;margin:12px 0 20px}
+  h1{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px}
+  h1 .grad{background:linear-gradient(90deg,#7c8cff,#2dd4a7);-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--mut);font-size:14px;margin-top:6px}
+  .addbar{display:flex;gap:8px;margin-bottom:10px}
+  .addbar input{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
+  .addbar input:focus{border-color:var(--accent)}
+  .addbar button{background:var(--accent);border:none;color:#fff;font-weight:700;border-radius:12px;padding:0 18px;font-size:15px;cursor:pointer}
+  .addbar button:disabled{opacity:.4;cursor:default}
+  .sugg{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;display:none}
+  .sugg div{padding:10px 14px;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+  .sugg div:hover,.sugg div.hi{background:var(--panel2)}
+  .sugg small{color:var(--mut)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 8px 7px 14px;font-size:14px}
+  .chip b{font-weight:600}
+  .chip small{color:var(--mut)}
+  .chip button{background:var(--panel2);border:none;color:var(--mut);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1}
+  .chip button:hover{color:#fff;background:#3a4066}
+  .chip.home{border-color:#3d4573}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;overflow:hidden}
+  .gridscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:separate;border-spacing:3px;width:100%}
+  th,td{text-align:center;font-size:12px}
+  th.city,td.city{text-align:left;position:sticky;left:0;background:var(--panel);z-index:2;padding-right:10px;min-width:92px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}
+  td.city small{display:block;color:var(--mut);font-weight:400;font-size:11px}
+  th.hr{color:var(--mut);font-weight:600;padding:4px 0;min-width:30px;cursor:pointer;border-radius:6px}
+  th.hr.best{color:#ffd166}
+  th.hr.sel{background:var(--accent);color:#fff}
+  td.cell{min-width:30px;height:34px;border-radius:7px;cursor:pointer;font-weight:600;color:#0c0f1c;position:relative}
+  td.cell.good{background:var(--good)}
+  td.cell.ok{background:var(--ok)}
+  td.cell.bad{background:var(--bad);color:#767ca3}
+  td.cell.sel{outline:2px solid #fff;outline-offset:-2px}
+  .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:12px 0 4px;font-size:12px;color:var(--mut)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .dot{width:11px;height:11px;border-radius:4px;display:inline-block}
+  .detail{margin-top:14px;background:var(--panel2);border-radius:14px;padding:14px;display:none}
+  .detail h3{font-size:14px;color:var(--mut);font-weight:600;margin-bottom:10px}
+  .drow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 2px;border-bottom:1px solid var(--line);font-size:15px}
+  .drow:last-child{border-bottom:none}
+  .drow .t{font-weight:700;font-variant-numeric:tabular-nums}
+  .drow .t .day{font-size:11px;font-weight:700;margin-left:6px;padding:2px 6px;border-radius:6px;background:#343a63;color:#c3c9f5;vertical-align:2px}
+  .drow .badge{font-size:11px;margin-left:8px;padding:2px 7px;border-radius:6px;font-weight:700}
+  .b-good{background:rgba(45,212,167,.18);color:var(--good)}
+  .b-ok{background:rgba(245,185,66,.18);color:var(--ok)}
+  .b-bad{background:rgba(120,126,163,.15);color:#8b91b3}
+  .bestline{margin-top:14px;text-align:center;font-size:14px;color:var(--mut)}
+  .bestline b{color:#ffd166}
+  .hint{text-align:center;color:var(--mut);font-size:13px;margin-top:14px}
+  .empty{color:var(--mut);text-align:center;padding:30px 10px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Time<span class="grad">Bridge</span></h1>
+    <p>Add cities. Green hours are meeting-friendly everywhere. Tap a column for exact times.</p>
+  </header>
+
+  <div class="addbar">
+    <input id="q" type="text" placeholder="Add a city… (e.g. Tokyo, London, New York)" autocomplete="off">
+    <button id="addBtn" disabled>Add</button>
+  </div>
+  <div class="sugg" id="sugg"></div>
+  <div class="chips" id="chips"></div>
+
+  <div class="card">
+    <div class="gridscroll" id="gridwrap"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--good)"></i>9:00–16:59 · ideal</span>
+      <span><i class="dot" style="background:var(--ok)"></i>7–9 / 17–21 · stretch</span>
+      <span><i class="dot" style="background:var(--bad)"></i>asleep</span>
+    </div>
+    <div class="detail" id="detail"></div>
+    <div class="bestline" id="bestline"></div>
+  </div>
+  <div class="hint">Hours shown are today's — daylight saving is handled automatically.</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var CITIES = [
+    ["New York, USA","America/New_York"],["Los Angeles, USA","America/Los_Angeles"],
+    ["Chicago, USA","America/Chicago"],["Denver, USA","America/Denver"],
+    ["Toronto, Canada","America/Toronto"],["Vancouver, Canada","America/Vancouver"],
+    ["Mexico City, Mexico","America/Mexico_City"],["São Paulo, Brazil","America/Sao_Paulo"],
+    ["Buenos Aires, Argentina","America/Argentina/Buenos_Aires"],["Lima, Peru","America/Lima"],
+    ["Bogotá, Colombia","America/Bogota"],["Santiago, Chile","America/Santiago"],
+    ["Honolulu, USA","Pacific/Honolulu"],["Anchorage, USA","America/Anchorage"],
+    ["London, UK","Europe/London"],["Dublin, Ireland","Europe/Dublin"],
+    ["Paris, France","Europe/Paris"],["Berlin, Germany","Europe/Berlin"],
+    ["Madrid, Spain","Europe/Madrid"],["Rome, Italy","Europe/Rome"],
+    ["Amsterdam, Netherlands","Europe/Amsterdam"],["Zurich, Switzerland","Europe/Zurich"],
+    ["Stockholm, Sweden","Europe/Stockholm"],["Oslo, Norway","Europe/Oslo"],
+    ["Copenhagen, Denmark","Europe/Copenhagen"],["Helsinki, Finland","Europe/Helsinki"],
+    ["Lisbon, Portugal","Europe/Lisbon"],["Warsaw, Poland","Europe/Warsaw"],
+    ["Athens, Greece","Europe/Athens"],["Istanbul, Türkiye","Europe/Istanbul"],
+    ["Kyiv, Ukraine","Europe/Kyiv"],["Moscow, Russia","Europe/Moscow"],
+    ["Dubai, UAE","Asia/Dubai"],["Riyadh, Saudi Arabia","Asia/Riyadh"],
+    ["Tel Aviv, Israel","Asia/Jerusalem"],["Cairo, Egypt","Africa/Cairo"],
+    ["Lagos, Nigeria","Africa/Lagos"],["Nairobi, Kenya","Africa/Nairobi"],
+    ["Johannesburg, South Africa","Africa/Johannesburg"],["Casablanca, Morocco","Africa/Casablanca"],
+    ["Mumbai, India","Asia/Kolkata"],["Delhi, India","Asia/Kolkata"],
+    ["Bengaluru, India","Asia/Kolkata"],["Karachi, Pakistan","Asia/Karachi"],
+    ["Dhaka, Bangladesh","Asia/Dhaka"],["Bangkok, Thailand","Asia/Bangkok"],
+    ["Jakarta, Indonesia","Asia/Jakarta"],["Singapore","Asia/Singapore"],
+    ["Kuala Lumpur, Malaysia","Asia/Kuala_Lumpur"],["Hong Kong","Asia/Hong_Kong"],
+    ["Shanghai, China","Asia/Shanghai"],["Beijing, China","Asia/Shanghai"],
+    ["Taipei, Taiwan","Asia/Taipei"],["Seoul, South Korea","Asia/Seoul"],
+    ["Tokyo, Japan","Asia/Tokyo"],["Osaka, Japan","Asia/Tokyo"],
+    ["Manila, Philippines","Asia/Manila"],["Ho Chi Minh City, Vietnam","Asia/Ho_Chi_Minh"],
+    ["Sydney, Australia","Australia/Sydney"],["Melbourne, Australia","Australia/Melbourne"],
+    ["Brisbane, Australia","Australia/Brisbane"],["Perth, Australia","Australia/Perth"],
+    ["Auckland, New Zealand","Pacific/Auckland"],["Fiji","Pacific/Fiji"],
+    ["Tehran, Iran","Asia/Tehran"],["Kathmandu, Nepal","Asia/Kathmandu"],
+    ["Reykjavík, Iceland","Atlantic/Reykjavik"],["Honiara, Solomon Islands","Pacific/Guadalcanal"]
+  ];
+  var MAX = 6;
+  var homeZone = "UTC";
+  try { homeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch(e){}
+  var selected = [{name:"You", sub:homeZone.split("/").pop().replace(/_/g," "), zone:homeZone, home:true}];
+  var selHour = -1;
+
+  var q = document.getElementById("q"), sugg = document.getElementById("sugg"),
+      addBtn = document.getElementById("addBtn"), chips = document.getElementById("chips"),
+      gridwrap = document.getElementById("gridwrap"), detail = document.getElementById("detail"),
+      bestline = document.getElementById("bestline");
+  var matches = [], hiIdx = -1;
+
+  // ---- time helpers ----
+  function partsIn(zone, date){
+    var fmt = new Intl.DateTimeFormat("en-US",{timeZone:zone, hourCycle:"h23",
+      year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"});
+    var p = {};
+    fmt.formatToParts(date).forEach(function(x){ p[x.type] = x.value; });
+    return { y:+p.year, mo:+p.month, d:+p.day, h:+p.hour, mi:+p.minute };
+  }
+  function dayKey(p){ return p.y*10000 + p.mo*100 + p.d; }
+  function instantAtLocalHour(h){
+    var n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate(), h, 0, 0, 0);
+  }
+  function classify(h){
+    if (h >= 9 && h < 17) return "good";
+    if ((h >= 7 && h < 9) || (h >= 17 && h < 21)) return "ok";
+    return "bad";
+  }
+  function fmt12(h, mi){
+    var ap = h < 12 ? "am" : "pm";
+    var hh = h % 12; if (hh === 0) hh = 12;
+    return hh + (mi ? ":" + (mi<10?"0":"")+mi : "") + ap;
+  }
+
+  // ---- data for grid: rows[cityIdx][hour] = {h, dayDiff, cls} ----
+  function computeGrid(){
+    var homeDay = dayKey(partsIn(homeZone, instantAtLocalHour(12)));
+    return selected.map(function(c){
+      var row = [];
+      for (var h = 0; h < 24; h++){
+        var p = partsIn(c.zone, instantAtLocalHour(h));
+        var dd = dayKey(p) === homeDay ? 0 : (dayKey(p) > homeDay ? 1 : -1);
+        row.push({ h:p.h, mi:p.mi, dayDiff:dd, cls:classify(p.h) });
+      }
+      return row;
+    });
+  }
+  function scoreCols(grid){
+    var scores = [];
+    for (var h = 0; h < 24; h++){
+      var s = 0;
+      for (var i = 0; i < grid.length; i++){
+        s += grid[i][h].cls === "good" ? 2 : grid[i][h].cls === "ok" ? 1 : 0;
+      }
+      scores.push(s);
+    }
+    return scores;
+  }
+
+  function render(){
+    renderChips();
+    var grid = computeGrid();
+    var scores = scoreCols(grid);
+    var max = Math.max.apply(null, scores);
+    var allGood = grid.length * 2;
+
+    var html = "<table><tr><th class='city'></th>";
+    for (var h = 0; h < 24; h++){
+      var cls = "hr" + (scores[h] === max && max > 0 ? " best" : "") + (h === selHour ? " sel" : "");
+      html += "<th class='"+cls+"' data-h='"+h+"'>"+(scores[h]===max && max>0 ? "★<br>" : "")+h+"</th>";
+    }
+    html += "</tr>";
+    for (var i = 0; i < grid.length; i++){
+      var c = selected[i];
+      html += "<tr><td class='city'>"+esc(c.name)+"<small>"+esc(c.sub)+"</small></td>";
+      for (h = 0; h < 24; h++){
+        var cell = grid[i][h];
+        html += "<td class='cell "+cell.cls+(h===selHour?" sel":"")+"' data-h='"+h+"'>"+cell.h+"</td>";
+      }
+      html += "</tr>";
+    }
+    html += "</table>";
+    gridwrap.innerHTML = html;
+
+    gridwrap.querySelectorAll("[data-h]").forEach(function(el){
+      el.addEventListener("click", function(){
+        var h = +el.getAttribute("data-h");
+        selHour = (selHour === h) ? -1 : h;
+        render();
+      });
+    });
+
+    // best line
+    if (selected.length < 2){
+      bestline.innerHTML = "Add another city to find your overlap.";
+    } else if (max === 0){
+      bestline.innerHTML = "No shared waking hours today — one side will have to stretch.";
+    } else {
+      var bests = [];
+      for (h = 0; h < 24; h++) if (scores[h] === max) bests.push(h);
+      var label = bests.slice(0,4).map(function(b){ return fmt12(b,0); }).join(", ");
+      var qual = max === allGood ? "perfect for everyone" : "the least painful";
+      bestline.innerHTML = "★ Best time"+(bests.length>1?"s":"")+" (your clock): <b>"+label+"</b> — "+qual+".";
+    }
+    renderDetail(grid);
+  }
+
+  function renderDetail(grid){
+    if (selHour < 0){ detail.style.display = "none"; return; }
+    detail.style.display = "block";
+    var html = "<h3>If you meet at "+fmt12(selHour,0)+" your time…</h3>";
+    for (var i = 0; i < grid.length; i++){
+      var c = selected[i], cell = grid[i][selHour];
+      var day = cell.dayDiff === 1 ? "<span class='day'>+1 day</span>" : cell.dayDiff === -1 ? "<span class='day'>−1 day</span>" : "";
+      var b = cell.cls === "good" ? "<span class='badge b-good'>ideal</span>" :
+              cell.cls === "ok"   ? "<span class='badge b-ok'>stretch</span>" :
+                                    "<span class='badge b-bad'>asleep</span>";
+      html += "<div class='drow'><span>"+esc(c.name)+b+"</span><span class='t'>"+fmt12(cell.h, cell.mi)+day+"</span></div>";
+    }
+    detail.innerHTML = html;
+  }
+
+  function renderChips(){
+    chips.innerHTML = "";
+    selected.forEach(function(c, i){
+      var d = document.createElement("div");
+      d.className = "chip" + (c.home ? " home" : "");
+      d.innerHTML = "<b>"+esc(c.name)+"</b><small>"+esc(c.sub)+"</small>";
+      if (!c.home){
+        var x = document.createElement("button");
+        x.textContent = "✕";
+        x.setAttribute("aria-label","Remove "+c.name);
+        x.addEventListener("click", function(){ selected.splice(i,1); selHour=-1; render(); });
+        d.appendChild(x);
+      }
+      chips.appendChild(d);
+    });
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(m){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]; }); }
+
+  // ---- search ----
+  function updateSugg(){
+    var v = q.value.trim().toLowerCase();
+    hiIdx = -1;
+    if (!v){ sugg.style.display="none"; matches=[]; addBtn.disabled=true; return; }
+    matches = CITIES.filter(function(c){
+      return c[0].toLowerCase().indexOf(v) !== -1 && !selected.some(function(s){ return s.name === c[0].split(",")[0]; });
+    }).slice(0,6);
+    addBtn.disabled = matches.length === 0 || selected.length >= MAX;
+    if (!matches.length){ sugg.style.display="none"; return; }
+    sugg.innerHTML = matches.map(function(c,i){
+      return "<div data-i='"+i+"'>"+esc(c[0])+"<small>"+esc(c[1].split("/").pop().replace(/_/g," "))+"</small></div>";
+    }).join("");
+    sugg.style.display = "block";
+    sugg.querySelectorAll("div").forEach(function(el){
+      el.addEventListener("click", function(){ pick(+el.getAttribute("data-i")); });
+    });
+  }
+  function pick(i){
+    if (i < 0 || i >= matches.length || selected.length >= MAX) return;
+    var c = matches[i];
+    selected.push({ name:c[0].split(",")[0], sub:c[0].split(",")[1] ? c[0].split(",")[1].trim() : c[1].split("/").pop().replace(/_/g," "), zone:c[1] });
+    q.value = ""; sugg.style.display = "none"; addBtn.disabled = true; selHour = -1;
+    render();
+  }
+  q.addEventListener("input", updateSugg);
+  q.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); pick(hiIdx >= 0 ? hiIdx : 0); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp"){
+      e.preventDefault();
+      if (!matches.length) return;
+      hiIdx = e.key === "ArrowDown" ? (hiIdx+1) % matches.length : (hiIdx-1+matches.length) % matches.length;
+      sugg.querySelectorAll("div").forEach(function(el,i){ el.classList.toggle("hi", i===hiIdx); });
+    } else if (e.key === "Escape"){ sugg.style.display="none"; }
+  });
+  addBtn.addEventListener("click", function(){ pick(0); });
+
+  // seed with two popular cities so the grid isn't empty
+  (function seed(){
+    var pool = ["Europe/London","Asia/Tokyo","America/New_York"];
+    var added = 0;
+    for (var i = 0; i < pool.length && added < 2; i++){
+      if (pool[i] === homeZone) continue;
+      var c = CITIES.filter(function(x){ return x[1] === pool[i]; })[0];
+      if (c){ selected.push({ name:c[0].split(",")[0], sub:c[0].split(",")[1].trim(), zone:c[1] }); added++; }
+    }
+  })();
+
+  render();
+})();
+</script>
+</body>
+</html>

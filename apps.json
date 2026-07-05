@@ -19,5 +19,12 @@
     "emoji": "\ud83e\uddfe",
     "date": "2026-07-04",
     "blurb": "Split any bill by what each person actually ordered \u2014 tax and tip divided proportionally, pennies always add up."
+  },
+  {
+    "file": "apps/app-2026-07-05-timebridge.html",
+    "name": "TimeBridge",
+    "emoji": "\ud83c\udf10",
+    "date": "2026-07-05",
+    "blurb": "Pick your cities, see everyone's waking hours side by side, and tap the starred hour that works for all."
   }
 ]
