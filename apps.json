@@ -2,29 +2,36 @@
   {
     "file": "apps/app-2026-07-04-pocket-pyro.html",
     "name": "Pocket Pyro",
-    "emoji": "\ud83c\udf86",
+    "emoji": "🎆",
     "date": "2026-07-04",
-    "blurb": "Design your own fireworks show \u2014 tap the sky, pick burst styles, unleash the finale."
+    "blurb": "Design your own fireworks show — tap the sky, pick burst styles, unleash the finale."
   },
   {
     "file": "apps/app-2026-07-04-orbit-runner.html",
     "name": "Orbit Runner",
-    "emoji": "\ud83d\udef8",
+    "emoji": "🛸",
     "date": "2026-07-04",
     "blurb": "One-tap arcade: reverse your orbit to dodge red arcs and snag gold sparks as the ring speeds up."
   },
   {
     "file": "apps/app-2026-07-04-fairshare.html",
     "name": "FairShare",
-    "emoji": "\ud83e\uddfe",
+    "emoji": "🧾",
     "date": "2026-07-04",
-    "blurb": "Split any bill by what each person actually ordered \u2014 tax and tip divided proportionally, pennies always add up."
+    "blurb": "Split any bill by what each person actually ordered — tax and tip divided proportionally, pennies always add up."
   },
   {
     "file": "apps/app-2026-07-05-timebridge.html",
     "name": "TimeBridge",
-    "emoji": "\ud83c\udf10",
+    "emoji": "🌐",
     "date": "2026-07-05",
     "blurb": "Pick your cities, see everyone's waking hours side by side, and tap the starred hour that works for all."
+  },
+  {
+    "file": "apps/app-2026-07-07-kaleidodraw.html",
+    "name": "KaleidoDraw",
+    "emoji": "🔮",
+    "date": "2026-07-07",
+    "blurb": "Drag to paint glowing, ever-shifting kaleidoscope art with adjustable mirror symmetry — then save your bloom as a PNG."
   }
 ]

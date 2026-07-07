@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KaleidoDraw</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; background:#0a0a12; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#eee; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  canvas { display:block; touch-action:none; background:#08080f; box-shadow:0 0 80px rgba(120,80,255,.15); }
+  #ui {
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;
+    padding:10px 14px; border-radius:18px; max-width:calc(100vw - 20px);
+    background:rgba(20,20,34,.72); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.08); box-shadow:0 8px 30px rgba(0,0,0,.5);
+    z-index:10;
+  }
+  .grp { display:flex; align-items:center; gap:8px; }
+  .lbl { font-size:11px; letter-spacing:.5px; text-transform:uppercase; opacity:.55; }
+  input[type=range]{ -webkit-appearance:none; width:82px; height:4px; border-radius:4px;
+    background:linear-gradient(90deg,#7a5cff,#ff5ca8); outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background:#fff; box-shadow:0 0 8px rgba(255,255,255,.7); cursor:pointer; }
+  input[type=range]::-moz-range-thumb{ width:16px; height:16px; border:none; border-radius:50%; background:#fff; cursor:pointer; }
+  .val { font-size:13px; font-weight:600; width:22px; text-align:center; opacity:.9; }
+  button {
+    border:none; cursor:pointer; color:#fff; font-size:13px; font-weight:600;
+    padding:9px 14px; border-radius:12px; background:rgba(255,255,255,.1);
+    transition:background .15s, transform .1s;
+  }
+  button:hover{ background:rgba(255,255,255,.2); }
+  button:active{ transform:scale(.94); }
+  button.on{ background:linear-gradient(90deg,#7a5cff,#ff5ca8); }
+  .divider{ width:1px; height:26px; background:rgba(255,255,255,.12); }
+  #hint {
+    position:fixed; top:18px; left:50%; transform:translateX(-50%);
+    font-size:13px; opacity:.7; letter-spacing:.3px; pointer-events:none;
+    transition:opacity .6s; text-align:center; padding:0 16px;
+  }
+  #hint.gone{ opacity:0; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<div id="hint">Drag anywhere to paint a living kaleidoscope ✨</div>
+<div id="ui">
+  <div class="grp">
+    <span class="lbl">Mirror</span>
+    <input id="seg" type="range" min="3" max="16" step="1" value="8">
+    <span class="val" id="segVal">8</span>
+  </div>
+  <div class="grp">
+    <span class="lbl">Brush</span>
+    <input id="size" type="range" min="2" max="30" step="1" value="9">
+  </div>
+  <div class="divider"></div>
+  <button id="rainbow" class="on">🌈 Auto</button>
+  <button id="glow" class="on">✦ Glow</button>
+  <div class="divider"></div>
+  <button id="clear">Clear</button>
+  <button id="save">Save PNG</button>
+</div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var stage = document.getElementById('stage');
+  var W=0, H=0, cx=0, cy=0, dpr = Math.min(window.devicePixelRatio||1, 2);
+
+  var segments = 8;
+  var brush = 9;
+  var rainbow = true;
+  var glow = true;
+  var hue = Math.random()*360;
+
+  function resize(){
+    var side = Math.min(window.innerWidth, window.innerHeight) - 24;
+    side = Math.max(240, side);
+    canvas.style.width = side+'px';
+    canvas.style.height = side+'px';
+    // preserve drawing on resize
+    var prev = null;
+    if(W>0){ prev = document.createElement('canvas'); prev.width=canvas.width; prev.height=canvas.height; prev.getContext('2d').drawImage(canvas,0,0); }
+    W = canvas.width = Math.round(side*dpr);
+    H = canvas.height = Math.round(side*dpr);
+    cx = W/2; cy = H/2;
+    ctx.fillStyle = '#08080f';
+    ctx.fillRect(0,0,W,H);
+    if(prev){ ctx.drawImage(prev,0,0,prev.width,prev.height,0,0,W,H); }
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  var drawing=false, last=null, hintEl=document.getElementById('hint'), hidHint=false;
+
+  function pos(e){
+    var r = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return {
+      x: (t.clientX - r.left) / r.width * W,
+      y: (t.clientY - r.top) / r.height * H
+    };
+  }
+
+  function stamp(a, b){
+    // a,b are points relative to canvas top-left; convert to center-origin
+    var ax=a.x-cx, ay=a.y-cy, bx=b.x-cx, by=b.y-cy;
+    var col;
+    if(rainbow){ col = 'hsl('+(hue%360)+',85%,60%)'; }
+    else { col = 'hsl('+(hue%360)+',85%,60%)'; }
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    ctx.lineWidth = brush*dpr;
+    ctx.strokeStyle = col;
+    if(glow){ ctx.shadowBlur = brush*dpr*0.9; ctx.shadowColor = col; }
+    else { ctx.shadowBlur = 0; }
+
+    var step = (Math.PI*2)/segments;
+    for(var i=0;i<segments;i++){
+      var ang = i*step;
+      var cos=Math.cos(ang), sin=Math.sin(ang);
+      // rotated point
+      var rax = ax*cos - ay*sin, ray = ax*sin + ay*cos;
+      var rbx = bx*cos - by*sin, rby = bx*sin + by*cos;
+      // original
+      ctx.beginPath();
+      ctx.moveTo(cx+rax, cy+ray);
+      ctx.lineTo(cx+rbx, cy+rby);
+      ctx.stroke();
+      // mirrored (reflection across x-axis) for full kaleidoscope symmetry
+      ctx.beginPath();
+      ctx.moveTo(cx+rax, cy-ray);
+      ctx.lineTo(cx+rbx, cy-rby);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    if(rainbow){ hue += 2.2; }
+  }
+
+  function start(e){
+    e.preventDefault();
+    if(!hidHint){ hintEl.classList.add('gone'); hidHint=true; }
+    drawing=true; last=pos(e);
+    stamp(last,last);
+  }
+  function move(e){
+    if(!drawing) return;
+    e.preventDefault();
+    var p=pos(e);
+    stamp(last,p);
+    last=p;
+  }
+  function end(){ drawing=false; last=null; }
+
+  canvas.addEventListener('mousedown', start);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  window.addEventListener('touchend', end);
+
+  // controls
+  var segEl=document.getElementById('seg'), segVal=document.getElementById('segVal');
+  segEl.addEventListener('input', function(){ segments=+segEl.value; segVal.textContent=segments; });
+  document.getElementById('size').addEventListener('input', function(e){ brush=+e.target.value; });
+  var rb=document.getElementById('rainbow');
+  rb.addEventListener('click', function(){ rainbow=!rainbow; rb.classList.toggle('on',rainbow); });
+  var gl=document.getElementById('glow');
+  gl.addEventListener('click', function(){ glow=!glow; gl.classList.toggle('on',glow); });
+  document.getElementById('clear').addEventListener('click', function(){
+    ctx.fillStyle='#08080f'; ctx.fillRect(0,0,W,H);
+  });
+  document.getElementById('save').addEventListener('click', function(){
+    var a=document.createElement('a');
+    a.download='kaleido.png';
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+  });
+
+  // gentle idle color drift so palette feels alive even when not rainbow
+  setInterval(function(){ if(!rainbow) hue+=0.15; }, 200);
+})();
+</script>
+</body>
+</html>
