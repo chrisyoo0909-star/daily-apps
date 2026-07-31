@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>CycleSleep — Sleep Cycle Calculator</title>
+<style>
+  :root{
+    --bg1:#0b0f2b;
+    --bg2:#161a3d;
+    --accent:#8b7bff;
+    --accent2:#5ad1e6;
+    --gold:#ffd27a;
+    --text:#eef0ff;
+    --muted:#9aa0c8;
+    --card:rgba(255,255,255,0.06);
+    --card-border:rgba(255,255,255,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #23285c 0%, transparent 60%),
+      radial-gradient(1000px 500px at 90% 10%, #1b3a5c 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg1), var(--bg2) 60%, #0a0c22);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px 60px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  #stars{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+  }
+  .wrap{
+    position:relative; z-index:1;
+    max-width:640px;
+    margin:0 auto;
+  }
+  header{
+    text-align:center;
+    margin-bottom:22px;
+  }
+  header .moon{
+    font-size:40px;
+    filter:drop-shadow(0 0 18px rgba(255,210,122,0.5));
+    display:inline-block;
+    margin-bottom:6px;
+  }
+  h1{
+    font-size:26px;
+    margin:0 0 4px;
+    letter-spacing:0.5px;
+    background:linear-gradient(90deg, var(--gold), var(--accent2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  header p{
+    color:var(--muted);
+    font-size:14px;
+    margin:0;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:18px;
+    backdrop-filter:blur(10px);
+    box-shadow:0 8px 30px rgba(0,0,0,0.25);
+  }
+  .toggle{
+    display:flex;
+    background:rgba(255,255,255,0.05);
+    border-radius:12px;
+    padding:4px;
+    margin-bottom:18px;
+    border:1px solid var(--card-border);
+  }
+  .toggle button{
+    flex:1;
+    padding:10px 8px;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:14px;
+    font-weight:600;
+    border-radius:9px;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .toggle button.active{
+    background:linear-gradient(135deg, var(--accent), #6a5acd);
+    color:#fff;
+    box-shadow:0 4px 14px rgba(139,123,255,0.4);
+  }
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:8px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+  }
+  .time-row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  input[type="time"]{
+    flex:1;
+    font-size:22px;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--card-border);
+    background:rgba(0,0,0,0.25);
+    color:var(--text);
+    font-family:inherit;
+    outline:none;
+    colorScheme:dark;
+  }
+  input[type="time"]::-webkit-calendar-picker-indicator{
+    filter:invert(0.8);
+    cursor:pointer;
+  }
+  .row2{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .field{
+    flex:1;
+    min-width:140px;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .stepper button{
+    width:40px;
+    height:44px;
+    background:rgba(255,255,255,0.05);
+    border:none;
+    color:var(--text);
+    font-size:18px;
+    cursor:pointer;
+  }
+  .stepper button:hover{background:rgba(255,255,255,0.12);}
+  .stepper .val{
+    flex:1;
+    text-align:center;
+    font-size:15px;
+    font-weight:600;
+  }
+  .btn-primary{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--gold), #ff9a7a);
+    color:#241300;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:6px;
+    box-shadow:0 6px 20px rgba(255,180,100,0.3);
+    transition:transform .15s ease;
+  }
+  .btn-primary:active{transform:scale(0.98);}
+
+  .results{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .result-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    border-radius:14px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--card-border);
+    transition:all .2s ease;
+  }
+  .result-item.best{
+    background:linear-gradient(135deg, rgba(139,123,255,0.22), rgba(90,209,230,0.14));
+    border-color:rgba(139,123,255,0.5);
+  }
+  .result-left{
+    display:flex;
+    flex-direction:column;
+  }
+  .result-time{
+    font-size:22px;
+    font-weight:700;
+  }
+  .result-sub{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .result-right{
+    text-align:right;
+  }
+  .cycles-badge{
+    font-size:12px;
+    padding:4px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.08);
+    font-weight:600;
+  }
+  .star-badge{
+    font-size:11px;
+    color:var(--gold);
+    margin-top:4px;
+    font-weight:700;
+  }
+  .hint{
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--card-border);
+  }
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    margin-top:10px;
+  }
+  @media (max-width:400px){
+    .result-time{font-size:19px;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <header>
+    <div class="moon">🌙</div>
+    <h1>CycleSleep</h1>
+    <p>Time your sleep to full 90-minute cycles — wake up between cycles, not mid-dream.</p>
+  </header>
+
+  <div class="card">
+    <div class="toggle">
+      <button id="tabWake" class="active">I need to wake up at…</button>
+      <button id="tabBed">I'm going to bed at…</button>
+    </div>
+
+    <div id="wakeSection">
+      <label for="wakeTime">Wake-up time</label>
+      <div class="time-row">
+        <input type="time" id="wakeTime">
+      </div>
+    </div>
+
+    <div id="bedSection" style="display:none;">
+      <label for="bedTime">Bedtime</label>
+      <div class="time-row">
+        <input type="time" id="bedTime">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Time to fall asleep</label>
+        <div class="stepper">
+          <button id="fallDown">−</button>
+          <div class="val" id="fallVal">15 min</div>
+          <button id="fallUp">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="calcBtn">Calculate</button>
+  </div>
+
+  <div class="card" id="resultsCard" style="display:none;">
+    <label id="resultsLabel">Recommended bedtimes</label>
+    <div class="results" id="results"></div>
+    <div class="hint" id="hintText"></div>
+  </div>
+
+  <footer>Sleep cycles average ~90 min. Waking near the end of a cycle (light sleep) feels far easier than waking mid-cycle (deep sleep).</footer>
+</div>
+
+<script>
+(function(){
+  // ---------- starfield background ----------
+  var canvas = document.getElementById('stars');
+  var ctx = canvas.getContext('2d');
+  var stars = [];
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  function initStars(){
+    stars = [];
+    var count = Math.floor((canvas.width * canvas.height) / 9000);
+    for(var i=0;i<count;i++){
+      stars.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        r: Math.random()*1.4 + 0.3,
+        a: Math.random(),
+        speed: Math.random()*0.015 + 0.003
+      });
+    }
+  }
+  function drawStars(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(var i=0;i<stars.length;i++){
+      var s = stars[i];
+      s.a += s.speed;
+      var alpha = (Math.sin(s.a)+1)/2 * 0.8 + 0.15;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,'+alpha.toFixed(3)+')';
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  window.addEventListener('resize', function(){ resize(); initStars(); });
+  resize(); initStars(); drawStars();
+
+  // ---------- app logic ----------
+  var mode = 'wake'; // 'wake' = user gives wake time, we compute bedtimes; 'bed' = user gives bedtime, we compute wake times
+  var fallAsleepMin = 15;
+  var CYCLE_MIN = 90;
+
+  var tabWake = document.getElementById('tabWake');
+  var tabBed = document.getElementById('tabBed');
+  var wakeSection = document.getElementById('wakeSection');
+  var bedSection = document.getElementById('bedSection');
+  var wakeTimeInput = document.getElementById('wakeTime');
+  var bedTimeInput = document.getElementById('bedTime');
+  var fallVal = document.getElementById('fallVal');
+  var resultsCard = document.getElementById('resultsCard');
+  var resultsLabel = document.getElementById('resultsLabel');
+  var resultsDiv = document.getElementById('results');
+  var hintText = document.getElementById('hintText');
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+
+  function nowPlus(minutesFromNow){
+    var d = new Date(Date.now() + minutesFromNow*60000);
+    return d;
+  }
+
+  function setDefaultTimes(){
+    var now = new Date();
+    // default wake time: 7:00 AM
+    wakeTimeInput.value = "07:00";
+    // default bed time: rounded to next 15 min from now
+    var mins = now.getMinutes();
+    var roundedMins = Math.ceil(mins/15)*15;
+    var d = new Date(now);
+    d.setMinutes(roundedMins, 0, 0);
+    bedTimeInput.value = pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  tabWake.addEventListener('click', function(){
+    mode = 'wake';
+    tabWake.classList.add('active');
+    tabBed.classList.remove('active');
+    wakeSection.style.display = '';
+    bedSection.style.display = 'none';
+    resultsCard.style.display = 'none';
+  });
+  tabBed.addEventListener('click', function(){
+    mode = 'bed';
+    tabBed.classList.add('active');
+    tabWake.classList.remove('active');
+    bedSection.style.display = '';
+    wakeSection.style.display = 'none';
+    resultsCard.style.display = 'none';
+  });
+
+  document.getElementById('fallDown').addEventListener('click', function(){
+    fallAsleepMin = Math.max(0, fallAsleepMin - 5);
+    fallVal.textContent = fallAsleepMin + ' min';
+  });
+  document.getElementById('fallUp').addEventListener('click', function(){
+    fallAsleepMin = Math.min(60, fallAsleepMin + 5);
+    fallVal.textContent = fallAsleepMin + ' min';
+  });
+
+  function parseTimeToDate(timeStr, baseDate){
+    // timeStr "HH:MM" -> Date object using baseDate's day
+    var parts = timeStr.split(':');
+    var h = parseInt(parts[0],10);
+    var m = parseInt(parts[1],10);
+    var d = new Date(baseDate);
+    d.setHours(h, m, 0, 0);
+    return d;
+  }
+
+  function formatTime(d){
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12;
+    if(h12 === 0) h12 = 12;
+    return h12 + ':' + pad(m) + ' ' + ampm;
+  }
+
+  function formatDuration(totalMin){
+    var h = Math.floor(totalMin/60);
+    var m = totalMin % 60;
+    return h + 'h ' + (m>0 ? m+'m' : '');
+  }
+
+  function calculate(){
+    var cycles = [6,5,4,3]; // options to show, most to least recommended count
+    resultsDiv.innerHTML = '';
+
+    if(mode === 'wake'){
+      var wakeStr = wakeTimeInput.value;
+      if(!wakeStr) return;
+      var now = new Date();
+      var wakeDate = parseTimeToDate(wakeStr, now);
+      // if the wake time is earlier than "right now" treat as tomorrow
+      if(wakeDate.getTime() <= now.getTime()){
+        wakeDate.setDate(wakeDate.getDate()+1);
+      }
+      resultsLabel.textContent = 'Go to bed at one of these times';
+      hintText.textContent = 'Each option lets you fall asleep for ' + fallAsleepMin + ' min, then complete full 90-min cycles before your ' + formatTime(wakeDate) + ' alarm. Aim for 5–6 cycles (7.5–9h) for best rest.';
+
+      cycles.forEach(function(c){
+        var sleepMin = c * CYCLE_MIN;
+        var bedTime = new Date(wakeDate.getTime() - (sleepMin + fallAsleepMin)*60000);
+        addResult(bedTime, c, sleepMin, c>=5);
+      });
+    } else {
+      var bedStr = bedTimeInput.value;
+      if(!bedStr) return;
+      var now2 = new Date();
+      var bedDate = parseTimeToDate(bedStr, now2);
+      // allow bedtime to be "now-ish" or up to a bit in the past today; if far in past assume it means tonight already passed -> keep same day unless it's more than a few hours before now, then assume today (typical use: picking bedtime tonight)
+      resultsLabel.textContent = 'Wake up at one of these times';
+      hintText.textContent = 'Falling asleep ' + fallAsleepMin + ' min after ' + formatTime(bedDate) + ', these wake times land at the end of a full 90-min cycle. 5–6 cycles (7.5–9h) is the sweet spot for most adults.';
+
+      cycles.slice().reverse().forEach(function(c){
+        var sleepMin = c * CYCLE_MIN;
+        var wakeTime = new Date(bedDate.getTime() + (fallAsleepMin + sleepMin)*60000);
+        addResult(wakeTime, c, sleepMin, c>=5, true);
+      });
+    }
+
+    resultsCard.style.display = '';
+  }
+
+  function addResult(timeObj, cycleCount, sleepMin, isBest){
+    var item = document.createElement('div');
+    item.className = 'result-item' + (isBest ? ' best' : '');
+
+    var left = document.createElement('div');
+    left.className = 'result-left';
+    var t = document.createElement('div');
+    t.className = 'result-time';
+    t.textContent = formatTime(timeObj);
+    var sub = document.createElement('div');
+    sub.className = 'result-sub';
+    sub.textContent = 'Total sleep: ' + formatDuration(sleepMin);
+    left.appendChild(t);
+    left.appendChild(sub);
+
+    var right = document.createElement('div');
+    right.className = 'result-right';
+    var badge = document.createElement('div');
+    badge.className = 'cycles-badge';
+    badge.textContent = cycleCount + ' cycles';
+    right.appendChild(badge);
+    if(isBest){
+      var star = document.createElement('div');
+      star.className = 'star-badge';
+      star.textContent = '★ RECOMMENDED';
+      right.appendChild(star);
+    }
+
+    item.appendChild(left);
+    item.appendChild(right);
+    resultsDiv.appendChild(item);
+  }
+
+  document.getElementById('calcBtn').addEventListener('click', calculate);
+
+  setDefaultTimes();
+})();
+</script>
+</body>
+</html>
