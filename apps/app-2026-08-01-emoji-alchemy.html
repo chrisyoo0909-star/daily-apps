@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Emoji Alchemy</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    background: radial-gradient(circle at 50% -10%, #2a1a4a 0%, #150a28 45%, #0a0614 100%);
+    color:#f0eaff; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; padding:20px 14px 60px;
+    overflow-x:hidden;
+  }
+  header { text-align:center; margin-bottom:14px; }
+  h1 { font-size:clamp(24px,7vw,36px); letter-spacing:2px; background:linear-gradient(135deg,#ffd76e,#ff7ee0,#7ea6ff);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:#a99bd6; font-size:13px; margin-top:6px; }
+  .counter { margin-top:8px; font-size:13px; color:#d8c8ff; background:#ffffff12; padding:5px 14px;
+    border-radius:20px; display:inline-block; border:1px solid #ffffff22; }
+
+  .workspace { width:100%; max-width:560px; margin:18px 0; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .slot {
+    width:110px; height:110px; border-radius:20px; background:#ffffff0d; border:2px dashed #7a68a8;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:38px;
+    position:relative; transition:transform .2s, border-color .2s, background .2s;
+  }
+  .slot.filled { border-style:solid; border-color:#c79cff; background:#ffffff16; }
+  .slot .lbl { font-size:10px; color:#b8a8e0; margin-top:4px; max-width:96px; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .op { font-size:26px; color:#a99bd6; font-weight:300; }
+  .combineBtn {
+    width:64px; height:64px; border-radius:50%; border:none; cursor:pointer; font-size:22px;
+    background:linear-gradient(135deg,#ff7ee0,#7ea6ff); color:#1a0f30; font-weight:700;
+    box-shadow:0 4px 18px rgba(190,120,255,.4); transition:transform .15s, opacity .15s;
+  }
+  .combineBtn:disabled { opacity:.35; cursor:default; box-shadow:none; }
+  .combineBtn:not(:disabled):active { transform:scale(.92); }
+
+  .clearBtn { position:absolute; top:-8px; right:-8px; width:22px; height:22px; border-radius:50%;
+    background:#ff5f6d; border:none; color:#fff; font-size:13px; line-height:22px; cursor:pointer; display:none; }
+  .slot.filled .clearBtn { display:block; }
+
+  #toast {
+    position:fixed; top:22px; left:50%; transform:translateX(-50%) translateY(-30px); opacity:0;
+    background:linear-gradient(135deg,#ffd76e,#ff7ee0); color:#241333; padding:14px 26px; border-radius:16px;
+    font-weight:700; font-size:15px; box-shadow:0 10px 30px rgba(0,0,0,.4); transition:transform .35s ease, opacity .35s ease;
+    z-index:50; text-align:center; pointer-events:none;
+  }
+  #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  #toast .te { font-size:26px; display:block; margin-bottom:2px; }
+  #toast.dup { background:linear-gradient(135deg,#8a8aa3,#5f5f7a); color:#fff; }
+
+  .controls { width:100%; max-width:560px; display:flex; gap:8px; margin:6px 0 14px; }
+  #search {
+    flex:1; padding:10px 14px; border-radius:12px; border:1px solid #7a68a8; background:#ffffff0d;
+    color:#f0eaff; font-size:14px; outline:none;
+  }
+  #search::placeholder { color:#8a7ab0; }
+  #resetBtn {
+    padding:10px 16px; border-radius:12px; border:1px solid #7a68a8; background:#ffffff0d; color:#e0d0ff;
+    font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  #resetBtn:active { background:#ffffff22; }
+
+  #library {
+    width:100%; max-width:820px; display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+    gap:10px;
+  }
+  .item {
+    background:#ffffff0d; border:1px solid #ffffff1c; border-radius:14px; padding:10px 6px;
+    display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; user-select:none;
+    transition:transform .12s, border-color .12s, background .12s;
+    animation:pop .35s ease;
+  }
+  @keyframes pop { from { transform:scale(.5); opacity:0; } to { transform:scale(1); opacity:1; } }
+  .item:active { transform:scale(.94); }
+  .item.selected { border-color:#ffd76e; background:#ffd76e22; box-shadow:0 0 0 2px #ffd76e55; }
+  .item .em { font-size:30px; }
+  .item .nm { font-size:11px; color:#d8c8ff; text-align:center; line-height:1.2; }
+
+  footer { margin-top:26px; color:#6f5f96; font-size:12px; text-align:center; max-width:480px; }
+
+  @media (max-width:400px) {
+    .slot { width:88px; height:88px; font-size:30px; }
+    .combineBtn { width:52px; height:52px; font-size:18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>✨ EMOJI ALCHEMY ✨</h1>
+  <div class="sub">Tap two elements to combine them into something new.</div>
+  <div class="counter" id="counter">4 discovered</div>
+</header>
+
+<div class="workspace">
+  <div class="slot" id="slotA"><div class="clearBtn" onclick="clearSlot(0)">✕</div><span class="ph">?</span></div>
+  <div class="op">+</div>
+  <div class="slot" id="slotB"><div class="clearBtn" onclick="clearSlot(1)">✕</div><span class="ph">?</span></div>
+  <button class="combineBtn" id="combineBtn" onclick="doCombine()" disabled>=</button>
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search discoveries…" oninput="renderLibrary()">
+  <button id="resetBtn" onclick="resetGame()">Reset</button>
+</div>
+
+<div id="library"></div>
+
+<div id="toast"></div>
+
+<footer>4 starting elements, 70+ hand-crafted combinations, and a built-in alchemy engine that invents something for literally any pair you try — nothing ever "does nothing."</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- base elements ----------
+  var elements = {
+    fire:  { name:'Fire',  emoji:'🔥' },
+    water: { name:'Water', emoji:'💧' },
+    earth: { name:'Earth', emoji:'🌍' },
+    air:   { name:'Air',   emoji:'💨' }
+  };
+  var BASE_IDS = ['fire','water','earth','air'];
+
+  // ---------- hand-crafted combination tree ----------
+  // format: [idA, idB, newId, Name, Emoji]
+  var COMBOS = [
+    ['fire','water','steam','Steam','♨️'],
+    ['fire','earth','lava','Lava','🌋'],
+    ['fire','air','energy','Energy','⚡'],
+    ['water','earth','mud','Mud','🟤'],
+    ['water','air','rain','Rain','🌧️'],
+    ['earth','air','dust','Dust','🌫️'],
+    ['fire','fire','sun','Sun','☀️'],
+    ['water','water','ocean','Ocean','🌊'],
+    ['earth','earth','mountain','Mountain','⛰️'],
+    ['air','air','wind','Wind','🌬️'],
+
+    ['steam','air','cloud','Cloud','☁️'],
+    ['cloud','water','storm','Storm','⛈️'],
+    ['cloud','earth','geyser','Geyser','⛲'],
+    ['lava','water','stone','Stone','🪨'],
+    ['lava','air','smoke','Smoke','🌫️'],
+    ['mud','fire','brick','Brick','🧱'],
+    ['mud','sun','desert','Desert','🏜️'],
+    ['rain','earth','plant','Plant','🌱'],
+    ['rain','mountain','river','River','🏞️'],
+    ['ocean','earth','island','Island','🏝️'],
+    ['ocean','air','wave','Wave','🌊'],
+    ['mountain','fire','volcano','Volcano','🌋'],
+    ['mountain','water','cave','Cave','🕳️'],
+    ['wind','fire','wildfire','Wildfire','🔥'],
+    ['wind','earth','duststorm','Dust Storm','🌪️'],
+
+    ['plant','sun','flower','Flower','🌸'],
+    ['plant','water','algae','Algae','🌿'],
+    ['plant','earth','tree','Tree','🌳'],
+    ['tree','fire','charcoal','Charcoal','⚫'],
+    ['tree','wind','leaf','Leaf','🍃'],
+    ['flower','wind','bee','Bee','🐝'],
+    ['bee','flower','honey','Honey','🍯'],
+    ['algae','ocean','coral','Coral','🪸'],
+
+    ['energy','ocean','life','Life','🧬'],
+    ['life','ocean','fish','Fish','🐟'],
+    ['life','earth','bacteria','Bacteria','🦠'],
+    ['life','tree','bird','Bird','🐦'],
+    ['life','mud','amphibian','Amphibian','🐸'],
+    ['life','mountain','reptile','Reptile','🦎'],
+    ['life','fire','dragon','Dragon','🐉'],
+    ['life','wind','insect','Insect','🐛'],
+    ['insect','flower','butterfly','Butterfly','🦋'],
+    ['bird','wind','egg','Egg','🥚'],
+    ['egg','fire','phoenix','Phoenix','🦅'],
+    ['reptile','fire','dinosaur','Dinosaur','🦖'],
+    ['dinosaur','earth','fossil','Fossil','🦴'],
+    ['amphibian','mountain','mammal','Mammal','🐾'],
+    ['mammal','tree','monkey','Monkey','🐒'],
+    ['dragon','ocean','kraken','Kraken','🐙'],
+
+    ['stone','fire','metal','Metal','🔩'],
+    ['metal','fire','sword','Sword','⚔️'],
+    ['metal','stone','tool','Tool','🔨'],
+    ['monkey','tool','human','Human','🧑'],
+    ['human','tree','house','House','🏠'],
+    ['house','house','village','Village','🏘️'],
+    ['village','village','city','City','🏙️'],
+    ['human','fire','cooking','Cooking','🍳'],
+    ['human','plant','farm','Farm','🌾'],
+    ['human','mammal','pet','Pet','🐕'],
+    ['human','ocean','boat','Boat','⛵'],
+    ['boat','storm','shipwreck','Shipwreck','🏴‍☠️'],
+    ['human','sword','knight','Knight','🛡️'],
+    ['knight','dragon','legend','Legend','📜'],
+    ['human','city','kingdom','Kingdom','🏰'],
+    ['city','metal','robot','Robot','🤖'],
+    ['robot','energy','ai','AI','🧠'],
+    ['ai','city','internet','Internet','🌐'],
+    ['internet','human','meme','Meme','😂'],
+    ['ai','ai','singularity','Singularity','🌌'],
+
+    ['human','human','love','Love','❤️'],
+    ['love','human','baby','Baby','👶'],
+    ['tree','tool','paper','Paper','📄'],
+    ['paper','human','book','Book','📖'],
+    ['book','ai','wisdom','Wisdom','🦉']
+  ];
+
+  var comboMap = {};   // "idA|idB" (sorted) -> {id,name,emoji}
+  COMBOS.forEach(function(c){
+    var a=c[0], b=c[1], id=c[2], name=c[3], emoji=c[4];
+    elements[id] = elements[id] || { name:name, emoji:emoji };
+    var key = [a,b].sort().join('|');
+    comboMap[key] = { id:id, name:name, emoji:emoji };
+  });
+
+  // ---------- infinite fallback alchemy engine ----------
+  var ADJ = ['Golden','Shadow','Crystal','Ancient','Frozen','Storm','Molten','Lunar','Solar','Iron',
+    'Silver','Wild','Cosmic','Emerald','Obsidian','Radiant','Phantom','Electric','Sacred','Rusty',
+    'Feral','Velvet','Glass','Neon','Whispering','Sunken','Gilded','Cursed','Blazing','Frosted'];
+  var NOUN = ['Phoenix','Golem','Serpent','Titan','Sprite','Wolf','Falcon','Beacon','Engine','Garden',
+    'Fortress','Compass','Lantern','Comet','Reef','Glacier','Ember','Oracle','Tempest','Idol',
+    'Loom','Anchor','Spire','Chime','Maze','Orchard','Vault','Prism','Nomad','Hive'];
+  var GEM = ['🐉','🦅','🐺','🏯','🔮','⚔️','🛡️','🌌','☄️','🧊','🌋','🏔️','🌈','✨','💎','🕯️','🦋','🐍',
+    '🦂','🌵','🪶','🎋','🐚','🍄','🗿','🧿','🪄','🔱','🎐','🧭'];
+
+  function hashStr(s){
+    var h = 5381;
+    for (var i=0;i<s.length;i++){ h = ((h*33) ^ s.charCodeAt(i)) >>> 0; }
+    return h >>> 0;
+  }
+
+  function generateFallback(idA, idB){
+    var key = [idA,idB].sort().join('|');
+    var h = hashStr(key);
+    var adj = ADJ[h % ADJ.length];
+    var noun = NOUN[Math.floor(h/ADJ.length) % NOUN.length];
+    var emoji = GEM[Math.floor(h/(ADJ.length*NOUN.length)) % GEM.length];
+    var id = 'gen_' + key;
+    var name = adj + ' ' + noun;
+    var entry = { id:id, name:name, emoji:emoji };
+    elements[id] = { name:name, emoji:emoji };
+    comboMap[key] = entry;
+    return entry;
+  }
+
+  // ---------- game state ----------
+  var discovered = new Set(BASE_IDS);
+  var selected = [];
+
+  function orderedDiscovered(){
+    return Array.from(discovered).sort(function(x,y){
+      var bx = BASE_IDS.indexOf(x) !== -1, by = BASE_IDS.indexOf(y) !== -1;
+      if (bx && !by) return -1;
+      if (!bx && by) return 1;
+      return elements[x].name.localeCompare(elements[y].name);
+    });
+  }
+
+  function renderSlots(){
+    ['A','B'].forEach(function(letter,i){
+      var el = document.getElementById('slot'+letter);
+      var ph = el.querySelector('.ph');
+      var lbl = el.querySelector('.lbl');
+      if (lbl) lbl.remove();
+      if (selected[i]){
+        var e = elements[selected[i]];
+        el.classList.add('filled');
+        if (ph) ph.textContent = e.emoji;
+        var l = document.createElement('div');
+        l.className = 'lbl'; l.textContent = e.name;
+        el.appendChild(l);
+      } else {
+        el.classList.remove('filled');
+        if (ph) ph.textContent = '?';
+      }
+    });
+    document.getElementById('combineBtn').disabled = selected.length !== 2;
+  }
+
+  window.clearSlot = function(i){
+    selected.splice(i,1);
+    renderSlots();
+  };
+
+  function pick(id){
+    if (selected.length >= 2) return;
+    selected.push(id);
+    renderSlots();
+  }
+
+  window.doCombine = function(){
+    if (selected.length !== 2) return;
+    var a = selected[0], b = selected[1];
+    var key = [a,b].sort().join('|');
+    var result = comboMap[key] || generateFallback(a,b);
+    var isNew = !discovered.has(result.id);
+    discovered.add(result.id);
+    showToast(result, isNew);
+    selected = [];
+    renderSlots();
+    renderLibrary();
+    updateCounter();
+  };
+
+  var toastTimer = null;
+  function showToast(result, isNew){
+    var t = document.getElementById('toast');
+    t.className = isNew ? '' : 'dup';
+    t.innerHTML = '<span class="te">' + result.emoji + '</span>' +
+      (isNew ? 'New Discovery: ' : 'You made: ') + result.name;
+    requestAnimationFrame(function(){ t.classList.add('show'); if(!isNew) t.classList.add('dup'); });
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 1900);
+  }
+
+  function updateCounter(){
+    document.getElementById('counter').textContent = discovered.size + ' discovered';
+  }
+
+  function renderLibrary(){
+    var q = document.getElementById('search').value.trim().toLowerCase();
+    var lib = document.getElementById('library');
+    lib.innerHTML = '';
+    orderedDiscovered().forEach(function(id){
+      var e = elements[id];
+      if (q && e.name.toLowerCase().indexOf(q) === -1) return;
+      var div = document.createElement('div');
+      div.className = 'item' + (selected.indexOf(id) !== -1 ? ' selected' : '');
+      div.innerHTML = '<div class="em">' + e.emoji + '</div><div class="nm">' + e.name + '</div>';
+      div.onclick = function(){ pick(id); };
+      lib.appendChild(div);
+    });
+  }
+
+  window.resetGame = function(){
+    if (!confirm('Reset all discoveries back to Fire, Water, Earth, and Air?')) return;
+    discovered = new Set(BASE_IDS);
+    selected = [];
+    renderSlots();
+    renderLibrary();
+    updateCounter();
+  };
+
+  // ---------- init ----------
+  renderSlots();
+  renderLibrary();
+  updateCounter();
+})();
+</script>
+
+</body>
+</html>
