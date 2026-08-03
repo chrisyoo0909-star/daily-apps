@@ -54,5 +54,12 @@
     "emoji": "\ud83d\udd25",
     "date": "2026-08-02",
     "blurb": "A live-ticking dollar counter that shows exactly what a meeting is costing in real time, based on attendees' salaries."
+  },
+  {
+    "file": "apps/app-2026-08-03-groove-grid.html",
+    "name": "Groove Grid",
+    "emoji": "\ud83e\udd41",
+    "date": "2026-08-03",
+    "blurb": "A pocket drum machine: tap the glowing grid to build beats with six synthesized instruments, swing, presets, and a smart randomizer."
   }
 ]

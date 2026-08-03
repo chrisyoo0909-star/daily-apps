@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Groove Grid — Pocket Drum Machine</title>
+<style>
+  :root{
+    --bg:#0d0e14; --panel:#161826; --cell:#1f2234; --cell-border:#2a2e45;
+    --text:#e8eaf2; --dim:#8a8fa8;
+    --c-kick:#ff5d73; --c-snare:#ffb454; --c-clap:#f9e46b; --c-chat:#5de4a8; --c-ohat:#54c8ff; --c-bass:#b48cff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100%; touch-action:manipulation;}
+  .wrap{max-width:760px; margin:0 auto; padding:16px 12px 32px;}
+  header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:4px;}
+  h1{font-size:1.35rem; margin:0; letter-spacing:.5px;}
+  h1 .dot{color:var(--c-kick);}
+  .hint{font-size:.78rem; color:var(--dim);}
+  .panel{background:var(--panel); border-radius:16px; padding:14px; box-shadow:0 8px 30px rgba(0,0,0,.35);}
+  .controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button{border:none; border-radius:10px; padding:10px 16px; font-size:.9rem; font-weight:600;
+    background:var(--cell); color:var(--text); cursor:pointer; transition:transform .08s, background .15s;}
+  button:active{transform:scale(.95);}
+  #playBtn{background:linear-gradient(135deg,#ff5d73,#b44dff); min-width:92px; font-size:1rem;}
+  .ghost{background:transparent; border:1px solid var(--cell-border); color:var(--dim);}
+  .slider-group{display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--dim);}
+  .slider-group b{color:var(--text); font-variant-numeric:tabular-nums; min-width:34px; text-align:right;}
+  input[type=range]{width:110px; accent-color:#ff5d73;}
+  .grid{display:grid; grid-template-columns:64px repeat(16,1fr); gap:4px; align-items:stretch;}
+  .rowlabel{display:flex; align-items:center; justify-content:flex-end; padding-right:8px;
+    font-size:.72rem; font-weight:700; letter-spacing:.5px; color:var(--dim); text-transform:uppercase; user-select:none;}
+  .cell{aspect-ratio:1/1; min-height:22px; border-radius:6px; background:var(--cell);
+    border:1px solid var(--cell-border); cursor:pointer; transition:background .1s, box-shadow .1s; touch-action:none;}
+  .cell.beatmark{background:#262a40;}
+  .cell.on{border-color:transparent;}
+  .row-kick .cell.on{background:var(--c-kick); box-shadow:0 0 10px rgba(255,93,115,.55);}
+  .row-snare .cell.on{background:var(--c-snare); box-shadow:0 0 10px rgba(255,180,84,.55);}
+  .row-clap .cell.on{background:var(--c-clap); box-shadow:0 0 10px rgba(249,228,107,.5);}
+  .row-chat .cell.on{background:var(--c-chat); box-shadow:0 0 10px rgba(93,228,168,.5);}
+  .row-ohat .cell.on{background:var(--c-ohat); box-shadow:0 0 10px rgba(84,200,255,.5);}
+  .row-bass .cell.on{background:var(--c-bass); box-shadow:0 0 10px rgba(180,140,255,.55);}
+  .cell.playhead{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);}
+  .cell.on.playhead{filter:brightness(1.45);}
+  .presets{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+  .presets button{font-size:.8rem; padding:8px 13px;}
+  .presets button.activePreset{background:#343a5c; color:#fff;}
+  footer{margin-top:16px; text-align:center; font-size:.72rem; color:var(--dim);}
+  @media (max-width:520px){
+    .grid{grid-template-columns:44px repeat(16,1fr); gap:3px;}
+    .rowlabel{font-size:.6rem; padding-right:5px;}
+    input[type=range]{width:84px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Groove Grid<span class="dot">.</span></h1>
+    <span class="hint">Tap cells to build a beat — drag to paint</span>
+  </header>
+  <div class="panel">
+    <div class="controls">
+      <button id="playBtn">&#9654; Play</button>
+      <div class="slider-group">BPM <input type="range" id="bpm" min="60" max="180" value="112"><b id="bpmVal">112</b></div>
+      <div class="slider-group">Swing <input type="range" id="swing" min="0" max="60" value="12"><b id="swingVal">12%</b></div>
+      <button class="ghost" id="randomBtn">&#127922; Random</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="presets" id="presets">
+      <button data-p="house">House</button>
+      <button data-p="hiphop">Hip-Hop</button>
+      <button data-p="techno">Techno</button>
+      <button data-p="funk">Funk</button>
+    </div>
+  </div>
+  <footer>All sounds synthesized live in your browser — no samples, no downloads.</footer>
+</div>
+
+<script>
+"use strict";
+const STEPS = 16;
+const ROWS = [
+  {id:"kick",  label:"Kick"},
+  {id:"snare", label:"Snare"},
+  {id:"clap",  label:"Clap"},
+  {id:"chat",  label:"Hat"},
+  {id:"ohat",  label:"Open Hat"},
+  {id:"bass",  label:"Bass"}
+];
+// pattern[rowIndex][step] = 0/1
+let pattern = ROWS.map(() => new Array(STEPS).fill(0));
+
+const PRESETS = {
+  house: {
+    kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    snare: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+    clap:  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    chat:  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+    ohat:  [0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+    bass:  [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0]
+  },
+  hiphop: {
+    kick:  [1,0,0,0, 0,0,0,1, 0,0,1,0, 0,0,0,0],
+    snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    clap:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0],
+    chat:  [1,0,1,0, 1,0,1,1, 1,0,1,0, 1,1,0,1],
+    ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0],
+    bass:  [1,0,0,0, 0,0,0,1, 0,0,1,0, 0,0,0,0]
+  },
+  techno: {
+    kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    snare: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+    clap:  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1],
+    chat:  [1,1,0,1, 1,1,0,1, 1,1,0,1, 1,1,0,1],
+    ohat:  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+    bass:  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,1,0,1]
+  },
+  funk: {
+    kick:  [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,0,0],
+    snare: [0,0,0,0, 1,0,0,1, 0,0,0,0, 1,0,1,0],
+    clap:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+    chat:  [1,0,1,0, 1,0,1,0, 1,0,1,1, 0,1,1,0],
+    ohat:  [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0],
+    bass:  [1,0,0,1, 0,1,0,0, 1,0,1,0, 0,0,1,0]
+  }
+};
+
+// minor pentatonic on A — bass note picked by step position so anything sounds musical
+const BASS_SCALE = [55.0, 65.41, 73.42, 82.41, 98.0]; // A1 C2 D2 E2 G2
+function bassFreqFor(step){ return BASS_SCALE[[0,2,3,1,4,2,0,3][step % 8] % BASS_SCALE.length]; }
+
+/* ---------- UI ---------- */
+const gridEl = document.getElementById("grid");
+const cellEls = []; // [row][step]
+ROWS.forEach((row, r) => {
+  const label = document.createElement("div");
+  label.className = "rowlabel";
+  label.textContent = row.label;
+  gridEl.appendChild(label);
+  cellEls[r] = [];
+  for (let s = 0; s < STEPS; s++){
+    const c = document.createElement("div");
+    c.className = "cell row-" + row.id + (s % 4 === 0 ? " beatmark" : "");
+    c.dataset.r = r; c.dataset.s = s;
+    gridEl.appendChild(c);
+    cellEls[r][s] = c;
+  }
+});
+
+function paintCell(r, s){
+  cellEls[r][s].classList.toggle("on", !!pattern[r][s]);
+}
+function paintAll(){
+  for (let r = 0; r < ROWS.length; r++)
+    for (let s = 0; s < STEPS; s++) paintCell(r, s);
+}
+
+// tap + drag-to-paint
+let dragging = false, dragValue = 1;
+function setFromEvent(e, isStart){
+  // during a drag, implicit pointer capture makes e.target stale — hit-test by coordinates
+  const el = isStart
+    ? (e.target.closest ? e.target.closest(".cell") : null)
+    : document.elementFromPoint(e.clientX, e.clientY);
+  if (!el || !el.classList || !el.classList.contains("cell")) return;
+  const r = +el.dataset.r, s = +el.dataset.s;
+  if (isStart){ dragValue = pattern[r][s] ? 0 : 1; }
+  if (pattern[r][s] !== dragValue){
+    pattern[r][s] = dragValue;
+    paintCell(r, s);
+    clearPresetHighlight();
+    if (dragValue && !playing) previewSound(r, s);
+  }
+}
+gridEl.addEventListener("pointerdown", e => {
+  if (!e.target.classList.contains("cell")) return;
+  dragging = true;
+  unlockAudio();
+  setFromEvent(e, true);
+});
+window.addEventListener("pointermove", e => { if (dragging) setFromEvent(e, false); });
+window.addEventListener("pointerup", () => { dragging = false; });
+window.addEventListener("pointercancel", () => { dragging = false; });
+
+/* ---------- Audio engine ---------- */
+let ctx = null, master = null;
+function unlockAudio(){
+  if (!ctx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.85;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -12; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === "suspended") ctx.resume();
+}
+
+function noiseBuffer(){
+  const len = ctx.sampleRate * 0.5;
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+let _noise = null;
+function getNoise(){ return _noise || (_noise = noiseBuffer()); }
+
+function playKick(t){
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+  g.gain.setValueAtTime(1.0, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + 0.3);
+}
+function playSnare(t){
+  const n = ctx.createBufferSource(); n.buffer = getNoise();
+  const nf = ctx.createBiquadFilter(); nf.type = "highpass"; nf.frequency.value = 1400;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.7, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  n.connect(nf); nf.connect(ng); ng.connect(master);
+  n.start(t); n.stop(t + 0.2);
+  const o = ctx.createOscillator(), og = ctx.createGain();
+  o.type = "triangle"; o.frequency.setValueAtTime(190, t);
+  og.gain.setValueAtTime(0.5, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  o.connect(og); og.connect(master);
+  o.start(t); o.stop(t + 0.13);
+}
+function playClap(t){
+  for (let i = 0; i < 3; i++){
+    const st = t + i * 0.012;
+    const n = ctx.createBufferSource(); n.buffer = getNoise();
+    const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1800; f.Q.value = 1.2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(i === 2 ? 0.65 : 0.35, st);
+    g.gain.exponentialRampToValueAtTime(0.001, st + (i === 2 ? 0.22 : 0.05));
+    n.connect(f); f.connect(g); g.connect(master);
+    n.start(st); n.stop(st + 0.25);
+  }
+}
+function playHat(t, open){
+  const n = ctx.createBufferSource(); n.buffer = getNoise();
+  const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7500;
+  const g = ctx.createGain();
+  const dur = open ? 0.4 : 0.06;
+  g.gain.setValueAtTime(open ? 0.45 : 0.4, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(f); f.connect(g); g.connect(master);
+  n.start(t); n.stop(t + dur + 0.02);
+}
+function playBass(t, step){
+  const freq = bassFreqFor(step);
+  const o = ctx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(freq, t);
+  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.Q.value = 8;
+  f.frequency.setValueAtTime(900, t);
+  f.frequency.exponentialRampToValueAtTime(180, t + 0.22);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.55, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+  o.connect(f); f.connect(g); g.connect(master);
+  o.start(t); o.stop(t + 0.28);
+}
+const PLAYERS = {
+  kick: t => playKick(t),
+  snare: t => playSnare(t),
+  clap: t => playClap(t),
+  chat: t => playHat(t, false),
+  ohat: t => playHat(t, true),
+  bass: (t, s) => playBass(t, s)
+};
+function previewSound(r, s){
+  unlockAudio();
+  PLAYERS[ROWS[r].id](ctx.currentTime, s);
+}
+
+/* ---------- Scheduler (lookahead) ---------- */
+let playing = false, currentStep = 0, nextNoteTime = 0, timerId = null;
+let bpm = 112, swingPct = 12;
+const LOOKAHEAD_MS = 25, SCHEDULE_AHEAD = 0.12;
+
+function stepDur(){ return (60 / bpm) / 4; } // 16th note
+function scheduleNote(step, t){
+  for (let r = 0; r < ROWS.length; r++){
+    if (pattern[r][step]) PLAYERS[ROWS[r].id](t, step);
+  }
+  const delay = Math.max(0, (t - ctx.currentTime) * 1000);
+  setTimeout(() => { if (playing) drawPlayhead(step); }, delay);
+}
+function scheduler(){
+  while (nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD){
+    let t = nextNoteTime;
+    if (currentStep % 2 === 1) t += stepDur() * (swingPct / 100); // swing odd 16ths
+    scheduleNote(currentStep, t);
+    nextNoteTime += stepDur();
+    currentStep = (currentStep + 1) % STEPS;
+  }
+}
+let lastDrawn = -1;
+function drawPlayhead(step){
+  if (lastDrawn >= 0) cellEls.forEach(row => row[lastDrawn].classList.remove("playhead"));
+  cellEls.forEach(row => row[step].classList.add("playhead"));
+  lastDrawn = step;
+}
+function clearPlayhead(){
+  if (lastDrawn >= 0) cellEls.forEach(row => row[lastDrawn].classList.remove("playhead"));
+  lastDrawn = -1;
+}
+
+const playBtn = document.getElementById("playBtn");
+function togglePlay(){
+  unlockAudio();
+  playing = !playing;
+  if (playing){
+    currentStep = 0;
+    nextNoteTime = ctx.currentTime + 0.06;
+    timerId = setInterval(scheduler, LOOKAHEAD_MS);
+    playBtn.innerHTML = "&#9632; Stop";
+  } else {
+    clearInterval(timerId);
+    clearPlayhead();
+    playBtn.innerHTML = "&#9654; Play";
+  }
+}
+playBtn.addEventListener("click", togglePlay);
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT"){ e.preventDefault(); togglePlay(); }
+});
+
+/* ---------- Controls ---------- */
+const bpmIn = document.getElementById("bpm"), bpmVal = document.getElementById("bpmVal");
+bpmIn.addEventListener("input", () => { bpm = +bpmIn.value; bpmVal.textContent = bpm; });
+const swingIn = document.getElementById("swing"), swingVal = document.getElementById("swingVal");
+swingIn.addEventListener("input", () => { swingPct = +swingIn.value; swingVal.textContent = swingPct + "%"; });
+
+document.getElementById("clearBtn").addEventListener("click", () => {
+  pattern = ROWS.map(() => new Array(STEPS).fill(0));
+  paintAll(); clearPresetHighlight();
+});
+
+document.getElementById("randomBtn").addEventListener("click", () => {
+  unlockAudio();
+  const density = {kick:0.32, snare:0.18, clap:0.10, chat:0.55, ohat:0.10, bass:0.30};
+  pattern = ROWS.map(row => {
+    const arr = new Array(STEPS).fill(0);
+    for (let s = 0; s < STEPS; s++){
+      let p = density[row.id];
+      if (row.id === "kick" && s % 4 === 0) p += 0.45;          // kicks favor downbeats
+      if (row.id === "snare" && (s === 4 || s === 12)) p += 0.6; // backbeat
+      if (row.id === "chat" && s % 2 === 0) p += 0.2;
+      arr[s] = Math.random() < p ? 1 : 0;
+    }
+    return arr;
+  });
+  paintAll(); clearPresetHighlight();
+});
+
+const presetsEl = document.getElementById("presets");
+function clearPresetHighlight(){
+  presetsEl.querySelectorAll("button").forEach(b => b.classList.remove("activePreset"));
+}
+presetsEl.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = PRESETS[b.dataset.p]; if (!p) return;
+  unlockAudio();
+  pattern = ROWS.map(row => p[row.id].slice());
+  paintAll();
+  clearPresetHighlight();
+  b.classList.add("activePreset");
+  if (!playing) togglePlay();
+});
+
+// start with the house preset loaded (not playing) so the grid isn't empty
+pattern = ROWS.map(row => PRESETS.house[row.id].slice());
+paintAll();
+</script>
+</body>
+</html>
