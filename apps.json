@@ -61,5 +61,12 @@
     "emoji": "\ud83e\udd41",
     "date": "2026-08-03",
     "blurb": "A pocket drum machine: tap the glowing grid to build beats with six synthesized instruments, swing, presets, and a smart randomizer."
+  },
+  {
+    "file": "apps/app-2026-08-04-payoff-pilot.html",
+    "name": "Payoff Pilot",
+    "emoji": "\ud83e\udded",
+    "date": "2026-08-04",
+    "blurb": "List your debts and instantly compare snowball vs. avalanche payoff plans \u2014 debt-free date, total interest, and a payoff curve, side by side."
   }
 ]
