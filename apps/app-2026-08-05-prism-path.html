@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Prism Path</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:radial-gradient(1200px 800px at 50% -10%, #17224a 0%, #0a0e1c 55%, #05070f 100%);
+    color:#e8eeff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    display:flex;justify-content:center;
+    padding:14px 12px 28px;
+  }
+  .wrap{width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px}
+  header{text-align:center}
+  h1{
+    margin:0;font-size:27px;font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(90deg,#ff5a7a,#ffd84d,#4dff9d,#4ad4ff,#b07bff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{margin-top:3px;font-size:13px;color:#8ea0c8;letter-spacing:.3px}
+  .sub b{color:#dce6ff;font-weight:600}
+  .bar{display:flex;align-items:center;gap:8px}
+  .chip{
+    flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+    border-radius:11px;padding:8px 6px;text-align:center;font-size:12.5px;color:#b9c7e8;
+    font-variant-numeric:tabular-nums;
+  }
+  .chip b{color:#fff;font-weight:700}
+  .chip.over b{color:#ff7a8f}
+  button{
+    font:inherit;font-size:12.5px;font-weight:600;color:#cfdcff;cursor:pointer;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:11px;padding:9px 13px;transition:.15s;
+  }
+  button:hover{background:rgba(255,255,255,.12);color:#fff}
+  button:active{transform:scale(.95)}
+  button:disabled{opacity:.35;cursor:default}
+  .stage{position:relative;width:100%}
+  canvas{width:100%;display:block;border-radius:16px;touch-action:manipulation}
+  .veil{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,18,.78);border-radius:16px;backdrop-filter:blur(3px);
+    flex-direction:column;gap:14px;text-align:center;padding:20px;
+  }
+  .veil.show{display:flex;animation:pop .35s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+  .veil h2{margin:0;font-size:26px;font-weight:800;color:#fff;letter-spacing:.5px}
+  .veil p{margin:0;font-size:13.5px;color:#a4b5da;max-width:280px;line-height:1.5}
+  .veil button{background:linear-gradient(90deg,#4ad4ff,#b07bff);border:none;color:#08101f;font-weight:800;padding:12px 26px;font-size:14px;border-radius:12px}
+  .tip{font-size:12px;color:#7386ab;text-align:center;line-height:1.55}
+  .dots{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .dot{
+    width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#7d8fb8;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:.15s;
+  }
+  .dot.done{color:#0a1020;background:linear-gradient(140deg,#4dffa8,#2fd6ff);border-color:transparent}
+  .dot.cur{outline:2px solid #ffd84d;outline-offset:1px;color:#fff}
+  .dot.lock{opacity:.35;cursor:default}
+  .legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#6f81a8}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Prism Path</h1>
+    <div class="sub">Level <b id="lvNum">1</b> &middot; <b id="lvName">First Light</b></div>
+  </header>
+
+  <div class="bar">
+    <div class="chip" id="chipMirrors">Mirrors <b>0/1</b></div>
+    <div class="chip" id="chipTargets">Lit <b>0/1</b></div>
+    <button id="btnHint">Hint</button>
+    <button id="btnReset">Reset</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="cv"></canvas>
+    <div class="veil" id="veil">
+      <h2 id="veilTitle">Solved!</h2>
+      <p id="veilText"></p>
+      <button id="btnNext">Next level</button>
+    </div>
+  </div>
+
+  <div class="tip">Tap an empty cell to drop a mirror &mdash; tap again to flip it, once more to remove.<br>Each target must receive <b>exactly</b> its colour. Red + green = yellow.</div>
+
+  <div class="dots" id="dots"></div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:#ff2f52"></i>Red</span>
+    <span><i class="sw" style="background:#2dff8f"></i>Green</span>
+    <span><i class="sw" style="background:#3aa5ff"></i>Blue</span>
+    <span><i class="sw" style="background:#ffe14d"></i>R+G</span>
+    <span><i class="sw" style="background:#ff5ce6"></i>R+B</span>
+    <span><i class="sw" style="background:#4df2ff"></i>G+B</span>
+    <span><i class="sw" style="background:#fff"></i>All</span>
+  </div>
+</div>
+
+<script>
+/* ============================ ENGINE (pure) ============================ */
+var DX=[0,1,0,-1], DY=[-1,0,1,0];           // 0 up, 1 right, 2 down, 3 left
+var REF={'/':[1,0,3,2], '\\':[3,2,1,0]};    // reflection tables
+var R=1,G=2,B=4,W=7;
+
+var LEVELS=[
+  { name:"First Light", w:7, h:7, budget:1,
+    sources:[{x:0,y:3,dir:1,color:R}],
+    targets:[{x:3,y:0,color:R}],
+    sol:[[3,3,'/']] },
+
+  { name:"Detour", w:7, h:7, budget:3,
+    walls:[[3,3],[3,4]],
+    sources:[{x:0,y:3,dir:1,color:R}],
+    targets:[{x:6,y:3,color:R}],
+    sol:[[2,3,'/'],[2,1,'/'],[6,1,'\\']] },
+
+  { name:"Warm Blend", w:8, h:8, budget:2,
+    walls:[[3,4],[4,4]],
+    sources:[{x:0,y:1,dir:1,color:R},{x:0,y:6,dir:1,color:G}],
+    targets:[{x:7,y:3,color:R|G}],
+    sol:[[7,1,'\\'],[7,6,'/']] },
+
+  { name:"Split Decision", w:7, h:7, budget:3,
+    sources:[{x:3,y:6,dir:0,color:B}],
+    targets:[{x:0,y:0,color:B},{x:6,y:0,color:B}],
+    fixed:[{x:3,y:3,t:'splitter',o:'/'}],
+    sol:[[3,1,'\\'],[0,1,'\\'],[6,3,'/']] },
+
+  { name:"Crossfire", w:8, h:8, budget:4,
+    sources:[{x:0,y:0,dir:2,color:R},{x:7,y:0,dir:2,color:B}],
+    targets:[{x:7,y:7,color:R},{x:1,y:7,color:B}],
+    sol:[[0,3,'\\'],[7,3,'\\'],[7,1,'/'],[1,1,'/']] },
+
+  { name:"Filtered", w:7, h:7, budget:2,
+    sources:[{x:0,y:3,dir:1,color:W}],
+    targets:[{x:6,y:0,color:R},{x:6,y:6,color:B}],
+    fixed:[{x:3,y:3,t:'splitter',o:'\\'},{x:5,y:3,t:'filter',color:R},{x:3,y:5,t:'filter',color:B}],
+    sol:[[6,3,'/'],[3,6,'\\']] },
+
+  { name:"Spectrum", w:8, h:8, budget:3,
+    sources:[{x:0,y:4,dir:1,color:W}],
+    targets:[{x:0,y:0,color:R},{x:7,y:7,color:G},{x:7,y:0,color:B}],
+    fixed:[{x:2,y:4,t:'splitter',o:'/'},{x:5,y:4,t:'splitter',o:'\\'},
+           {x:2,y:2,t:'filter',color:R},{x:5,y:6,t:'filter',color:G},{x:6,y:4,t:'filter',color:B}],
+    sol:[[2,0,'\\'],[5,7,'\\'],[7,4,'/']] },
+
+  { name:"Convergence", w:8, h:8, budget:10,
+    walls:[[0,6],[4,3],[7,5]],
+    sources:[{x:0,y:0,dir:2,color:R},{x:4,y:0,dir:2,color:B},{x:7,y:0,dir:2,color:G}],
+    targets:[{x:4,y:7,color:W}],
+    sol:[[0,5,'\\'],[1,5,'\\'],[1,7,'\\'],
+         [4,2,'\\'],[5,2,'\\'],[5,5,'/'],[4,5,'/'],
+         [7,4,'/'],[6,4,'/'],[6,7,'/']] }
+];
+
+function buildCells(lv, placed){
+  var c={}, i, k;
+  var ws=lv.walls||[];
+  for(i=0;i<ws.length;i++) c[ws[i][0]+','+ws[i][1]]={t:'wall'};
+  var fx=lv.fixed||[];
+  for(i=0;i<fx.length;i++) c[fx[i].x+','+fx[i].y]={t:fx[i].t,o:fx[i].o,color:fx[i].color};
+  for(i=0;i<lv.sources.length;i++){var s=lv.sources[i];c[s.x+','+s.y]={t:'source',dir:s.dir,color:s.color};}
+  for(i=0;i<lv.targets.length;i++){var t=lv.targets[i];c[t.x+','+t.y]={t:'target',idx:i,need:t.color};}
+  for(k in placed){ if(placed[k] && !c[k]) c[k]={t:'mirror',o:placed[k]}; }
+  return c;
+}
+
+function simulate(lv, placed){
+  var cells=buildCells(lv,placed);
+  var got=lv.targets.map(function(){return 0;});
+  var segs=[], seen={}, sset={};
+  var stack=[], i;
+  for(i=0;i<lv.sources.length;i++){
+    var s=lv.sources[i];
+    stack.push({x:s.x,y:s.y,d:s.dir,c:s.color});
+  }
+  var guard=0;
+  function push(x1,y1,x2,y2,c){
+    var k=x1+'|'+y1+'|'+x2+'|'+y2+'|'+c;
+    var k2=x2+'|'+y2+'|'+x1+'|'+y1+'|'+c;
+    if(sset[k]||sset[k2]) return;
+    sset[k]=1; segs.push({x1:x1,y1:y1,x2:x2,y2:y2,c:c});
+  }
+  while(stack.length){
+    var beam=stack.pop();
+    var x=beam.x,y=beam.y,d=beam.d,c=beam.c;
+    while(true){
+      if(++guard>40000) break;
+      var nx=x+DX[d], ny=y+DY[d];
+      if(nx<0||ny<0||nx>=lv.w||ny>=lv.h){ push(x,y,x+DX[d]*0.5,y+DY[d]*0.5,c); break; }
+      var cell=cells[nx+','+ny];
+      if(cell && (cell.t==='wall'||cell.t==='source')){ push(x,y,x+DX[d]*0.42,y+DY[d]*0.42,c); break; }
+      var key=nx+','+ny+','+d+','+c;
+      if(seen[key]){ push(x,y,nx,ny,c); break; }
+      seen[key]=1;
+      push(x,y,nx,ny,c);
+      x=nx; y=ny;
+      if(!cell) continue;
+      if(cell.t==='target'){ got[cell.idx]|=c; continue; }
+      if(cell.t==='mirror'){ d=REF[cell.o][d]; continue; }
+      if(cell.t==='splitter'){ stack.push({x:x,y:y,d:REF[cell.o][d],c:c}); continue; }
+      if(cell.t==='filter'){ c=c&cell.color; if(!c) break; continue; }
+    }
+  }
+  var solved=true;
+  for(i=0;i<lv.targets.length;i++) if(got[i]!==lv.targets[i].color) solved=false;
+  return {segs:segs, got:got, solved:solved, cells:cells};
+}
+
+if(typeof module!=='undefined' && module.exports){ module.exports={LEVELS:LEVELS,simulate:simulate}; }
+
+/* ============================ UI ============================ */
+function boot(){
+  var COL={1:'#ff2f52',2:'#2dff8f',4:'#3aa5ff',3:'#ffe14d',5:'#ff5ce6',6:'#4df2ff',7:'#ffffff'};
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var veil=document.getElementById('veil');
+  var idx=0, placed={}, unlocked=1, sim=null, cell=48, pad=0, t0=performance.now(), sparks=[], solvedAt=0;
+
+  function lv(){ return LEVELS[idx]; }
+  function used(){ var n=0; for(var k in placed) if(placed[k]) n++; return n; }
+
+  function layout(){
+    var L=lv();
+    var wCss=cv.parentNode.clientWidth;
+    cell=Math.floor(wCss/L.w);
+    var hCss=cell*L.h;
+    var dpr=Math.min(window.devicePixelRatio||1,2.5);
+    cv.style.height=hCss+'px';
+    cv.width=Math.round(cell*L.w*dpr); cv.height=Math.round(hCss*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function cx(x){ return x*cell+cell/2; }
+
+  function recalc(){
+    sim=simulate(lv(),placed);
+    var L=lv();
+    var lit=0; for(var i=0;i<L.targets.length;i++) if(sim.got[i]===L.targets[i].color) lit++;
+    var mc=document.getElementById('chipMirrors');
+    mc.innerHTML='Mirrors <b>'+used()+'/'+L.budget+'</b>';
+    mc.className='chip'+(used()>=L.budget?' over':'');
+    document.getElementById('chipTargets').innerHTML='Lit <b>'+lit+'/'+L.targets.length+'</b>';
+    if(sim.solved && !veil.classList.contains('show')){
+      solvedAt=performance.now();
+      burst();
+      setTimeout(showWin,620);
+    }
+  }
+
+  function burst(){
+    var L=lv();
+    for(var i=0;i<L.targets.length;i++){
+      var t=L.targets[i];
+      for(var j=0;j<26;j++){
+        var a=Math.random()*Math.PI*2, sp=1+Math.random()*3.4;
+        sparks.push({x:cx(t.x),y:cx(t.y),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,col:COL[t.color]});
+      }
+    }
+  }
+
+  function showWin(){
+    var last=idx===LEVELS.length-1;
+    document.getElementById('veilTitle').textContent=last?'All levels cleared!':'Solved!';
+    document.getElementById('veilText').textContent=last
+      ? 'You bent light through every puzzle. Replay any level from the row below.'
+      : '"'+lv().name+'" complete with '+used()+' mirror'+(used()===1?'':'s')+'.';
+    document.getElementById('btnNext').textContent=last?'Replay level 1':'Next level';
+    veil.classList.add('show');
+    if(idx+1>unlocked) unlocked=idx+1;
+    if(unlocked>LEVELS.length-1) unlocked=LEVELS.length-1;
+    drawDots();
+  }
+
+  function load(i){
+    idx=i; placed={}; veil.classList.remove('show'); sparks=[];
+    document.getElementById('lvNum').textContent=(i+1);
+    document.getElementById('lvName').textContent=lv().name;
+    layout(); recalc(); drawDots();
+  }
+
+  function drawDots(){
+    var d=document.getElementById('dots'); d.innerHTML='';
+    for(var i=0;i<LEVELS.length;i++){
+      (function(i){
+        var e=document.createElement('div');
+        e.className='dot'+(i<unlocked?' done':'')+(i===idx?' cur':'')+(i>unlocked?' lock':'');
+        e.textContent=i+1;
+        if(i<=unlocked) e.onclick=function(){ load(i); };
+        d.appendChild(e);
+      })(i);
+    }
+  }
+
+  /* ---------- drawing ---------- */
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+  }
+
+  function draw(now){
+    var L=lv(), i, k;
+    var Wp=cell*L.w, Hp=cell*L.h;
+    ctx.clearRect(0,0,Wp,Hp);
+
+    // board
+    var bg=ctx.createLinearGradient(0,0,Wp,Hp);
+    bg.addColorStop(0,'#0d1428'); bg.addColorStop(1,'#0a1020');
+    ctx.fillStyle=bg; rr(0,0,Wp,Hp,16); ctx.fill();
+
+    // grid cells
+    for(var y=0;y<L.h;y++) for(var x=0;x<L.w;x++){
+      ctx.fillStyle='rgba(255,255,255,.022)';
+      rr(x*cell+3,y*cell+3,cell-6,cell-6,7); ctx.fill();
+    }
+
+    // beams (additive)
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    ctx.lineCap='round';
+    var pulse=0.72+0.28*Math.sin(now/380);
+    for(var pass=0;pass<2;pass++){
+      for(i=0;i<sim.segs.length;i++){
+        var s=sim.segs[i], col=COL[s.c]||'#fff';
+        ctx.strokeStyle=col;
+        if(pass===0){ ctx.globalAlpha=0.20*pulse; ctx.lineWidth=cell*0.44; }
+        else { ctx.globalAlpha=0.95; ctx.lineWidth=cell*0.115; }
+        ctx.beginPath(); ctx.moveTo(cx(s.x1),cx(s.y1)); ctx.lineTo(cx(s.x2),cx(s.y2)); ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    var cells=sim.cells;
+    // elements
+    for(k in cells){
+      var p=k.split(','), gx=+p[0], gy=+p[1], c=cells[k];
+      var X=gx*cell, Y=gy*cell, M=cx(gx), N=cx(gy);
+      if(c.t==='wall'){
+        ctx.fillStyle='#1d2942'; rr(X+4,Y+4,cell-8,cell-8,8); ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1; ctx.stroke();
+      }
+      else if(c.t==='mirror'){
+        var g=ctx.createLinearGradient(X,Y,X+cell,Y+cell);
+        g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#9fb6e0'); g.addColorStop(1,'#5f7099');
+        ctx.strokeStyle=g; ctx.lineWidth=cell*0.135; ctx.lineCap='round';
+        ctx.shadowColor='rgba(180,215,255,.55)'; ctx.shadowBlur=10;
+        ctx.beginPath();
+        if(c.o==='/'){ ctx.moveTo(X+cell*0.2,Y+cell*0.8); ctx.lineTo(X+cell*0.8,Y+cell*0.2); }
+        else { ctx.moveTo(X+cell*0.2,Y+cell*0.2); ctx.lineTo(X+cell*0.8,Y+cell*0.8); }
+        ctx.stroke(); ctx.shadowBlur=0;
+      }
+      else if(c.t==='splitter'){
+        ctx.strokeStyle='rgba(215,232,255,.75)'; ctx.lineWidth=cell*0.09;
+        ctx.setLineDash([cell*0.10,cell*0.09]); ctx.lineCap='round';
+        ctx.beginPath();
+        if(c.o==='/'){ ctx.moveTo(X+cell*0.18,Y+cell*0.82); ctx.lineTo(X+cell*0.82,Y+cell*0.18); }
+        else { ctx.moveTo(X+cell*0.18,Y+cell*0.18); ctx.lineTo(X+cell*0.82,Y+cell*0.82); }
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle='rgba(255,255,255,.85)';
+        ctx.beginPath(); ctx.arc(M,N,cell*0.055,0,7); ctx.fill();
+      }
+      else if(c.t==='filter'){
+        var fc=COL[c.color];
+        ctx.beginPath();
+        for(i=0;i<6;i++){ var a=Math.PI/6+i*Math.PI/3, rx=M+Math.cos(a)*cell*0.32, ry=N+Math.sin(a)*cell*0.32;
+          if(i===0) ctx.moveTo(rx,ry); else ctx.lineTo(rx,ry); }
+        ctx.closePath();
+        ctx.fillStyle=fc; ctx.globalAlpha=0.18; ctx.fill(); ctx.globalAlpha=1;
+        ctx.strokeStyle=fc; ctx.lineWidth=cell*0.055; ctx.stroke();
+        ctx.fillStyle=fc; ctx.globalAlpha=.75;
+        ctx.beginPath(); ctx.arc(M,N,cell*0.075,0,7); ctx.fill(); ctx.globalAlpha=1;
+      }
+      else if(c.t==='source'){
+        ctx.fillStyle='#141d33'; rr(X+cell*0.13,Y+cell*0.13,cell*0.74,cell*0.74,8); ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1.2; ctx.stroke();
+        var sc=COL[c.color];
+        ctx.fillStyle=sc; ctx.shadowColor=sc; ctx.shadowBlur=16;
+        rr(X+cell*0.29,Y+cell*0.29,cell*0.42,cell*0.42,5); ctx.fill(); ctx.shadowBlur=0;
+        // nozzle
+        ctx.save(); ctx.translate(M,N); ctx.rotate(c.dir*Math.PI/2); // 0=up baseline
+        ctx.fillStyle=sc; ctx.globalAlpha=.9;
+        ctx.beginPath(); ctx.moveTo(0,-cell*0.44); ctx.lineTo(cell*0.12,-cell*0.27); ctx.lineTo(-cell*0.12,-cell*0.27);
+        ctx.closePath(); ctx.fill(); ctx.restore(); ctx.globalAlpha=1;
+      }
+      else if(c.t==='target'){
+        var need=c.need, gotv=sim.got[c.idx], ok=gotv===need, tc=COL[need];
+        var pr=ok?(1+0.06*Math.sin(now/220)):1;
+        ctx.save(); ctx.translate(M,N); ctx.scale(pr,pr);
+        if(ok){ ctx.shadowColor=tc; ctx.shadowBlur=22; }
+        ctx.beginPath(); ctx.arc(0,0,cell*0.30,0,7);
+        ctx.strokeStyle=tc; ctx.lineWidth=cell*0.075; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0,0,cell*0.19,0,7);
+        ctx.fillStyle=tc; ctx.globalAlpha=ok?1:0.16; ctx.fill();
+        ctx.globalAlpha=1; ctx.shadowBlur=0;
+        if(!ok && gotv!==0){
+          ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=cell*0.05;
+          ctx.setLineDash([cell*0.07,cell*0.07]);
+          ctx.beginPath(); ctx.arc(0,0,cell*0.40,0,7); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.restore();
+      }
+    }
+
+    // sparks
+    for(i=sparks.length-1;i>=0;i--){
+      var sp=sparks[i];
+      sp.x+=sp.vx; sp.y+=sp.vy; sp.vy+=0.09; sp.life-=0.018;
+      if(sp.life<=0){ sparks.splice(i,1); continue; }
+      ctx.globalAlpha=Math.max(sp.life,0); ctx.fillStyle=sp.col;
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,cell*0.045,0,7); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    requestAnimationFrame(draw);
+  }
+
+  /* ---------- interaction ---------- */
+  function tap(ev){
+    if(veil.classList.contains('show')) return;
+    var r=cv.getBoundingClientRect();
+    var pt=(ev.touches&&ev.touches[0])||ev;
+    var gx=Math.floor((pt.clientX-r.left)/cell), gy=Math.floor((pt.clientY-r.top)/cell);
+    var L=lv();
+    if(gx<0||gy<0||gx>=L.w||gy>=L.h) return;
+    var k=gx+','+gy;
+    var base=buildCells(L,{});
+    if(base[k]) return;                       // occupied by a fixed element
+    var cur=placed[k];
+    if(!cur){
+      if(used()>=L.budget){ flash(); return; }
+      placed[k]='/';
+    } else if(cur==='/'){ placed[k]='\\'; }
+    else { delete placed[k]; }
+    recalc();
+  }
+  function flash(){
+    var c=document.getElementById('chipMirrors');
+    c.style.transition='none'; c.style.background='rgba(255,90,120,.3)';
+    setTimeout(function(){ c.style.transition='.4s'; c.style.background=''; },90);
+  }
+
+  cv.addEventListener('click',tap);
+  document.getElementById('btnReset').onclick=function(){ placed={}; sparks=[]; veil.classList.remove('show'); recalc(); };
+  document.getElementById('btnHint').onclick=function(){
+    var L=lv(), s=L.sol, i, k;
+    var want={}; for(i=0;i<s.length;i++) want[s[i][0]+','+s[i][1]]=s[i][2];
+    for(i=0;i<s.length;i++){
+      k=s[i][0]+','+s[i][1];
+      if(placed[k]!==s[i][2]){
+        if(!placed[k] && used()>=L.budget){
+          for(var j in placed){ if(placed[j] && want[j]===undefined){ delete placed[j]; break; } }
+        }
+        if(!placed[k] && used()>=L.budget){ flash(); return; }
+        placed[k]=s[i][2]; recalc(); return;
+      }
+    }
+  };
+  document.getElementById('btnNext').onclick=function(){
+    load(idx===LEVELS.length-1?0:idx+1);
+  };
+  window.addEventListener('resize',function(){ layout(); });
+
+  load(0);
+  requestAnimationFrame(draw);
+}
+
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+}
+</script>
+</body>
+</html>
