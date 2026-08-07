@@ -84,10 +84,10 @@
     "blurb": "A neon light-routing puzzle: flip mirrors and beam splitters to steer coloured lasers into every ring — mix red and green to make yellow, all three for white."
   },
   {
-    "file": "apps/app-2026-08-07-beamline.html",
-    "name": "Beamline",
-    "emoji": "🔦",
+    "file": "apps/app-2026-08-07-batchwise.html",
+    "name": "Batchwise",
+    "emoji": "🥣",
     "date": "2026-08-07",
-    "blurb": "Flip neon mirrors to bend a laser through every crystal — endless, always-solvable puzzles that grow with you."
+    "blurb": "Paste any recipe and resize it by servings or pan size — quantities come back as fractions you can actually measure, with one-tap cups↔grams."
   }
 ]
