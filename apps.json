@@ -89,5 +89,12 @@
     "emoji": "🥣",
     "date": "2026-08-07",
     "blurb": "Paste any recipe and resize it by servings or pan size — quantities come back as fractions you can actually measure, with one-tap cups↔grams."
+  },
+  {
+    "file": "apps/app-2026-08-08-lumen.html",
+    "name": "Lumen",
+    "emoji": "🔦",
+    "date": "2026-08-08",
+    "blurb": "Flip mirrors and beam splitters to route coloured light across a grid — 10 hand-built puzzles where red plus green really does make yellow."
   }
 ]
