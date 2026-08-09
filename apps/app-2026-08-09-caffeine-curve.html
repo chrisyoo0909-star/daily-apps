@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caffeine Curve — when will it wear off?</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root{
+    --bg:#0c0f14;
+    --panel:#151a22;
+    --panel-2:#1b212b;
+    --line:#2a323f;
+    --txt:#e9edf4;
+    --dim:#93a0b4;
+    --amber:#f5a524;
+    --amber-2:#ff7a45;
+    --teal:#2dd4bf;
+    --indigo:#7c8cff;
+    --red:#ff5f6d;
+    --green:#42d392;
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 620px at 12% -8%, #241a10 0%, transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, #131b2c 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding:22px 16px 56px;
+  }
+  .wrap{max-width:1060px;margin:0 auto;}
+  header{margin-bottom:20px;}
+  h1{
+    margin:0;font-size:27px;letter-spacing:-.6px;font-weight:750;
+    display:flex;align-items:center;gap:10px;
+  }
+  h1 .mug{
+    font-size:26px;filter:drop-shadow(0 3px 10px rgba(245,165,36,.45));
+  }
+  .sub{color:var(--dim);margin-top:6px;font-size:14px;max-width:62ch;}
+
+  .grid{display:grid;grid-template-columns:1fr;gap:16px;}
+  @media(min-width:900px){ .grid{grid-template-columns:minmax(0,1fr) 350px;align-items:start;} }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 12px 30px rgba(0,0,0,.32);
+  }
+  .card + .card{margin-top:16px;}
+  .card h2{
+    margin:0 0 12px;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--dim);font-weight:700;
+  }
+
+  /* chart */
+  .chartbox{position:relative;}
+  canvas{display:block;width:100%;height:280px;touch-action:none;border-radius:10px;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--dim);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .sw{width:16px;height:3px;border-radius:2px;display:inline-block;}
+  .sw.dash{background:repeating-linear-gradient(90deg,var(--teal) 0 4px,transparent 4px 8px);}
+  .sw.band{height:10px;width:14px;border-radius:3px;background:rgba(124,140,255,.28);border:1px solid rgba(124,140,255,.5);}
+
+  /* insight tiles */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-top:14px;}
+  .tile{
+    background:#111721;border:1px solid var(--line);border-radius:12px;padding:11px 12px;
+  }
+  .tile .k{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);font-weight:700;}
+  .tile .v{font-size:19px;font-weight:730;margin-top:3px;letter-spacing:-.3px;}
+  .tile .n{font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .v.good{color:var(--green);} .v.warn{color:var(--amber);} .v.bad{color:var(--red);}
+
+  .verdict{
+    margin-top:14px;border-radius:12px;padding:12px 14px;font-size:14px;
+    border:1px solid var(--line);background:#111721;display:flex;gap:10px;align-items:flex-start;
+  }
+  .verdict .ico{font-size:19px;line-height:1.1;}
+  .verdict b{font-weight:700;}
+
+  /* add drink */
+  .presets{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{
+    background:#111721;border:1px solid var(--line);color:var(--txt);
+    border-radius:999px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:.15s;font-family:inherit;
+  }
+  .chip:hover{border-color:var(--amber);transform:translateY(-1px);}
+  .chip.on{background:rgba(245,165,36,.16);border-color:var(--amber);color:#ffd591;}
+  .chip .mg{color:var(--dim);font-size:11px;}
+  .chip.on .mg{color:#ffd591;opacity:.8;}
+
+  .row{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;}
+  .fld{display:flex;flex-direction:column;gap:5px;flex:1 1 108px;min-width:0;}
+  .fld label{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);font-weight:700;}
+  input[type=number], input[type=time], input[type=text], select{
+    background:#0d121a;border:1px solid var(--line);border-radius:10px;color:var(--txt);
+    padding:9px 10px;font:inherit;font-size:14px;width:100%;min-width:0;
+    -webkit-appearance:none;appearance:none;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,165,36,.14);}
+  select{background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px;}
+
+  .btn{
+    background:linear-gradient(180deg,var(--amber) 0%,#e08b12 100%);
+    color:#20160a;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:750;
+    cursor:pointer;white-space:nowrap;transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn.ghost{background:#111721;border:1px solid var(--line);color:var(--dim);font-weight:600;}
+  .btn.ghost:hover{color:var(--txt);border-color:var(--amber);}
+  .nudge{display:flex;gap:5px;}
+  .nudge button{
+    background:#111721;border:1px solid var(--line);color:var(--dim);border-radius:8px;
+    padding:8px 9px;font:inherit;font-size:12px;cursor:pointer;
+  }
+  .nudge button:hover{color:var(--txt);border-color:var(--amber);}
+
+  /* list */
+  ul.drinks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  ul.drinks li{
+    display:flex;align-items:center;gap:10px;background:#111721;border:1px solid var(--line);
+    border-radius:11px;padding:9px 11px;
+  }
+  .d-emoji{font-size:19px;}
+  .d-main{flex:1;min-width:0;}
+  .d-name{font-size:14px;font-weight:620;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .d-meta{font-size:11.5px;color:var(--dim);}
+  .d-mg{font-size:13px;font-weight:700;color:var(--amber);white-space:nowrap;}
+  .del{background:none;border:0;color:#5c6779;font-size:17px;cursor:pointer;padding:2px 4px;line-height:1;}
+  .del:hover{color:var(--red);}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:14px 6px;}
+
+  .totalbar{margin-top:12px;}
+  .tb-track{height:8px;border-radius:5px;background:#0d121a;border:1px solid var(--line);overflow:hidden;position:relative;}
+  .tb-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--amber-2));border-radius:5px 0 0 5px;transition:width .3s;}
+  .tb-lab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-top:6px;}
+
+  /* sliders */
+  .slider-row{margin-top:14px;}
+  .slider-row:first-child{margin-top:0;}
+  .sl-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:7px;}
+  .sl-head .lab{color:var(--dim);font-weight:600;}
+  .sl-head .val{font-weight:730;font-size:13.5px;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:4px;
+    background:linear-gradient(90deg,var(--amber),#3a4351);outline:none;margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;
+    border:3px solid var(--amber);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--amber);cursor:pointer;
+  }
+  .hint{font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.45;}
+  .foot{margin-top:20px;font-size:11.5px;color:#6b7789;text-align:center;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="mug">☕</span> Caffeine Curve</h1>
+    <div class="sub">Log what you drank and when. See how much caffeine is still in your bloodstream tonight — and the latest hour you can have one more cup without wrecking your sleep.</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div>
+      <div class="card chartbox">
+        <h2>Caffeine in your system</h2>
+        <canvas id="cv"></canvas>
+        <div class="legend">
+          <span><i class="sw" style="background:linear-gradient(90deg,#f5a524,#ff7a45)"></i> caffeine level</span>
+          <span><i class="sw dash"></i> sleep-safe limit</span>
+          <span><i class="sw band"></i> sleep window</span>
+        </div>
+
+        <div class="tiles" id="tiles"></div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+
+      <div class="card">
+        <h2>Add a drink</h2>
+        <div class="presets" id="presets"></div>
+        <div class="row">
+          <div class="fld" style="flex:2 1 150px">
+            <label for="dname">Name</label>
+            <input type="text" id="dname" value="Brewed coffee" maxlength="28">
+          </div>
+          <div class="fld" style="flex:0 1 92px">
+            <label for="dmg">Caffeine</label>
+            <input type="number" id="dmg" value="95" min="0" max="1000" step="1">
+          </div>
+          <div class="fld" style="flex:0 1 118px">
+            <label for="dtime">Time</label>
+            <input type="time" id="dtime">
+          </div>
+          <div class="nudge">
+            <button type="button" data-nudge="-60">−1h</button>
+            <button type="button" data-nudge="-15">−15m</button>
+            <button type="button" data-nudge="15">+15m</button>
+          </div>
+          <button class="btn" id="addBtn">Add</button>
+        </div>
+        <div class="hint">Tip: tap a preset to fill the fields, tweak the time, then hit Add. Numbers are typical values — adjust if you know yours.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="card">
+        <h2>Today's log</h2>
+        <ul class="drinks" id="list"></ul>
+        <div class="totalbar">
+          <div class="tb-track"><div class="tb-fill" id="tbFill" style="width:0%"></div></div>
+          <div class="tb-lab"><span id="tbTxt">0 mg today</span><span>400 mg guideline</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Your settings</h2>
+        <div class="slider-row">
+          <div class="sl-head"><span class="lab">Bedtime</span></div>
+          <input type="time" id="bedtime" value="23:00">
+          <div class="hint">The shaded band is your 8-hour sleep window.</div>
+        </div>
+        <div class="slider-row">
+          <div class="sl-head"><span class="lab">Caffeine half-life</span><span class="val" id="hlVal">5.0 h</span></div>
+          <input type="range" id="hl" min="3" max="8" step="0.5" value="5">
+          <div class="hint" id="hlNote">Average adult. Faster if you're a heavy coffee drinker or a smoker; slower on hormonal birth control, when pregnant, or with liver conditions.</div>
+        </div>
+        <div class="slider-row">
+          <div class="sl-head"><span class="lab">Sleep-safe limit</span><span class="val" id="thVal">50 mg</span></div>
+          <input type="range" id="th" min="10" max="150" step="5" value="50">
+          <div class="hint">Roughly the level below which caffeine stops measurably disturbing most people's sleep. Lower it if you're sensitive.</div>
+        </div>
+        <div class="slider-row">
+          <div class="sl-head"><span class="lab">"One more cup" size</span><span class="val" id="cupVal">95 mg</span></div>
+          <input type="range" id="cup" min="30" max="300" step="5" value="95">
+          <div class="hint">Used for the last-call estimate below the chart.</div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn ghost" id="clearBtn" style="flex:1">Clear the log</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Model: one-compartment pharmacokinetics (~20&nbsp;min absorption half-life, adjustable elimination half-life). A rough estimate for planning, not medical advice.
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- constants ---------- */
+  var HOUR = 3600000;
+  var KA = Math.LN2 / (20/60);      // absorption rate, t½ ≈ 20 min
+  var SLEEP_HOURS = 8;
+  var TRACE_FREE = 5;               // mg considered "basically gone"
+
+  var PRESETS = [
+    {e:"☕", n:"Brewed coffee",   mg:95,  note:"8 oz"},
+    {e:"🫖", n:"Big cup / mug",   mg:190, note:"16 oz"},
+    {e:"⚡", n:"Espresso shot",   mg:64,  note:"1 oz"},
+    {e:"🥛", n:"Latte",           mg:77,  note:"12 oz"},
+    {e:"🧊", n:"Cold brew",       mg:205, note:"12 oz"},
+    {e:"🍵", n:"Black tea",       mg:47,  note:"8 oz"},
+    {e:"🌿", n:"Green tea",       mg:28,  note:"8 oz"},
+    {e:"🍡", n:"Matcha",          mg:70,  note:"8 oz"},
+    {e:"🥤", n:"Energy drink",    mg:80,  note:"8.4 oz"},
+    {e:"😈", n:"Big energy can",  mg:160, note:"16 oz"},
+    {e:"🥫", n:"Cola",            mg:34,  note:"12 oz"},
+    {e:"🧴", n:"Diet cola",       mg:46,  note:"12 oz"},
+    {e:"🍫", n:"Dark chocolate",  mg:24,  note:"1 oz"},
+    {e:"💪", n:"Pre-workout",     mg:200, note:"1 scoop"},
+    {e:"💊", n:"Caffeine pill",   mg:200, note:"tablet"},
+    {e:"🚫", n:"Decaf coffee",    mg:3,   note:"8 oz"}
+  ];
+
+  /* ---------- state ---------- */
+  var drinks = [];      // {id, e, n, mg, t (epoch ms)}
+  var uid = 1;
+  var halfLife = 5, threshold = 50, cupSize = 95;
+  var scrubX = null;
+
+  /* ---------- helpers ---------- */
+  function $(id){ return document.getElementById(id); }
+  function now(){ return Date.now(); }
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+  function fmtTime(ms){
+    return new Date(ms).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  }
+  function fmtTimeShort(ms){
+    var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
+    var ap = h < 12 ? "a" : "p", hh = h % 12; if(hh === 0) hh = 12;
+    return m === 0 ? hh + ap : hh + ":" + (m<10?"0":"") + m + ap;
+  }
+  function fmtDur(hours){
+    if(hours < 0) hours = 0;
+    var h = Math.floor(hours), m = Math.round((hours - h) * 60);
+    if(m === 60){ h++; m = 0; }
+    if(h === 0) return m + " min";
+    if(m === 0) return h + " hr";
+    return h + " hr " + m + " min";
+  }
+  function dayLabel(ms){
+    var d = new Date(ms), t = new Date();
+    var dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var td = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    var diff = Math.round((dd - td) / 86400000);
+    if(diff === 0) return "";
+    if(diff === 1) return " tomorrow";
+    if(diff === -1) return " yesterday";
+    return "";
+  }
+
+  /* Amount of caffeine in the body from one dose, `h` hours after intake.
+     Bateman one-compartment model with first-order absorption. */
+  function doseAt(mg, h){
+    if(h <= 0) return 0;
+    var ke = Math.LN2 / halfLife;
+    if(Math.abs(KA - ke) < 1e-9) return mg * ke * h * Math.exp(-ke * h);
+    return mg * (KA/(KA - ke)) * (Math.exp(-ke*h) - Math.exp(-KA*h));
+  }
+  function levelAt(ms, list){
+    var arr = list || drinks, s = 0;
+    for(var i=0;i<arr.length;i++) s += doseAt(arr[i].mg, (ms - arr[i].t)/HOUR);
+    return s;
+  }
+
+  function bedtimeMs(){
+    var v = $("bedtime").value || "23:00";
+    var p = v.split(":");
+    var d = new Date(); d.setHours(+p[0], +p[1], 0, 0);
+    if(d.getTime() <= now()) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+
+  /* time when level first falls below `target` after the last peak */
+  function fallsBelow(target, from){
+    var t = from, end = from + 48*HOUR;
+    if(levelAt(t) < target){
+      // make sure it stays below (nothing pending in absorption phase)
+      var rising = false;
+      for(var k = t; k < t + 3*HOUR; k += 5*60000){ if(levelAt(k) >= target){ rising = true; break; } }
+      if(!rising) return t;
+    }
+    var step = 5*60000;
+    for(t = from; t <= end; t += step){
+      if(levelAt(t) < target){
+        // confirm it doesn't climb back over within 3h
+        var ok = true;
+        for(var j = t; j < t + 3*HOUR; j += step){ if(levelAt(j) >= target){ ok = false; break; } }
+        if(ok) return t;
+      }
+    }
+    return null;
+  }
+
+  /* peak level & time over the visible horizon */
+  function findPeak(t0, t1){
+    var best = {v:0, t:t0}, step = 3*60000;
+    for(var t=t0; t<=t1; t+=step){
+      var v = levelAt(t);
+      if(v > best.v){ best.v = v; best.t = t; }
+    }
+    return best;
+  }
+
+  /* latest time you could drink `mg` and still stay under threshold
+     for the whole sleep window */
+  function lastCall(mg){
+    var bed = bedtimeMs(), wake = bed + SLEEP_HOURS*HOUR;
+    var step = 5*60000;
+    function maxDuringSleep(tc){
+      var m = 0;
+      for(var t = bed; t <= wake; t += 15*60000){
+        var v = levelAt(t) + doseAt(mg, (t - tc)/HOUR);
+        if(v > m) m = v;
+      }
+      return m;
+    }
+    var earliest = Math.min(now(), bed - 18*HOUR);
+    if(maxDuringSleep(earliest) > threshold) return {ok:false};
+    var found = null;
+    for(var tc = earliest; tc <= bed; tc += step){
+      if(maxDuringSleep(tc) <= threshold) found = tc; else break;
+    }
+    if(found === null) return {ok:false};
+    return {ok:true, t:found, past: found < now() - 5*60000};
+  }
+
+  /* ---------- render: list + totals ---------- */
+  function renderList(){
+    var ul = $("list");
+    ul.innerHTML = "";
+    if(!drinks.length){
+      var li = document.createElement("li");
+      li.className = "empty";
+      li.style.cssText = "display:block;background:none;border:1px dashed var(--line)";
+      li.textContent = "Nothing logged yet — add a drink to see your curve.";
+      ul.appendChild(li);
+    }
+    var sorted = drinks.slice().sort(function(a,b){ return a.t - b.t; });
+    sorted.forEach(function(d){
+      var li = document.createElement("li");
+      var ago = (now() - d.t)/HOUR;
+      var when = fmtTime(d.t) + " · " + (ago >= 0 ? fmtDur(ago) + " ago" : "in " + fmtDur(-ago));
+      li.innerHTML =
+        '<span class="d-emoji">' + d.e + '</span>' +
+        '<span class="d-main"><span class="d-name"></span><div class="d-meta"></div></span>' +
+        '<span class="d-mg">' + d.mg + ' mg</span>' +
+        '<button class="del" title="Remove">&times;</button>';
+      li.querySelector(".d-name").textContent = d.n;
+      li.querySelector(".d-meta").textContent = when;
+      li.querySelector(".del").addEventListener("click", function(){
+        drinks = drinks.filter(function(x){ return x.id !== d.id; });
+        render();
+      });
+      ul.appendChild(li);
+    });
+
+    var total = drinks.reduce(function(s,d){ return s + d.mg; }, 0);
+    $("tbFill").style.width = clamp(total/400*100, 0, 100) + "%";
+    $("tbTxt").textContent = Math.round(total) + " mg logged";
+    $("tbFill").style.background = total > 400
+      ? "linear-gradient(90deg,#ff7a45,#ff5f6d)"
+      : "linear-gradient(90deg,#f5a524,#ff7a45)";
+  }
+
+  /* ---------- render: insight tiles ---------- */
+  function renderInsights(t0, t1){
+    var bed = bedtimeMs();
+    var cur = levelAt(now());
+    var peak = findPeak(Math.min(t0, now()), t1);
+    var atBed = levelAt(bed);
+    var below = fallsBelow(threshold, now());
+    var clear = fallsBelow(TRACE_FREE, now());
+    var lc = lastCall(cupSize);
+
+    function tile(k, v, n, cls){
+      return '<div class="tile"><div class="k">' + k + '</div><div class="v ' +
+             (cls||"") + '">' + v + '</div><div class="n">' + (n||"") + '</div></div>';
+    }
+
+    var bedCls = atBed <= threshold ? "good" : (atBed <= threshold*2 ? "warn" : "bad");
+    var html = "";
+    html += tile("In your system now", Math.round(cur) + " mg",
+                 drinks.length ? "peak was " + Math.round(peak.v) + " mg at " + fmtTime(peak.t) : "nothing logged");
+    html += tile("At bedtime " + fmtTime(bed), Math.round(atBed) + " mg",
+                 "limit is " + threshold + " mg", bedCls);
+    html += tile("Drops below limit",
+                 below === null ? "—" : fmtTime(below) + dayLabel(below),
+                 below === null ? "not within 48 h" : (below <= now()+60000 ? "already there" : "in " + fmtDur((below-now())/HOUR)));
+    html += tile("Practically caffeine-free",
+                 clear === null ? "—" : fmtTime(clear) + dayLabel(clear),
+                 "under " + TRACE_FREE + " mg");
+    $("tiles").innerHTML = html;
+
+    // verdict
+    var v = $("verdict"), ico, txt;
+    if(!drinks.length){
+      ico = "👋";
+      txt = "Add today's coffees and teas and I'll show you exactly how much caffeine is still circulating at bedtime.";
+    } else if(atBed <= threshold){
+      ico = "😴";
+      txt = "<b>You're clear for bed.</b> By " + fmtTime(bed) + " you'll be at about " +
+            Math.round(atBed) + " mg — under your " + threshold + " mg limit.";
+      if(lc.ok && !lc.past){
+        txt += " You could still have a " + cupSize + " mg cup up until <b>" + fmtTime(lc.t) +
+               "</b> (" + fmtDur((lc.t - now())/HOUR) + " from now) and stay under.";
+      } else if(lc.ok && lc.past){
+        txt += " But last call for another " + cupSize + " mg cup was " + fmtTime(lc.t) + " — one more now would push you over.";
+      }
+    } else {
+      var over = Math.round(atBed - threshold);
+      ico = atBed > threshold*2 ? "🚨" : "⚠️";
+      txt = "<b>" + Math.round(atBed) + " mg still on board at bedtime</b> — about " + over +
+            " mg over your limit. " +
+            (below ? "You won't drop under " + threshold + " mg until <b>" + fmtTime(below) + dayLabel(below) + "</b>. " : "") +
+            "Pushing bedtime later, or making that last drink a decaf, is the quickest fix.";
+    }
+    v.innerHTML = '<span class="ico">' + ico + '</span><span>' + txt + '</span>';
+  }
+
+  /* ---------- render: chart ---------- */
+  var cv = $("cv"), ctx = cv.getContext("2d");
+  var view = {t0:0, t1:0, yMax:100, pad:{l:44,r:14,t:14,b:26}, w:0, h:0};
+
+  function computeWindow(){
+    var bed = bedtimeMs();
+    var first = drinks.length ? Math.min.apply(null, drinks.map(function(d){ return d.t; })) : now();
+    var t0 = Math.min(first - 0.5*HOUR, now() - 0.5*HOUR);
+    var t1 = bed + (SLEEP_HOURS + 1) * HOUR;
+    if(t1 - t0 < 8*HOUR) t1 = t0 + 8*HOUR;
+    if(t1 - t0 > 30*HOUR) t0 = t1 - 30*HOUR;
+    return {t0:t0, t1:t1};
+  }
+
+  function drawChart(){
+    var dpr = window.devicePixelRatio || 1;
+    var rect = cv.getBoundingClientRect();
+    var w = Math.max(240, rect.width), h = rect.height || 280;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    var win = computeWindow();
+    var t0 = win.t0, t1 = win.t1;
+    var P = view.pad;
+    var pw = w - P.l - P.r, ph = h - P.t - P.b;
+    var peak = findPeak(t0, t1);
+    var yMax = Math.max(peak.v*1.18, threshold*1.8, 60);
+    view = {t0:t0, t1:t1, yMax:yMax, pad:P, w:w, h:h, pw:pw, ph:ph};
+
+    var X = function(t){ return P.l + (t - t0)/(t1 - t0) * pw; };
+    var Y = function(v){ return P.t + ph - clamp(v/yMax,0,1) * ph; };
+
+    // plot background
+    ctx.fillStyle = "#0d121a";
+    roundRect(P.l, P.t, pw, ph, 8); ctx.fill();
+
+    // sleep window band
+    var bed = bedtimeMs(), wake = bed + SLEEP_HOURS*HOUR;
+    var bx0 = clamp(X(bed), P.l, P.l+pw), bx1 = clamp(X(wake), P.l, P.l+pw);
+    if(bx1 > bx0){
+      ctx.fillStyle = "rgba(124,140,255,.13)";
+      ctx.fillRect(bx0, P.t, bx1-bx0, ph);
+      ctx.strokeStyle = "rgba(124,140,255,.42)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx0+.5, P.t); ctx.lineTo(bx0+.5, P.t+ph); ctx.stroke();
+      ctx.fillStyle = "rgba(160,175,255,.85)";
+      ctx.font = "600 10px -apple-system,system-ui,sans-serif";
+      if(bx1 - bx0 > 44) ctx.fillText("SLEEP", bx0+6, P.t+13);
+    }
+
+    // y gridlines
+    var steps = 4;
+    ctx.font = "10px -apple-system,system-ui,sans-serif";
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for(var i=0;i<=steps;i++){
+      var val = yMax*i/steps, y = Y(val);
+      ctx.strokeStyle = "rgba(255,255,255,.055)";
+      ctx.beginPath(); ctx.moveTo(P.l, y+.5); ctx.lineTo(P.l+pw, y+.5); ctx.stroke();
+      ctx.fillStyle = "#6b7789";
+      ctx.fillText(Math.round(val) + (i===steps?" mg":""), P.l-7, y);
+    }
+
+    // x ticks — every 2 or 3 hours on the hour
+    var spanH = (t1-t0)/HOUR;
+    var tickEvery = spanH > 20 ? 4 : (spanH > 12 ? 3 : 2);
+    var d0 = new Date(t0); d0.setMinutes(0,0,0);
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for(var tt = d0.getTime(); tt <= t1; tt += HOUR){
+      var hr = new Date(tt).getHours();
+      if(hr % tickEvery !== 0 || tt < t0) continue;
+      var x = X(tt);
+      ctx.strokeStyle = "rgba(255,255,255,.05)";
+      ctx.beginPath(); ctx.moveTo(x+.5, P.t); ctx.lineTo(x+.5, P.t+ph); ctx.stroke();
+      ctx.fillStyle = "#6b7789";
+      ctx.fillText(fmtTimeShort(tt), x, P.t+ph+7);
+    }
+
+    // threshold line
+    var ty = Y(threshold);
+    if(ty > P.t && ty < P.t+ph){
+      ctx.save();
+      ctx.setLineDash([4,4]); ctx.strokeStyle = "rgba(45,212,191,.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(P.l, ty); ctx.lineTo(P.l+pw, ty); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "rgba(45,212,191,.95)";
+      ctx.font = "600 10px -apple-system,system-ui,sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+      ctx.fillText(threshold + " mg limit", P.l+6, ty-3);
+    }
+
+    // curve
+    var pts = [], N = Math.max(60, Math.round(pw));
+    for(var k=0;k<=N;k++){
+      var t = t0 + (t1-t0)*k/N;
+      pts.push([X(t), Y(levelAt(t))]);
+    }
+    if(drinks.length){
+      var g = ctx.createLinearGradient(0, P.t, 0, P.t+ph);
+      g.addColorStop(0, "rgba(255,122,69,.42)");
+      g.addColorStop(1, "rgba(245,165,36,.02)");
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], P.t+ph);
+      for(var a=0;a<pts.length;a++) ctx.lineTo(pts[a][0], pts[a][1]);
+      ctx.lineTo(pts[pts.length-1][0], P.t+ph);
+      ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+
+      var lg = ctx.createLinearGradient(P.l, 0, P.l+pw, 0);
+      lg.addColorStop(0, "#f5a524"); lg.addColorStop(1, "#ff7a45");
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for(var b=1;b<pts.length;b++) ctx.lineTo(pts[b][0], pts[b][1]);
+      ctx.strokeStyle = lg; ctx.lineWidth = 2.4; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    // "now" marker
+    var nx = X(now());
+    if(nx >= P.l && nx <= P.l+pw){
+      ctx.save();
+      ctx.setLineDash([2,3]); ctx.strokeStyle = "rgba(255,255,255,.38)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(nx+.5, P.t); ctx.lineTo(nx+.5, P.t+ph); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      ctx.font = "600 10px -apple-system,system-ui,sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText("now", nx, P.t+2);
+    }
+
+    // drink markers
+    drinks.forEach(function(d){
+      var x = X(d.t);
+      if(x < P.l-2 || x > P.l+pw+2) return;
+      var y = Y(levelAt(d.t));
+      ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI*2);
+      ctx.fillStyle = "#12181f"; ctx.fill();
+      ctx.lineWidth = 2.2; ctx.strokeStyle = "#f5a524"; ctx.stroke();
+    });
+
+    // scrub readout
+    if(scrubX !== null){
+      var sx = clamp(scrubX, P.l, P.l+pw);
+      var st = t0 + (sx-P.l)/pw * (t1-t0);
+      var sv = levelAt(st);
+      var sy = Y(sv);
+      ctx.strokeStyle = "rgba(255,255,255,.32)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(sx+.5, P.t); ctx.lineTo(sx+.5, P.t+ph); ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI*2);
+      ctx.fillStyle = "#fff"; ctx.fill();
+
+      var lab = Math.round(sv) + " mg · " + fmtTime(st);
+      ctx.font = "600 11.5px -apple-system,system-ui,sans-serif";
+      var tw = ctx.measureText(lab).width + 16;
+      var bxx = clamp(sx - tw/2, P.l+2, P.l+pw-tw-2);
+      var byy = clamp(sy - 34, P.t+2, P.t+ph-28);
+      ctx.fillStyle = "rgba(12,15,20,.94)";
+      roundRect(bxx, byy, tw, 24, 7); ctx.fill();
+      ctx.strokeStyle = "rgba(245,165,36,.55)"; ctx.lineWidth = 1;
+      roundRect(bxx, byy, tw, 24, 7); ctx.stroke();
+      ctx.fillStyle = "#ffd591"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(lab, bxx + tw/2, byy + 12.5);
+    }
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function render(){
+    renderList();
+    drawChart();
+    renderInsights(view.t0, view.t1);
+  }
+
+  /* ---------- input wiring ---------- */
+  function setTimeInputToNow(){
+    var d = new Date();
+    $("dtime").value = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+
+  var selectedPreset = PRESETS[0];
+  function buildPresets(){
+    var box = $("presets");
+    PRESETS.forEach(function(p, i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip" + (i===0 ? " on" : "");
+      b.innerHTML = '<span>' + p.e + '</span><span></span><span class="mg">' + p.mg + '</span>';
+      b.children[1].textContent = p.n;
+      b.title = p.note;
+      b.addEventListener("click", function(){
+        Array.prototype.forEach.call(box.children, function(c){ c.classList.remove("on"); });
+        b.classList.add("on");
+        selectedPreset = p;
+        $("dname").value = p.n;
+        $("dmg").value = p.mg;
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function addDrink(){
+    var mg = parseFloat($("dmg").value);
+    if(!isFinite(mg) || mg < 0) mg = 0;
+    mg = clamp(mg, 0, 1000);
+    var name = ($("dname").value || "Drink").trim().slice(0,28) || "Drink";
+    var tv = ($("dtime").value || "").split(":");
+    var d = new Date();
+    if(tv.length === 2){ d.setHours(+tv[0], +tv[1], 0, 0); }
+    // a time more than 3h in the future almost certainly means yesterday
+    if(d.getTime() > now() + 3*HOUR) d.setDate(d.getDate() - 1);
+    var emoji = (selectedPreset && selectedPreset.n === name) ? selectedPreset.e : "☕";
+    drinks.push({id: uid++, e: emoji, n: name, mg: mg, t: d.getTime()});
+    render();
+  }
+
+  $("addBtn").addEventListener("click", addDrink);
+  $("dmg").addEventListener("keydown", function(e){ if(e.key === "Enter") addDrink(); });
+  $("dname").addEventListener("keydown", function(e){ if(e.key === "Enter") addDrink(); });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-nudge]"), function(b){
+    b.addEventListener("click", function(){
+      var mins = +b.getAttribute("data-nudge");
+      var tv = ($("dtime").value || "00:00").split(":");
+      var d = new Date(); d.setHours(+tv[0], +tv[1], 0, 0);
+      d = new Date(d.getTime() + mins*60000);
+      $("dtime").value = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+    });
+  });
+
+  $("clearBtn").addEventListener("click", function(){ drinks = []; render(); });
+
+  $("hl").addEventListener("input", function(){
+    halfLife = parseFloat(this.value);
+    $("hlVal").textContent = halfLife.toFixed(1) + " h";
+    var note = halfLife <= 3.5 ? "Very fast metabolizer — regular heavy coffee drinkers and smokers clear caffeine quickest."
+             : halfLife <= 4.5 ? "Fast side of normal."
+             : halfLife <= 5.5 ? "Average adult. Faster if you're a heavy coffee drinker or a smoker; slower on hormonal birth control, when pregnant, or with liver conditions."
+             : halfLife <= 6.5 ? "Slow side of normal — common with hormonal birth control."
+             : "Very slow — typical late in pregnancy or with reduced liver function.";
+    $("hlNote").textContent = note;
+    render();
+  });
+  $("th").addEventListener("input", function(){
+    threshold = parseFloat(this.value);
+    $("thVal").textContent = threshold + " mg";
+    render();
+  });
+  $("cup").addEventListener("input", function(){
+    cupSize = parseFloat(this.value);
+    $("cupVal").textContent = cupSize + " mg";
+    render();
+  });
+  $("bedtime").addEventListener("change", render);
+  $("bedtime").addEventListener("input", render);
+
+  /* scrubbing */
+  function scrubFrom(e){
+    var r = cv.getBoundingClientRect();
+    var x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    scrubX = x; drawChart();
+  }
+  cv.addEventListener("pointerdown", function(e){
+    try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+    scrubFrom(e);
+  });
+  cv.addEventListener("pointermove", function(e){
+    if(e.pointerType === "mouse" || e.buttons) scrubFrom(e);
+  });
+  cv.addEventListener("pointerleave", function(){ scrubX = null; drawChart(); });
+  cv.addEventListener("pointerup", function(e){
+    if(e.pointerType !== "mouse"){ scrubX = null; drawChart(); }
+  });
+
+  window.addEventListener("resize", function(){ drawChart(); });
+
+  /* ---------- seed ---------- */
+  function seed(){
+    var base = new Date(); base.setSeconds(0,0);
+    function at(h,m){ var d = new Date(base); d.setHours(h,m,0,0); return d.getTime(); }
+    var t1 = at(8,0), t2 = at(13,30);
+    if(t1 < now()) drinks.push({id:uid++, e:"☕", n:"Brewed coffee", mg:95, t:t1});
+    if(t2 < now()) drinks.push({id:uid++, e:"🥛", n:"Latte", mg:77, t:t2});
+    if(!drinks.length){
+      drinks.push({id:uid++, e:"☕", n:"Brewed coffee", mg:95, t: now() - 45*60000});
+    }
+  }
+
+  buildPresets();
+  setTimeInputToNow();
+  seed();
+  render();
+  setInterval(function(){ render(); }, 60000);
+})();
+</script>
+</body>
+</html>

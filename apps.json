@@ -2,99 +2,106 @@
   {
     "file": "apps/app-2026-07-04-pocket-pyro.html",
     "name": "Pocket Pyro",
-    "emoji": "🎆",
+    "emoji": "\ud83c\udf86",
     "date": "2026-07-04",
-    "blurb": "Design your own fireworks show — tap the sky, pick burst styles, unleash the finale."
+    "blurb": "Design your own fireworks show \u2014 tap the sky, pick burst styles, unleash the finale."
   },
   {
     "file": "apps/app-2026-07-04-orbit-runner.html",
     "name": "Orbit Runner",
-    "emoji": "🛸",
+    "emoji": "\ud83d\udef8",
     "date": "2026-07-04",
     "blurb": "One-tap arcade: reverse your orbit to dodge red arcs and snag gold sparks as the ring speeds up."
   },
   {
     "file": "apps/app-2026-07-04-fairshare.html",
     "name": "FairShare",
-    "emoji": "🧾",
+    "emoji": "\ud83e\uddfe",
     "date": "2026-07-04",
-    "blurb": "Split any bill by what each person actually ordered — tax and tip divided proportionally, pennies always add up."
+    "blurb": "Split any bill by what each person actually ordered \u2014 tax and tip divided proportionally, pennies always add up."
   },
   {
     "file": "apps/app-2026-07-05-timebridge.html",
     "name": "TimeBridge",
-    "emoji": "🌐",
+    "emoji": "\ud83c\udf10",
     "date": "2026-07-05",
     "blurb": "Pick your cities, see everyone's waking hours side by side, and tap the starred hour that works for all."
   },
   {
     "file": "apps/app-2026-07-07-kaleidodraw.html",
     "name": "KaleidoDraw",
-    "emoji": "🔮",
+    "emoji": "\ud83d\udd2e",
     "date": "2026-07-07",
-    "blurb": "Drag to paint glowing, ever-shifting kaleidoscope art with adjustable mirror symmetry — then save your bloom as a PNG."
+    "blurb": "Drag to paint glowing, ever-shifting kaleidoscope art with adjustable mirror symmetry \u2014 then save your bloom as a PNG."
   },
   {
     "file": "apps/app-2026-08-01-cyclesleep.html",
     "name": "CycleSleep",
-    "emoji": "🌙",
+    "emoji": "\ud83c\udf19",
     "date": "2026-08-01",
     "blurb": "Enter your wake-up or bedtime and get the exact times that align with full 90-minute sleep cycles, so you wake up rested instead of groggy."
   },
   {
     "file": "apps/app-2026-08-01-emoji-alchemy.html",
     "name": "Emoji Alchemy",
-    "emoji": "✨",
+    "emoji": "\u2728",
     "date": "2026-08-01",
-    "blurb": "Combine emoji elements to discover 70+ hidden creations — and a built-in alchemy engine invents something new for literally any pair you try."
+    "blurb": "Combine emoji elements to discover 70+ hidden creations \u2014 and a built-in alchemy engine invents something new for literally any pair you try."
   },
   {
     "file": "apps/app-2026-08-02-burn-meter.html",
     "name": "Burn Meter",
-    "emoji": "🔥",
+    "emoji": "\ud83d\udd25",
     "date": "2026-08-02",
     "blurb": "A live-ticking dollar counter that shows exactly what a meeting is costing in real time, based on attendees' salaries."
   },
   {
     "file": "apps/app-2026-08-03-groove-grid.html",
     "name": "Groove Grid",
-    "emoji": "🥁",
+    "emoji": "\ud83e\udd41",
     "date": "2026-08-03",
     "blurb": "A pocket drum machine: tap the glowing grid to build beats with six synthesized instruments, swing, presets, and a smart randomizer."
   },
   {
     "file": "apps/app-2026-08-04-payoff-pilot.html",
     "name": "Payoff Pilot",
-    "emoji": "🧭",
+    "emoji": "\ud83e\udded",
     "date": "2026-08-04",
-    "blurb": "List your debts and instantly compare snowball vs. avalanche payoff plans — debt-free date, total interest, and a payoff curve, side by side."
+    "blurb": "List your debts and instantly compare snowball vs. avalanche payoff plans \u2014 debt-free date, total interest, and a payoff curve, side by side."
   },
   {
     "file": "apps/app-2026-08-05-prism-path.html",
     "name": "Prism Path",
-    "emoji": "🔺",
+    "emoji": "\ud83d\udd3a",
     "date": "2026-08-05",
     "blurb": "A light-bending puzzle: place mirrors to steer coloured beams through splitters and filters until every target glows its exact colour."
   },
   {
     "file": "apps/app-2026-08-06-prism.html",
     "name": "Prism",
-    "emoji": "🔮",
+    "emoji": "\ud83d\udd2e",
     "date": "2026-08-06",
-    "blurb": "A neon light-routing puzzle: flip mirrors and beam splitters to steer coloured lasers into every ring — mix red and green to make yellow, all three for white."
+    "blurb": "A neon light-routing puzzle: flip mirrors and beam splitters to steer coloured lasers into every ring \u2014 mix red and green to make yellow, all three for white."
   },
   {
     "file": "apps/app-2026-08-07-batchwise.html",
     "name": "Batchwise",
-    "emoji": "🥣",
+    "emoji": "\ud83e\udd63",
     "date": "2026-08-07",
-    "blurb": "Paste any recipe and resize it by servings or pan size — quantities come back as fractions you can actually measure, with one-tap cups↔grams."
+    "blurb": "Paste any recipe and resize it by servings or pan size \u2014 quantities come back as fractions you can actually measure, with one-tap cups\u2194grams."
   },
   {
     "file": "apps/app-2026-08-08-lumen.html",
     "name": "Lumen",
-    "emoji": "🔦",
+    "emoji": "\ud83d\udd26",
     "date": "2026-08-08",
-    "blurb": "Flip mirrors and beam splitters to route coloured light across a grid — 10 hand-built puzzles where red plus green really does make yellow."
+    "blurb": "Flip mirrors and beam splitters to route coloured light across a grid \u2014 10 hand-built puzzles where red plus green really does make yellow."
+  },
+  {
+    "file": "apps/app-2026-08-09-caffeine-curve.html",
+    "name": "Caffeine Curve",
+    "emoji": "\u2615",
+    "date": "2026-08-09",
+    "blurb": "Log your coffees and see the real pharmacokinetic curve of caffeine in your bloodstream \u2014 including how much is left at bedtime and the last hour you can safely have one more cup."
   }
 ]
