@@ -103,5 +103,12 @@
     "emoji": "\u2615",
     "date": "2026-08-09",
     "blurb": "Log your coffees and see the real pharmacokinetic curve of caffeine in your bloodstream \u2014 including how much is left at bedtime and the last hour you can safely have one more cup."
+  },
+  {
+    "file": "apps/app-2026-08-10-astro-putt.html",
+    "name": "Astro Putt",
+    "emoji": "\ud83e\ude90",
+    "date": "2026-08-10",
+    "blurb": "Nine holes of golf in deep space \u2014 slingshot your ball past gravity wells and repulsors, with a live trajectory preview that makes every bank shot plannable."
   }
 ]
