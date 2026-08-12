@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pace Ace — running pace calculator</title>
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --card:#ffffff;
+    --ink:#12151c;
+    --ink-2:#59607094;
+    --muted:#666e7e;
+    --line:#e5e8ee;
+    --accent:#ff4423;
+    --accent-soft:#fff0ec;
+    --blue:#1668e3;
+    --blue-soft:#eaf1fe;
+    --green:#0f9d58;
+    --radius:18px;
+    --shadow:0 1px 2px rgba(16,20,28,.05), 0 8px 24px -12px rgba(16,20,28,.18);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    padding:20px 16px 56px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:640px;margin:0 auto}
+  header{margin:6px 2px 20px;display:flex;align-items:center;gap:12px}
+  .logo{
+    width:44px;height:44px;border-radius:14px;flex:0 0 auto;
+    background:linear-gradient(145deg,var(--accent),#ff8a3d);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    box-shadow:0 6px 16px -6px rgba(255,68,35,.7);
+  }
+  h1{font-size:23px;margin:0;letter-spacing:-.5px;font-weight:800}
+  .sub{margin:1px 0 0;color:var(--muted);font-size:13.5px}
+
+  .card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 16px;margin-bottom:16px;border:1px solid #edeff4;
+  }
+  .card h2{
+    font-size:12px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);
+    margin:0 0 14px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:space-between;
+  }
+
+  /* --- unit toggle --- */
+  .seg{display:inline-flex;background:#eef0f5;border-radius:999px;padding:3px;gap:2px}
+  .seg button{
+    border:0;background:transparent;font:600 12.5px/1 inherit;color:var(--muted);
+    padding:7px 13px;border-radius:999px;cursor:pointer;letter-spacing:.2px;
+  }
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+  /* --- field rows --- */
+  .field{
+    border:1.5px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:10px;
+    display:flex;align-items:center;gap:10px;transition:border-color .15s,background .15s;background:#fff;
+  }
+  .field:focus-within{border-color:var(--blue);background:#fcfdff}
+  .field.computed{border-color:var(--accent);background:var(--accent-soft)}
+  .field .lab{
+    font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
+    font-weight:700;width:78px;flex:0 0 auto;
+  }
+  .field.computed .lab{color:var(--accent)}
+  .badge{
+    display:none;font-size:9.5px;letter-spacing:.6px;background:var(--accent);color:#fff;
+    padding:2px 6px;border-radius:6px;margin-top:4px;font-weight:700;
+  }
+  .field.computed .badge{display:inline-block}
+  .vals{display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:nowrap}
+  input[type=number]{
+    font:700 21px/1 inherit;font-variant-numeric:tabular-nums;border:0;background:transparent;
+    color:var(--ink);width:100%;min-width:0;padding:2px 0;outline:none;text-align:right;
+    -moz-appearance:textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .field.computed input{color:#c0290d}
+  .colon{font:700 19px/1 inherit;color:var(--ink-2)}
+  .u{font-size:12px;color:var(--muted);font-weight:600;flex:0 0 auto}
+  select{
+    font:600 13px/1 inherit;border:1px solid var(--line);background:#fff;border-radius:9px;
+    padding:7px 6px;color:var(--ink);outline:none;flex:0 0 auto;
+  }
+  .tw{width:52px !important}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 14px}
+  .chip{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;
+    font:600 12.5px/1 inherit;color:var(--muted);cursor:pointer;
+  }
+  .chip:hover{border-color:#c9cede;color:var(--ink)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .readout{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-radius:14px;overflow:hidden;margin-top:14px;border:1px solid var(--line);
+  }
+  .readout div{background:#fbfcfe;padding:11px 8px;text-align:center}
+  .readout .k{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .readout .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+
+  /* --- slider --- */
+  .slrow{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 2px}
+  .strategy{text-align:center;font-size:13px;font-weight:700;color:var(--accent);min-height:18px;margin-bottom:10px}
+
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);text-align:right;padding:0 0 8px;font-weight:700}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:8px 0;border-top:1px solid #f0f2f6;text-align:right;font-size:14.5px;font-weight:600}
+  td:first-child{color:var(--muted);font-weight:700}
+  tbody tr:last-child td{font-weight:800}
+  tbody tr.last td{background:#fffaf3}
+  .scroll{max-height:340px;overflow:auto;margin:0 -4px;padding:0 4px}
+
+  .pill{display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+  .note{font-size:12px;color:var(--muted);margin:12px 0 0;line-height:1.5}
+  .btn{
+    border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;
+    font:600 12px/1 inherit;color:var(--muted);cursor:pointer;
+  }
+  .btn:active{background:#f2f4f8}
+  .zone{display:flex;align-items:baseline;gap:10px;padding:10px 0;border-top:1px solid #f0f2f6}
+  .zone:first-of-type{border-top:0}
+  .zn{font-weight:700;font-size:14px;flex:1}
+  .zn small{display:block;font-weight:500;color:var(--muted);font-size:11.5px;margin-top:1px}
+  .zv{font-weight:800;font-variant-numeric:tabular-nums;font-size:15px;white-space:nowrap}
+  .warn{color:var(--accent);font-weight:600}
+  @media (max-width:400px){
+    .field .lab{width:64px;font-size:10px}
+    input[type=number]{font-size:19px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">🏃</div>
+    <div>
+      <h1>Pace Ace</h1>
+      <p class="sub">Fill in any two — distance, time, pace — and the third solves itself.</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>The calculator
+      <span class="seg" id="unitSeg">
+        <button data-u="km" class="on">min / km</button>
+        <button data-u="mi">min / mi</button>
+      </span>
+    </h2>
+
+    <div class="chips" id="chips"></div>
+
+    <div class="field" id="f-distance">
+      <div class="lab">Distance<span class="badge">AUTO</span></div>
+      <div class="vals">
+        <input type="number" id="dist" step="any" min="0" inputmode="decimal" value="10">
+        <select id="distUnit">
+          <option value="km">km</option>
+          <option value="mi">mi</option>
+          <option value="m">m</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" id="f-time">
+      <div class="lab">Time<span class="badge">AUTO</span></div>
+      <div class="vals">
+        <input type="number" class="tw" id="th" min="0" step="1" inputmode="numeric" value="0"><span class="colon">:</span>
+        <input type="number" class="tw" id="tm" min="0" step="1" inputmode="numeric" value="50"><span class="colon">:</span>
+        <input type="number" class="tw" id="ts" min="0" step="1" inputmode="numeric" value="00">
+        <span class="u">h : m : s</span>
+      </div>
+    </div>
+
+    <div class="field" id="f-pace">
+      <div class="lab">Pace<span class="badge">AUTO</span></div>
+      <div class="vals">
+        <input type="number" class="tw" id="pm" min="0" step="1" inputmode="numeric" value="5"><span class="colon">:</span>
+        <input type="number" class="tw" id="ps" min="0" step="1" inputmode="numeric" value="00">
+        <span class="u" id="paceUnitLabel">min / km</span>
+      </div>
+    </div>
+
+    <div class="readout">
+      <div><div class="k">Speed</div><div class="v" id="oSpeed">—</div></div>
+      <div><div class="k" id="oAltK">Pace / mi</div><div class="v" id="oAlt">—</div></div>
+      <div><div class="k">400 m lap</div><div class="v" id="oLap">—</div></div>
+    </div>
+    <p class="note" id="calcNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>Split plan <button class="btn" id="copyBtn">Copy</button></h2>
+    <div class="slrow"><span>◀ Fast finish</span><span>Even</span><span>Fade ▶</span></div>
+    <input type="range" id="fade" min="-4" max="4" step="0.5" value="0">
+    <div class="strategy" id="stratLabel">Even splits</div>
+    <div class="scroll">
+      <table id="splitTable">
+        <thead><tr><th>Split</th><th>Pace</th><th>Elapsed</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Equivalent race times <span class="pill">Riegel</span></h2>
+    <table id="predTable">
+      <thead><tr><th>Distance</th><th>Predicted</th><th id="predPaceHead">Pace / km</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="note">Predictions assume the entry above is a hard, well-trained effort, and that your endurance holds up as distance grows (exponent 1.06). Treat the marathon row as optimistic unless you've done the long-run mileage.</p>
+  </div>
+
+  <div class="card">
+    <h2>Training paces</h2>
+    <div id="zones"></div>
+    <p class="note">Estimated from your equivalent race times — easy running is deliberately slow, threshold is “comfortably hard” for ~40–60 min, intervals are 3–5 min repeats at 5K effort.</p>
+  </div>
+
+  <p class="note" style="text-align:center;max-width:420px;margin:22px auto 0">
+    Nothing is saved or sent anywhere — everything runs in this page.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var MI = 1609.344;
+  var PRESETS = [
+    {n:"1 mi",   m:MI},
+    {n:"5K",     m:5000},
+    {n:"10K",    m:10000},
+    {n:"10 mi",  m:10*MI},
+    {n:"Half",   m:21097.5},
+    {n:"Marathon", m:42195}
+  ];
+  var PRED = [
+    {n:"800 m",   m:800},
+    {n:"1500 m",  m:1500},
+    {n:"1 mile",  m:MI},
+    {n:"5K",      m:5000},
+    {n:"10K",     m:10000},
+    {n:"10 mile", m:10*MI},
+    {n:"Half marathon", m:21097.5},
+    {n:"Marathon", m:42195}
+  ];
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---- state -------------------------------------------------------------
+  var unit = "km";                 // pace / split unit
+  var recent = ["distance","pace"]; // two most recently edited -> third is computed
+  var S = { meters: 10000, seconds: 3000, secPerKm: 300 };
+
+  function computedField(){
+    var all = ["distance","time","pace"];
+    for (var i=0;i<all.length;i++){ if (recent.indexOf(all[i]) === -1) return all[i]; }
+    return "time";
+  }
+  function markEdited(f){
+    recent = [f].concat(recent.filter(function(x){ return x !== f; })).slice(0,2);
+  }
+
+  // ---- formatting --------------------------------------------------------
+  function pad(n){ n = Math.floor(n); return (n<10?"0":"") + n; }
+
+  function fmtTime(sec){
+    if (!isFinite(sec) || sec <= 0) return "—";
+    var t = Math.round(sec);
+    var h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+    return h > 0 ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);
+  }
+  function fmtPace(sec){
+    if (!isFinite(sec) || sec <= 0) return "—";
+    var t = Math.round(sec);
+    var h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+    return h > 0 ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);
+  }
+  function num(v){ var x = parseFloat(v); return isFinite(x) && x >= 0 ? x : 0; }
+
+  function unitMeters(){ return unit === "km" ? 1000 : MI; }
+  function secPerUnit(){ return S.secPerKm * (unitMeters()/1000); }
+
+  // ---- read inputs -------------------------------------------------------
+  function readDistance(){
+    var v = num($("dist").value), u = $("distUnit").value;
+    return v * (u === "km" ? 1000 : u === "mi" ? MI : 1);
+  }
+  function readTime(){
+    return num($("th").value)*3600 + num($("tm").value)*60 + num($("ts").value);
+  }
+  function readPaceSecPerKm(){
+    var p = num($("pm").value)*60 + num($("ps").value);
+    return p / (unitMeters()/1000);   // sec per displayed unit -> sec per km
+  }
+
+  // ---- write inputs ------------------------------------------------------
+  function writeDistance(){
+    var u = $("distUnit").value;
+    var v = S.meters / (u === "km" ? 1000 : u === "mi" ? MI : 1);
+    $("dist").value = Math.round(v*1000)/1000;
+  }
+  function writeTime(){
+    var t = Math.max(0, Math.round(S.seconds));
+    $("th").value = Math.floor(t/3600);
+    $("tm").value = pad(Math.floor((t%3600)/60));
+    $("ts").value = pad(t%60);
+  }
+  function writePace(){
+    var p = Math.max(0, Math.round(secPerUnit()));
+    $("pm").value = Math.floor(p/60);
+    $("ps").value = pad(p%60);
+  }
+
+  // ---- core solve --------------------------------------------------------
+  function solve(){
+    var c = computedField();
+    var d = readDistance(), t = readTime(), pk = readPaceSecPerKm();
+
+    if (c === "time"){
+      S.meters = d; S.secPerKm = pk;
+      S.seconds = (d/1000) * pk;
+      writeTime();
+    } else if (c === "pace"){
+      S.meters = d; S.seconds = t;
+      S.secPerKm = d > 0 ? t / (d/1000) : 0;
+      writePace();
+    } else {
+      S.seconds = t; S.secPerKm = pk;
+      S.meters = pk > 0 ? (t/pk) * 1000 : 0;
+      writeDistance();
+    }
+
+    ["distance","time","pace"].forEach(function(f){
+      $("f-"+f).classList.toggle("computed", f === c);
+    });
+    render();
+  }
+
+  // ---- rendering ---------------------------------------------------------
+  function render(){
+    var valid = S.meters > 0 && S.seconds > 0 && S.secPerKm > 0 && isFinite(S.secPerKm);
+    var kmh = valid ? 3600 / S.secPerKm : 0;
+
+    $("oSpeed").textContent = valid
+      ? (unit === "km" ? kmh.toFixed(1) + " km/h" : (kmh/1.609344).toFixed(1) + " mph")
+      : "—";
+    $("oAltK").textContent = unit === "km" ? "Pace / mi" : "Pace / km";
+    $("oAlt").textContent  = valid
+      ? fmtPace(unit === "km" ? S.secPerKm*1.609344 : S.secPerKm)
+      : "—";
+    $("oLap").textContent  = valid ? fmtPace(S.secPerKm*0.4) : "—";
+
+    $("calcNote").innerHTML = valid
+      ? "That's <b>" + (S.meters/1000).toFixed(2) + " km</b> (" + (S.meters/MI).toFixed(2) +
+        " mi) in <b>" + fmtTime(S.seconds) + "</b>."
+      : "<span class='warn'>Enter two values above to solve the third.</span>";
+
+    // preset chip highlight
+    var chips = $("chips").children;
+    for (var i=0;i<chips.length;i++){
+      chips[i].classList.toggle("on", Math.abs(PRESETS[i].m - S.meters) < 1);
+    }
+
+    $("paceUnitLabel").textContent = "min / " + unit;
+    $("predPaceHead").textContent  = "Pace / " + unit;
+
+    renderSplits(valid);
+    renderPredictions(valid);
+    renderZones(valid);
+  }
+
+  // Pace drifts linearly across the race: p(x) = avg * (1 + k*(2x-1)), x = fraction of
+  // distance covered. The integral over the whole race is exactly the average pace, so
+  // the splits always add back up to the entered finish time.
+  function segTime(d1, d2, D, avgPerUnit, k){
+    return avgPerUnit * ((d2 - d1) + k * (((d2*d2 - d1*d1)/D) - (d2 - d1)));
+  }
+
+  function renderSplits(valid){
+    var tb = $("splitTable").getElementsByTagName("tbody")[0];
+    tb.innerHTML = "";
+    var k = parseFloat($("fade").value)/100;
+
+    $("stratLabel").textContent = Math.abs(k) < 0.0001
+      ? "Even splits"
+      : (k < 0 ? "Negative split — " : "Positive split — ")
+        + Math.abs(k*100).toFixed(1) + "% "
+        + (k < 0 ? "faster" : "slower") + " at the finish than the start";
+
+    if (!valid) {
+      tb.innerHTML = "<tr><td colspan='3' style='color:#666e7e;font-weight:500'>Splits appear once the calculator has two values.</td></tr>";
+      return;
+    }
+
+    var U = unitMeters();
+    var D = S.meters / U;                 // total distance in display units
+    var avg = secPerUnit();
+    if (D > 200) {                        // keep the table sane for ultra distances
+      tb.innerHTML = "<tr><td colspan='3' style='color:#666e7e;font-weight:500'>That's a lot of splits — try a shorter distance.</td></tr>";
+      return;
+    }
+
+    var cum = 0, i = 0, frag = document.createDocumentFragment();
+    while (i < D - 1e-9){
+      var a = i, b = Math.min(i+1, D);
+      var dt = segTime(a, b, D, avg, k);
+      cum += dt;
+      var partial = (b - a) < 0.999;
+      var tr = document.createElement("tr");
+      if (partial) tr.className = "last";
+      var label = partial
+        ? (D).toFixed(2) + " " + unit
+        : Math.round(b) + " " + unit;
+      tr.innerHTML = "<td>" + label + "</td><td>" +
+        fmtPace(dt / (b - a)) + " / " + unit + "</td><td>" + fmtTime(cum) + "</td>";
+      frag.appendChild(tr);
+      i = b;
+    }
+    tb.appendChild(frag);
+  }
+
+  function riegel(t1, d1, d2){ return t1 * Math.pow(d2/d1, 1.06); }
+
+  function renderPredictions(valid){
+    var tb = $("predTable").getElementsByTagName("tbody")[0];
+    tb.innerHTML = "";
+    var U = unitMeters();
+    PRED.forEach(function(r){
+      var tr = document.createElement("tr");
+      var t = valid ? riegel(S.seconds, S.meters, r.m) : NaN;
+      if (valid && Math.abs(r.m - S.meters) < 1) tr.className = "last";
+      tr.innerHTML = "<td>" + r.n + "</td><td>" + fmtTime(t) + "</td><td>" +
+        (valid ? fmtPace(t / (r.m/U)) + " / " + unit : "—") + "</td>";
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderZones(valid){
+    var box = $("zones");
+    box.innerHTML = "";
+    var U = unitMeters();
+    function paceAt(meters, mult){
+      var t = riegel(S.seconds, S.meters, meters);
+      return (t / (meters/U)) * (mult || 1);
+    }
+    var zones = valid ? [
+      {n:"Easy / recovery", d:"Conversational — most of your weekly mileage",
+       v: fmtPace(paceAt(42195,1.15)) + "–" + fmtPace(paceAt(42195,1.28))},
+      {n:"Long run", d:"Steady, sustainable, slightly quicker than easy",
+       v: fmtPace(paceAt(42195,1.10)) + "–" + fmtPace(paceAt(42195,1.20))},
+      {n:"Marathon pace", d:"Race-day rhythm for the long stuff",
+       v: fmtPace(paceAt(42195))},
+      {n:"Threshold / tempo", d:"Comfortably hard, ~20–40 min continuous",
+       v: fmtPace(paceAt(15000))},
+      {n:"Interval (VO₂max)", d:"3–5 min repeats at 5K effort",
+       v: fmtPace(paceAt(5000))},
+      {n:"Repetition / speed", d:"Short, sharp 200–600 m reps with full rest",
+       v: fmtPace(paceAt(1500))}
+    ] : [];
+
+    if (!zones.length){
+      box.innerHTML = "<p class='note' style='margin:0'>Training paces appear once the calculator has two values.</p>";
+      return;
+    }
+    zones.forEach(function(z){
+      var d = document.createElement("div");
+      d.className = "zone";
+      d.innerHTML = "<div class='zn'>" + z.n + "<small>" + z.d + "</small></div>" +
+                    "<div class='zv'>" + z.v + " /" + unit + "</div>";
+      box.appendChild(d);
+    });
+  }
+
+  // ---- wiring ------------------------------------------------------------
+  var chipBox = $("chips");
+  PRESETS.forEach(function(p){
+    var b = document.createElement("button");
+    b.className = "chip";
+    b.type = "button";
+    b.textContent = p.n;
+    b.addEventListener("click", function(){
+      S.meters = p.m;
+      $("distUnit").value = /mi/.test(p.n) ? "mi" : "km";
+      writeDistance();
+      markEdited("distance");
+      solve();
+    });
+    chipBox.appendChild(b);
+  });
+
+  ["dist"].forEach(function(id){
+    $(id).addEventListener("input", function(){ markEdited("distance"); solve(); });
+  });
+  ["th","tm","ts"].forEach(function(id){
+    $(id).addEventListener("input", function(){ markEdited("time"); solve(); });
+  });
+  ["pm","ps"].forEach(function(id){
+    $(id).addEventListener("input", function(){ markEdited("pace"); solve(); });
+  });
+
+  $("distUnit").addEventListener("change", function(){
+    // keep the physical distance, just re-express it
+    writeDistance();
+    solve();
+  });
+
+  $("fade").addEventListener("input", function(){ renderSplits(S.meters>0 && S.seconds>0 && S.secPerKm>0); });
+
+  var segBtns = $("unitSeg").getElementsByTagName("button");
+  for (var j=0;j<segBtns.length;j++){
+    (function(btn){
+      btn.addEventListener("click", function(){
+        if (btn.getAttribute("data-u") === unit) return;
+        unit = btn.getAttribute("data-u");
+        for (var q=0;q<segBtns.length;q++) segBtns[q].classList.remove("on");
+        btn.classList.add("on");
+        writePace();          // pace field always re-expressed in the new unit
+        render();
+      });
+    })(segBtns[j]);
+  }
+
+  // tidy up hand-typed values on blur
+  ["tm","ts","ps"].forEach(function(id){
+    $(id).addEventListener("blur", function(){ $(id).value = pad(num($(id).value)); });
+  });
+
+  $("copyBtn").addEventListener("click", function(){
+    var rows = $("splitTable").getElementsByTagName("tbody")[0].rows;
+    var out = ["Pace Ace — " + (S.meters/1000).toFixed(2) + " km in " + fmtTime(S.seconds), ""];
+    for (var i=0;i<rows.length;i++){
+      var c = rows[i].cells;
+      if (c.length < 3) { out.push(c[0].textContent); continue; }
+      out.push(c[0].textContent + "   " + c[1].textContent + "   " + c[2].textContent);
+    }
+    var text = out.join("\n");
+    var done = function(){
+      $("copyBtn").textContent = "Copied";
+      setTimeout(function(){ $("copyBtn").textContent = "Copy"; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ fallback(text, done); });
+    } else { fallback(text, done); }
+  });
+  function fallback(text, done){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  solve();
+})();
+</script>
+</body>
+</html>

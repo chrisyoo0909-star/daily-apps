@@ -117,5 +117,12 @@
     "emoji": "🏡",
     "date": "2026-08-11",
     "blurb": "Rent or buy? Watch two net-worth curves race each other and find the exact year buying pulls ahead — mortgage, taxes, upkeep, PMI and the investment return you give up, all in today's dollars."
+  },
+  {
+    "file": "apps/app-2026-08-12-pace-ace.html",
+    "name": "Pace Ace",
+    "emoji": "🏃",
+    "date": "2026-08-12",
+    "blurb": "Enter any two of distance, time and pace and it solves the third — plus a split plan you can tune from negative split to fade, equivalent race times, and training paces."
   }
 ]
