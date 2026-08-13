@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Primordial — a life simulator from six simple rules</title>
+<style>
+  :root{
+    --bg:#05060c;
+    --panel:rgba(16,18,32,.82);
+    --edge:rgba(255,255,255,.10);
+    --edge2:rgba(255,255,255,.18);
+    --ink:#e9ecff;
+    --dim:#9aa3c7;
+    --accent:#7cc6ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font:15px/1.45 ui-sans-serif,-apple-system,"SF Pro Text",Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  #stage{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+
+  /* ---------- title ---------- */
+  #brand{
+    position:fixed;left:14px;top:calc(12px + env(safe-area-inset-top));
+    pointer-events:none;z-index:5;
+  }
+  #brand h1{
+    margin:0;font-size:17px;font-weight:650;letter-spacing:.34em;text-transform:uppercase;
+    background:linear-gradient(90deg,#ff4d6d,#ffd166,#4cc9f0,#c77dff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  #brand p{margin:2px 0 0;font-size:11.5px;color:var(--dim);letter-spacing:.04em}
+  #stats{
+    position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top));z-index:5;
+    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#67709a;text-align:right;
+    pointer-events:none;
+  }
+
+  /* ---------- hint ---------- */
+  #hint{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+    z-index:6;text-align:center;pointer-events:none;
+    padding:16px 22px;border-radius:16px;
+    background:rgba(8,10,20,.6);border:1px solid var(--edge);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    font-size:13.5px;color:#cbd3f5;max-width:min(84vw,360px);
+    transition:opacity .7s ease;
+  }
+  #hint b{color:#fff;font-weight:600}
+  #hint.gone{opacity:0}
+
+  /* ---------- dock ---------- */
+  #dock{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    z-index:8;display:flex;gap:6px;align-items:center;
+    padding:6px;border-radius:16px;
+    background:var(--panel);border:1px solid var(--edge);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 12px 40px rgba(0,0,0,.55);
+    max-width:calc(100vw - 20px);
+  }
+  button{
+    font:inherit;color:var(--ink);background:rgba(255,255,255,.05);
+    border:1px solid transparent;border-radius:11px;padding:9px 13px;cursor:pointer;
+    transition:background .15s,border-color .15s,transform .1s;white-space:nowrap;
+  }
+  button:hover{background:rgba(255,255,255,.11)}
+  button:active{transform:scale(.96)}
+  button.primary{background:linear-gradient(135deg,#2b6cff,#7c3aed);font-weight:600}
+  button.primary:hover{filter:brightness(1.12)}
+  button.on{border-color:var(--accent);color:#fff;background:rgba(124,198,255,.16)}
+  .icon{padding:9px 11px;font-size:15px;line-height:1}
+
+  /* ---------- panel ---------- */
+  #panel{
+    position:fixed;z-index:9;
+    right:14px;bottom:calc(74px + env(safe-area-inset-bottom));
+    width:min(340px,calc(100vw - 28px));
+    max-height:min(70vh,560px);overflow-y:auto;overscroll-behavior:contain;
+    padding:16px;border-radius:18px;
+    background:var(--panel);border:1px solid var(--edge);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:0 18px 60px rgba(0,0,0,.6);
+    transform-origin:bottom right;
+    transition:opacity .18s ease,transform .18s ease;
+  }
+  #panel.hidden{opacity:0;transform:scale(.94) translateY(8px);pointer-events:none}
+  .sect{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#7d86b0;margin:0 0 8px}
+  .sect+.sect{margin-top:18px}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .row label{flex:0 0 74px;font-size:12.5px;color:var(--dim)}
+  .row output{flex:0 0 44px;text-align:right;font:11.5px ui-monospace,Menlo,monospace;color:#aab3dd}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:22px;background:transparent}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;margin-top:-5.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(124,198,255,.28);cursor:pointer}
+  input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(124,198,255,.28)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips button{padding:7px 11px;font-size:12.5px;border-radius:10px}
+  .note{font-size:11.5px;color:#6f78a2;margin:10px 0 0;line-height:1.5}
+
+  /* ---------- matrix ---------- */
+  #matrixWrap{overflow-x:auto}
+  table#matrix{border-collapse:separate;border-spacing:3px;margin:0 auto}
+  table#matrix td{padding:0}
+  .dot{width:17px;height:17px;border-radius:50%;display:block}
+  .cell{
+    width:31px;height:31px;border-radius:9px;cursor:ns-resize;touch-action:none;
+    display:flex;align-items:center;justify-content:center;
+    font:10px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.82);
+    border:1px solid rgba(255,255,255,.07);user-select:none;-webkit-user-select:none;
+  }
+  .cell.hot{outline:2px solid #fff;outline-offset:-2px}
+  .mhead{text-align:center;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div id="brand">
+  <h1>Primordial</h1>
+  <p>emergent life from a table of numbers</p>
+</div>
+<div id="stats"><span id="fps">–</span> fps<br><span id="pcount">–</span> cells</div>
+
+<div id="hint">
+  <b>Drag anywhere</b> to stir the soup.<br>
+  Hit <b>Mutate</b> until something alive appears.
+</div>
+
+<div id="dock">
+  <button class="primary" id="mutate">✦ Mutate</button>
+  <button class="icon" id="playBtn" title="Pause / play">⏸</button>
+  <button class="icon" id="reseed" title="Re-scatter particles">↻</button>
+  <button class="icon on" id="tune" title="Rules &amp; settings">⚙</button>
+</div>
+
+<div id="panel" class="hidden">
+  <p class="sect">Behaviour presets</p>
+  <div class="chips" id="presets">
+    <button data-p="chaos">Chaos</button>
+    <button data-p="cells">Cells</button>
+    <button data-p="snakes">Snakes</button>
+    <button data-p="chase">Chase</button>
+    <button data-p="orbits">Orbits</button>
+    <button data-p="zero">Clear</button>
+  </div>
+
+  <p class="sect">Attraction rules</p>
+  <div id="matrixWrap"><table id="matrix"></table></div>
+  <p class="note">Row = who feels it, column = who they feel. Drag a square up for <span style="color:#6ea8ff">attraction</span>, down for <span style="color:#ff6b8a">repulsion</span>.</p>
+
+  <p class="sect">Physics</p>
+  <div class="row"><label>Species</label><input type="range" id="sSpecies" min="2" max="6" step="1"><output id="oSpecies"></output></div>
+  <div class="row"><label>Population</label><input type="range" id="sCount" min="300" max="3000" step="100"><output id="oCount"></output></div>
+  <div class="row"><label>Reach</label><input type="range" id="sRange" min="40" max="180" step="1"><output id="oRange"></output></div>
+  <div class="row"><label>Force</label><input type="range" id="sForce" min="2" max="30" step="1"><output id="oForce"></output></div>
+  <div class="row"><label>Friction</label><input type="range" id="sFric" min="10" max="200" step="1"><output id="oFric"></output></div>
+  <div class="row"><label>Trails</label><input type="range" id="sTrail" min="0" max="95" step="1"><output id="oTrail"></output></div>
+  <div class="row"><label>Size</label><input type="range" id="sSize" min="50" max="260" step="1"><output id="oSize"></output></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================ constants ============================ */
+const COLORS = ["#ff4d6d","#ffd166","#4cc9f0","#8ef58a","#c77dff","#ff9f45"];
+const RGB = COLORS.map(h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]);
+const MAX_S = 6;
+const BETA = 0.30;            // universal short-range repulsion radius (fraction of reach)
+const DT   = 0.02;            // fixed physics step
+
+/* ============================ state ============================ */
+const S = {
+  species: 5,
+  count: 1400,
+  rMax: 0.09,                 // in normalized units (domain width = 1)
+  force: 10,
+  halfLife: 0.045,            // velocity half-life in seconds
+  trail: 0.72,                // 0 = no trail, ->1 = long trail
+  size: 1.15,
+  running: true
+};
+
+let M = [];                   // attraction matrix [MAX_S][MAX_S]
+
+let px, py, vx, vy, sp;       // particle arrays
+let N = 0;
+
+/* ============================ canvas ============================ */
+const cv  = document.getElementById("c");
+const ctx = cv.getContext("2d", { alpha:false });
+let W = 1, H = 1, DPR = 1, aspect = 1; // aspect = domain height (domain width is always 1)
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const r = cv.getBoundingClientRect();
+  W = Math.max(1, Math.round(r.width));
+  H = Math.max(1, Math.round(r.height));
+  cv.width  = Math.round(W * DPR);
+  cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const newAspect = H / W;
+  if (py){                                  // keep particles inside the new domain
+    for (let i=0;i<N;i++){
+      py[i] = ((py[i] % newAspect) + newAspect) % newAspect;
+    }
+  }
+  aspect = newAspect;
+  ctx.fillStyle = "#05060c";
+  ctx.fillRect(0,0,W,H);
+  buildSprites();
+  layoutGrid();
+}
+window.addEventListener("resize", resize);
+
+/* ---------- glow sprites (one per species) ---------- */
+let sprites = [], spriteHalf = 0;
+function buildSprites(){
+  const rad = Math.max(2.2, 3.1 * S.size);          // css px core radius
+  const half = Math.ceil(rad * 3.4);
+  spriteHalf = half;
+  sprites = RGB.map(([r,g,b]) => {
+    const s = document.createElement("canvas");
+    s.width = s.height = Math.ceil(half*2*DPR);
+    const c = s.getContext("2d");
+    c.setTransform(DPR,0,0,DPR,0,0);
+    const gr = c.createRadialGradient(half,half,0,half,half,half);
+    // kept below full opacity so dense clumps stay coloured instead of blowing out to white
+    gr.addColorStop(0,    "rgba("+r+","+g+","+b+",0.82)");
+    gr.addColorStop(rad/half*0.62, "rgba("+r+","+g+","+b+",0.66)");
+    gr.addColorStop(rad/half,      "rgba("+r+","+g+","+b+",0.20)");
+    gr.addColorStop(1,    "rgba("+r+","+g+","+b+",0)");
+    c.fillStyle = gr;
+    c.beginPath(); c.arc(half,half,half,0,Math.PI*2); c.fill();
+    return s;
+  });
+}
+
+/* ============================ matrix presets ============================ */
+const rnd = (a,b)=> a + Math.random()*(b-a);
+const round2 = v => Math.round(v*100)/100;
+
+function blank(){
+  const m = [];
+  for (let i=0;i<MAX_S;i++){ m.push(new Array(MAX_S).fill(0)); }
+  return m;
+}
+function preset(kind){
+  const n = S.species;
+  const m = blank();
+  if (kind === "chaos"){
+    for (let i=0;i<n;i++) for (let j=0;j<n;j++) m[i][j] = round2(rnd(-1,1));
+  } else if (kind === "cells"){                    // near-symmetric, self-loving -> drifting blobs & membranes
+    for (let i=0;i<n;i++){
+      m[i][i] = round2(rnd(0.4,1));
+      for (let j=i+1;j<n;j++){
+        const v = rnd(-0.9,0.75), skew = rnd(-0.18,0.18);   // the skew keeps it alive instead of frozen
+        m[i][j] = round2(v + skew); m[j][i] = round2(v - skew);
+      }
+    }
+  } else if (kind === "snakes"){                   // chains that crawl
+    for (let i=0;i<n;i++){
+      m[i][i] = 0.9;
+      m[i][(i+1)%n] = 0.35;
+      m[(i+1)%n][i] = -0.35;
+      if (n >= 3) m[i][(i+2)%n] = round2(rnd(-0.5,-0.1));
+    }
+  } else if (kind === "chase"){                    // i hunts i+1, i+1 flees i
+    for (let i=0;i<n;i++){
+      m[i][i] = round2(rnd(-0.2,0.25));
+      m[i][(i+1)%n] = 1;
+      m[(i+1)%n][i] = -1;
+    }
+  } else if (kind === "orbits"){                   // antisymmetric -> swirling rotors
+    for (let i=0;i<n;i++){
+      m[i][i] = round2(rnd(0.15,0.6));
+      for (let j=i+1;j<n;j++){ const v = round2(rnd(0.3,1)); m[i][j] = v; m[j][i] = -v; }
+    }
+  }
+  return m;
+}
+
+/* ============================ particles ============================ */
+function seed(keepMatrix){
+  N = S.count;
+  px = new Float32Array(N); py = new Float32Array(N);
+  vx = new Float32Array(N); vy = new Float32Array(N);
+  sp = new Uint8Array(N);
+  for (let i=0;i<N;i++){
+    px[i] = Math.random();
+    py[i] = Math.random()*aspect;
+    vx[i] = 0; vy[i] = 0;
+    sp[i] = (Math.random()*S.species)|0;
+  }
+  if (!keepMatrix) M = preset("chaos");
+  document.getElementById("pcount").textContent = N;
+  layoutGrid();
+}
+
+/* ---------- uniform spatial grid (counting sort, torus) ---------- */
+let cols=1, rows=1, cellW=1, cellH=1, cellStart, cellFill, order, cellOf;
+function layoutGrid(){
+  const r = effRange();
+  cols = Math.max(3, Math.floor(1 / r));
+  rows = Math.max(3, Math.floor(aspect / r));
+  cellW = 1 / cols;
+  cellH = aspect / rows;
+  const n = cols*rows;
+  cellStart = new Int32Array(n+1);
+  cellFill  = new Int32Array(n+1);
+  order     = new Int32Array(Math.max(1,N));
+  cellOf    = new Int32Array(Math.max(1,N));
+}
+// reach can never exceed a third of the smaller domain side, or the torus wrap double-counts
+function effRange(){
+  return Math.min(S.rMax, 1/3.05, aspect/3.05);
+}
+
+function buildGrid(){
+  const n = cols*rows;
+  cellStart.fill(0);
+  for (let i=0;i<N;i++){
+    let cxi = (px[i]/cellW)|0; if (cxi<0) cxi=0; else if (cxi>=cols) cxi=cols-1;
+    let cyi = (py[i]/cellH)|0; if (cyi<0) cyi=0; else if (cyi>=rows) cyi=rows-1;
+    const ci = cyi*cols + cxi;
+    cellOf[i] = ci;
+    cellStart[ci+1]++;
+  }
+  for (let k=0;k<n;k++) cellStart[k+1] += cellStart[k];
+  cellFill.set(cellStart);
+  for (let i=0;i<N;i++) order[cellFill[cellOf[i]]++] = i;
+}
+
+/* ---------- the force law ---------- */
+function forceLaw(r, a){
+  if (r < BETA) return r/BETA - 1;                       // hard core: always push apart
+  if (r < 1)    return a * (1 - Math.abs(2*r - 1 - BETA) / (1 - BETA));
+  return 0;
+}
+
+/* ---------- pointer stirring ---------- */
+let stir = null; // {x,y} in normalized coords
+const STIR_R = 0.13;
+
+function step(){
+  const r    = effRange();
+  const r2   = r*r;
+  const halfW = 0.5, halfH = aspect*0.5;
+  const fric = Math.pow(0.5, DT / S.halfLife);
+  const k    = r * S.force;
+  buildGrid();
+
+  for (let i=0;i<N;i++){
+    let fx = 0, fy = 0;
+    const xi = px[i], yi = py[i], si = sp[i];
+    const row = M[si];
+    let cxi = (xi/cellW)|0; if (cxi<0) cxi=0; else if (cxi>=cols) cxi=cols-1;
+    let cyi = (yi/cellH)|0; if (cyi<0) cyi=0; else if (cyi>=rows) cyi=rows-1;
+
+    for (let oy=-1; oy<=1; oy++){
+      let gy = cyi + oy; if (gy<0) gy += rows; else if (gy>=rows) gy -= rows;
+      const base = gy*cols;
+      for (let ox=-1; ox<=1; ox++){
+        let gx = cxi + ox; if (gx<0) gx += cols; else if (gx>=cols) gx -= cols;
+        const ci = base + gx;
+        const s0 = cellStart[ci], s1 = cellStart[ci+1];
+        for (let t=s0;t<s1;t++){
+          const j = order[t];
+          if (j === i) continue;
+          let dx = px[j] - xi;
+          let dy = py[j] - yi;
+          if (dx >  halfW) dx -= 1;      else if (dx < -halfW) dx += 1;
+          if (dy >  halfH) dy -= aspect; else if (dy < -halfH) dy += aspect;
+          const d2 = dx*dx + dy*dy;
+          if (d2 > 0 && d2 < r2){
+            const d = Math.sqrt(d2);
+            const f = forceLaw(d/r, row[sp[j]]);
+            fx += f * dx / d;
+            fy += f * dy / d;
+          }
+        }
+      }
+    }
+
+    fx *= k; fy *= k;
+
+    if (stir){
+      let dx = xi - stir.x, dy = yi - stir.y;
+      if (dx >  halfW) dx -= 1;      else if (dx < -halfW) dx += 1;
+      if (dy >  halfH) dy -= aspect; else if (dy < -halfH) dy += aspect;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < STIR_R*STIR_R && d2 > 1e-9){
+        const d = Math.sqrt(d2);
+        const push = (1 - d/STIR_R) * 6;
+        fx += push * dx / d;
+        fy += push * dy / d;
+      }
+    }
+
+    let nvx = vx[i]*fric + fx*DT;
+    let nvy = vy[i]*fric + fy*DT;
+    // safety clamp so extreme settings can never explode
+    const sp2 = nvx*nvx + nvy*nvy, cap = 3;
+    if (sp2 > cap*cap){ const s = cap/Math.sqrt(sp2); nvx*=s; nvy*=s; }
+    vx[i] = nvx; vy[i] = nvy;
+  }
+
+  for (let i=0;i<N;i++){
+    let x = px[i] + vx[i]*DT;
+    let y = py[i] + vy[i]*DT;
+    if (x < 0) x += 1; else if (x >= 1) x -= 1;
+    if (y < 0) y += aspect; else if (y >= aspect) y -= aspect;
+    if (!(x >= 0 && x < 1)) x = Math.random();
+    if (!(y >= 0 && y < aspect)) y = Math.random()*aspect;
+    px[i] = x; py[i] = y;
+  }
+}
+
+/* ============================ render ============================ */
+function draw(){
+  const fade = 1 - S.trail;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "rgba(5,6,12," + (0.10 + fade*0.90).toFixed(3) + ")";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.globalCompositeOperation = "lighter";
+  const scale = W, h = spriteHalf;
+  for (let i=0;i<N;i++){
+    ctx.drawImage(sprites[sp[i]], px[i]*scale - h, py[i]*scale - h, h*2, h*2);
+  }
+  ctx.globalCompositeOperation = "source-over";
+}
+
+/* ============================ loop ============================ */
+let last = performance.now(), acc = 0, fpsT = last, frames = 0;
+const fpsEl = document.getElementById("fps");
+
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last)/1000);
+  last = now;
+
+  if (S.running){
+    acc += dt;
+    let guard = 0;
+    while (acc >= DT && guard < 3){ step(); acc -= DT; guard++; }
+    if (acc > DT) acc = 0;
+    draw();
+  }
+
+  frames++;
+  if (now - fpsT > 500){
+    fpsEl.textContent = Math.round(frames * 1000 / (now - fpsT));
+    frames = 0; fpsT = now;
+  }
+}
+
+/* ============================ matrix UI ============================ */
+const mTable = document.getElementById("matrix");
+
+function cellColor(v){
+  if (v > 0) return "rgba(80,140,255," + (0.12 + 0.72*v).toFixed(3) + ")";
+  if (v < 0) return "rgba(255,70,110," + (0.12 + 0.72*(-v)).toFixed(3) + ")";
+  return "rgba(255,255,255,.05)";
+}
+
+function renderMatrix(){
+  const n = S.species;
+  let html = "<tr><td></td>";
+  for (let j=0;j<n;j++) html += '<td class="mhead"><span class="dot" style="background:'+COLORS[j]+'"></span></td>';
+  html += "</tr>";
+  for (let i=0;i<n;i++){
+    html += '<tr><td class="mhead"><span class="dot" style="background:'+COLORS[i]+'"></span></td>';
+    for (let j=0;j<n;j++){
+      const v = M[i][j];
+      html += '<td><div class="cell" data-i="'+i+'" data-j="'+j+'" style="background:'+cellColor(v)+'">'+v.toFixed(1)+'</div></td>';
+    }
+    html += "</tr>";
+  }
+  mTable.innerHTML = html;
+}
+
+function updateCell(i,j){
+  const el = mTable.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');
+  if (el){ el.style.background = cellColor(M[i][j]); el.textContent = M[i][j].toFixed(1); }
+}
+
+let drag = null;
+mTable.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".cell");
+  if (!el) return;
+  e.preventDefault();
+  const i = +el.dataset.i, j = +el.dataset.j;
+  drag = { i, j, y: e.clientY, v: M[i][j], el };
+  el.classList.add("hot");
+  el.setPointerCapture(e.pointerId);
+});
+mTable.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dy = drag.y - e.clientY;
+  let v = drag.v + dy/70;
+  v = Math.max(-1, Math.min(1, Math.round(v*20)/20));
+  if (v !== M[drag.i][drag.j]){ M[drag.i][drag.j] = v; updateCell(drag.i, drag.j); }
+});
+function endDrag(){ if (drag){ drag.el.classList.remove("hot"); drag = null; } }
+mTable.addEventListener("pointerup", endDrag);
+mTable.addEventListener("pointercancel", endDrag);
+
+/* ============================ controls ============================ */
+function bind(id, oid, get, set, fmt){
+  const s = document.getElementById(id), o = document.getElementById(oid);
+  s.value = get();
+  o.textContent = fmt(+s.value);
+  s.addEventListener("input", () => { set(+s.value); o.textContent = fmt(+s.value); });
+  return s;
+}
+
+bind("sSpecies","oSpecies", ()=>S.species, v => {
+  const old = S.species;
+  S.species = v;
+  if (v > old){                             // invent rules for the newcomers, keep existing ones
+    const fresh = preset("chaos");
+    for (let i=0;i<v;i++) for (let j=0;j<v;j++) if (i >= old || j >= old) M[i][j] = fresh[i][j];
+  }
+  for (let i=0;i<N;i++) if (sp[i] >= v) sp[i] = (Math.random()*v)|0;
+  renderMatrix();
+}, v=>v);
+
+bind("sCount","oCount", ()=>S.count, v => { S.count = v; seed(true); }, v=>v);
+bind("sRange","oRange", ()=>Math.round(S.rMax*1000), v => { S.rMax = v/1000; layoutGrid(); }, v=>v);
+bind("sForce","oForce", ()=>S.force, v => S.force = v, v=>v);
+bind("sFric","oFric", ()=>Math.round(S.halfLife*1000), v => S.halfLife = v/1000, v=>v);
+bind("sTrail","oTrail", ()=>Math.round(S.trail*100), v => S.trail = v/100, v=>v+"%");
+bind("sSize","oSize", ()=>Math.round(S.size*100), v => { S.size = v/100; buildSprites(); }, v=>v+"%");
+
+document.getElementById("presets").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  M = b.dataset.p === "zero" ? blank() : preset(b.dataset.p);
+  renderMatrix();
+  hideHint();
+});
+
+const playBtn = document.getElementById("playBtn");
+playBtn.addEventListener("click", () => {
+  S.running = !S.running;
+  playBtn.textContent = S.running ? "⏸" : "▶";
+  playBtn.classList.toggle("on", !S.running);
+});
+
+document.getElementById("mutate").addEventListener("click", () => {
+  const kinds = ["chaos","chaos","cells","snakes","chase","orbits"];
+  M = preset(kinds[(Math.random()*kinds.length)|0]);
+  renderMatrix();
+  hideHint();
+});
+
+document.getElementById("reseed").addEventListener("click", () => { seed(true); hideHint(); });
+
+const panel = document.getElementById("panel"), tuneBtn = document.getElementById("tune");
+tuneBtn.addEventListener("click", () => {
+  const showing = panel.classList.toggle("hidden");
+  tuneBtn.classList.toggle("on", !showing);
+});
+
+/* ---------- stirring ---------- */
+const hint = document.getElementById("hint");
+let hintGone = false;
+function hideHint(){ if (!hintGone){ hintGone = true; hint.classList.add("gone"); setTimeout(()=>hint.remove(), 800); } }
+
+function toNorm(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left)/r.width, y: (e.clientY - r.top)/r.width };
+}
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); stir = toNorm(e); hideHint(); });
+cv.addEventListener("pointermove", e => { if (stir) stir = toNorm(e); });
+cv.addEventListener("pointerup",   () => stir = null);
+cv.addEventListener("pointercancel", () => stir = null);
+window.addEventListener("blur", () => stir = null);
+document.addEventListener("gesturestart", e => e.preventDefault());
+
+/* ============================ go ============================ */
+resize();
+seed(false);
+M = preset("cells");
+renderMatrix();
+if (window.innerWidth >= 760){                 // on phones, keep the soup in full view until asked
+  setTimeout(()=>{ panel.classList.remove("hidden"); }, 60);
+} else {
+  tuneBtn.classList.remove("on");
+}
+setTimeout(hideHint, 9000);
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

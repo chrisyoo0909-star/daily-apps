@@ -124,5 +124,12 @@
     "emoji": "🏃",
     "date": "2026-08-12",
     "blurb": "Enter any two of distance, time and pace and it solves the third — plus a split plan you can tune from negative split to fade, equivalent race times, and training paces."
+  },
+  {
+    "file": "apps/app-2026-08-13-primordial.html",
+    "name": "Primordial",
+    "emoji": "🦠",
+    "date": "2026-08-13",
+    "blurb": "A living petri dish: five species of glowing particle obey nothing but a table of attraction numbers, and cells, chains and hunting swarms emerge on their own — tune the table and watch life change."
   }
 ]
