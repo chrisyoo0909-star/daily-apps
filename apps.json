@@ -131,5 +131,12 @@
     "emoji": "🦠",
     "date": "2026-08-13",
     "blurb": "A living petri dish: five species of glowing particle obey nothing but a table of attraction numbers, and cells, chains and hunting swarms emerge on their own — tune the table and watch life change."
+  },
+  {
+    "file": "apps/app-2026-08-14-plated.html",
+    "name": "Plated",
+    "emoji": "🍽️",
+    "date": "2026-08-14",
+    "blurb": "Tell it when you want to eat and it works backwards — every dish gets a start time, hands-on prep is spread so one cook can actually do it, and it warns you when the oven is double-booked."
   }
 ]
