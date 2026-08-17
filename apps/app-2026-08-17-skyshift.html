@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skyshift — Beat Jet Lag Before You Land</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#0b1020;
+    --bg2:#111935;
+    --card:#161f3d;
+    --card2:#1c2749;
+    --line:#2a3765;
+    --txt:#e8ecff;
+    --dim:#93a0cc;
+    --dim2:#6b7aa8;
+    --sleep:#5b6ee8;
+    --sleepD:#3b4bb5;
+    --seek:#ffc74a;
+    --avoid:#3a2a55;
+    --avoidL:#7d5fb0;
+    --accent:#5ee0c0;
+    --warn:#ff7a6b;
+  }
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 12% -8%, #22306b 0%, transparent 58%),
+      radial-gradient(900px 520px at 96% 4%, #3a2350 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding:22px 16px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+
+  header{text-align:center;margin-bottom:22px}
+  .logo{font-size:34px;line-height:1;margin-bottom:6px}
+  h1{font-size:29px;margin:0 0 6px;letter-spacing:-.6px;font-weight:750}
+  h1 .g{background:linear-gradient(92deg,#7cc6ff,#c8a2ff 50%,#ffc74a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tag{color:var(--dim);font-size:14px;margin:0;line-height:1.5}
+
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:0 14px 40px rgba(0,0,0,.34);
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+
+  label{display:block;font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin-bottom:6px;font-weight:700}
+  select,input{
+    width:100%;padding:11px 12px;border-radius:11px;
+    background:#0e1531;border:1px solid var(--line);color:var(--txt);
+    font-size:15px;font-family:inherit;appearance:none;-webkit-appearance:none;
+  }
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%2393a0cc' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  input[type=date],input[type=time]{min-height:44px}
+  select:focus,input:focus{outline:none;border-color:#5b6ee8;box-shadow:0 0 0 3px rgba(91,110,232,.2)}
+  .hint{font-size:11.5px;color:var(--dim2);margin-top:5px}
+
+  .swapRow{display:flex;align-items:flex-end;gap:10px}
+  .swapRow>div{flex:1;min-width:0}
+  #swap{
+    flex:0 0 auto;width:42px;height:42px;border-radius:11px;border:1px solid var(--line);
+    background:#0e1531;color:var(--dim);font-size:17px;cursor:pointer;padding:0;
+  }
+  #swap:hover{color:var(--txt);border-color:#5b6ee8}
+
+  .prepRow{display:flex;align-items:center;gap:12px;margin-top:4px}
+  input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;padding:0;border:0;height:26px;flex:1}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#5b6ee8,#7d5fb0)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;margin-top:-7px;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+  input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:linear-gradient(90deg,#5b6ee8,#7d5fb0)}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:#fff;cursor:pointer}
+  .prepVal{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;min-width:88px;text-align:right;color:var(--accent)}
+
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0e1531}
+  .toggle button{background:transparent;border:0;color:var(--dim);font:inherit;font-size:12.5px;font-weight:650;padding:7px 13px;cursor:pointer}
+  .toggle button.on{background:#2a3765;color:var(--txt)}
+
+  /* summary */
+  .verdict{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .arrow{font-size:30px}
+  .vmain{font-size:21px;font-weight:750;letter-spacing:-.3px}
+  .vsub{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.45}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:520px){.stats{grid-template-columns:1fr}}
+  .stat{background:#0e1531;border:1px solid var(--line);border-radius:13px;padding:12px}
+  .stat .n{font-size:23px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .stat .l{font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;font-weight:700}
+  .stat .s{font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.4}
+  .stat.good .n{color:var(--accent)}
+  .stat.meh .n{color:var(--dim)}
+
+  h2{font-size:12px;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim2);margin:0 0 12px;font-weight:750}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim)}
+  .sw{width:15px;height:11px;border-radius:3px;flex:0 0 auto}
+
+  /* timeline */
+  .axis{display:flex;margin:0 0 5px;padding-left:var(--lw);font-size:10px;color:var(--dim2);font-variant-numeric:tabular-nums}
+  .axis span{flex:1;text-align:left;transform:translateX(-50%)}
+  .axis span:first-child{transform:none}
+  .row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .rlab{width:var(--lw);flex:0 0 var(--lw);font-size:11.5px;line-height:1.25}
+  .rlab b{display:block;font-weight:700;font-size:12px}
+  .rlab span{color:var(--dim2);font-size:10.5px}
+  .bar{position:relative;flex:1;height:34px;border-radius:9px;background:#0a0f26;overflow:hidden;border:1px solid #202b52}
+  .seg{position:absolute;top:0;bottom:0}
+  .s-avoid{background:repeating-linear-gradient(135deg,#2e2148,#2e2148 5px,#3a2a58 5px,#3a2a58 10px)}
+  .s-sleep{background:linear-gradient(180deg,#5b6ee8,#3b4bb5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  .s-seek{background:linear-gradient(180deg,#ffd579,#f0a81e);box-shadow:0 0 14px rgba(255,199,74,.4)}
+  .s-mel{background:#5ee0c0;width:3px!important;border-radius:2px}
+  .grid-t{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.055)}
+  .nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--warn);opacity:.8}
+  .divider{display:flex;align-items:center;gap:10px;margin:16px 0 12px;color:var(--accent);font-size:11.5px;font-weight:750;letter-spacing:1px;text-transform:uppercase}
+  .divider::before,.divider::after{content:"";height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);flex:1}
+
+  .daydetail{font-size:11.5px;color:var(--dim);padding:0 0 4px var(--lw);margin:-3px 0 9px;line-height:1.5}
+  .daydetail em{color:var(--seek);font-style:normal;font-weight:650}
+
+  ul.tips{margin:0;padding:0;list-style:none}
+  ul.tips li{position:relative;padding-left:24px;margin-bottom:9px;font-size:13.5px;line-height:1.5;color:#c9d2f0}
+  ul.tips li::before{content:attr(data-i);position:absolute;left:0;top:-1px;font-size:14px}
+  ul.tips li b{color:var(--txt)}
+
+  .note{font-size:11.5px;color:var(--dim2);line-height:1.55;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .btn{background:#0e1531;border:1px solid var(--line);color:var(--txt);font:inherit;font-size:13px;font-weight:650;padding:10px 16px;border-radius:11px;cursor:pointer}
+  .btn:hover{border-color:#5b6ee8}
+  .btn.pri{background:linear-gradient(92deg,#5b6ee8,#7d5fb0);border-color:transparent}
+  .zero{text-align:center;padding:26px 10px}
+  .zero .big{font-size:40px;margin-bottom:8px}
+  .zero p{color:var(--dim);font-size:14px;margin:6px 0 0;line-height:1.5}
+  footer{text-align:center;color:var(--dim2);font-size:11.5px;margin-top:26px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">🛬</div>
+  <h1>Sky<span class="g">shift</span></h1>
+  <p class="tag">A day-by-day light and sleep plan that shifts your body clock <em>before</em> you fly — so you land closer to local time.</p>
+</header>
+
+<div class="card">
+  <div class="swapRow" style="margin-bottom:12px">
+    <div>
+      <label for="from">Flying from</label>
+      <select id="from"></select>
+    </div>
+    <button id="swap" title="Swap cities">⇄</button>
+    <div>
+      <label for="to">Flying to</label>
+      <select id="to"></select>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label for="arr">Date you land</label>
+      <input type="date" id="arr">
+    </div>
+    <div>
+      <label>Your usual sleep (at home)</label>
+      <div style="display:flex;gap:8px">
+        <input type="time" id="bed" value="23:00" style="flex:1" aria-label="Usual bedtime">
+        <input type="time" id="wake" value="07:00" style="flex:1" aria-label="Usual wake time">
+      </div>
+      <div class="hint">Bedtime → wake time</div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <label for="prep">Days you can prepare before the flight</label>
+    <div class="prepRow">
+      <input type="range" id="prep" min="0" max="4" step="1" value="3">
+      <span class="prepVal" id="prepVal">3 days</span>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="toggle" id="fmtToggle">
+      <button data-f="12" class="on">12h</button><button data-f="24">24h</button>
+    </div>
+    <div class="btnrow"><button class="btn" id="copy">Copy plan as text</button></div>
+  </div>
+</div>
+
+<div id="out"></div>
+
+<footer>
+  Built on standard circadian phase-shifting practice: your body clock's low point (core-temperature minimum) sits about 2 h before your normal wake time,<br>
+  light <em>after</em> it pulls you earlier, light <em>before</em> it pushes you later. Educational tool — not medical advice.
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- cities ---------------- */
+var CITIES = [
+  ["Auckland","Pacific/Auckland"],["Sydney","Australia/Sydney"],["Melbourne","Australia/Melbourne"],
+  ["Brisbane","Australia/Brisbane"],["Adelaide","Australia/Adelaide"],["Perth","Australia/Perth"],
+  ["Tokyo","Asia/Tokyo"],["Osaka","Asia/Tokyo"],["Seoul","Asia/Seoul"],["Taipei","Asia/Taipei"],
+  ["Shanghai","Asia/Shanghai"],["Beijing","Asia/Shanghai"],["Hong Kong","Asia/Hong_Kong"],
+  ["Manila","Asia/Manila"],["Singapore","Asia/Singapore"],["Kuala Lumpur","Asia/Kuala_Lumpur"],
+  ["Jakarta","Asia/Jakarta"],["Bangkok","Asia/Bangkok"],["Ho Chi Minh City","Asia/Ho_Chi_Minh"],
+  ["Hanoi","Asia/Ho_Chi_Minh"],["Dhaka","Asia/Dhaka"],["Kathmandu","Asia/Kathmandu"],
+  ["Delhi","Asia/Kolkata"],["Mumbai","Asia/Kolkata"],["Bengaluru","Asia/Kolkata"],
+  ["Colombo","Asia/Colombo"],["Karachi","Asia/Karachi"],["Tashkent","Asia/Tashkent"],
+  ["Dubai","Asia/Dubai"],["Abu Dhabi","Asia/Dubai"],["Doha","Asia/Qatar"],["Riyadh","Asia/Riyadh"],
+  ["Tehran","Asia/Tehran"],["Baku","Asia/Baku"],["Tbilisi","Asia/Tbilisi"],
+  ["Moscow","Europe/Moscow"],["Istanbul","Europe/Istanbul"],["Tel Aviv","Asia/Jerusalem"],
+  ["Cairo","Africa/Cairo"],["Nairobi","Africa/Nairobi"],["Johannesburg","Africa/Johannesburg"],
+  ["Cape Town","Africa/Johannesburg"],["Lagos","Africa/Lagos"],["Accra","Africa/Accra"],
+  ["Casablanca","Africa/Casablanca"],["Athens","Europe/Athens"],["Helsinki","Europe/Helsinki"],
+  ["Kyiv","Europe/Kyiv"],["Bucharest","Europe/Bucharest"],["Warsaw","Europe/Warsaw"],
+  ["Berlin","Europe/Berlin"],["Munich","Europe/Berlin"],["Vienna","Europe/Vienna"],
+  ["Prague","Europe/Prague"],["Zurich","Europe/Zurich"],["Rome","Europe/Rome"],
+  ["Milan","Europe/Rome"],["Paris","Europe/Paris"],["Amsterdam","Europe/Amsterdam"],
+  ["Brussels","Europe/Brussels"],["Copenhagen","Europe/Copenhagen"],["Stockholm","Europe/Stockholm"],
+  ["Oslo","Europe/Oslo"],["Madrid","Europe/Madrid"],["Barcelona","Europe/Madrid"],
+  ["Lisbon","Europe/Lisbon"],["Dublin","Europe/Dublin"],["London","Europe/London"],
+  ["Edinburgh","Europe/London"],["Reykjavik","Atlantic/Reykjavik"],
+  ["São Paulo","America/Sao_Paulo"],["Rio de Janeiro","America/Sao_Paulo"],
+  ["Buenos Aires","America/Argentina/Buenos_Aires"],["Santiago","America/Santiago"],
+  ["Lima","America/Lima"],["Bogotá","America/Bogota"],["Mexico City","America/Mexico_City"],
+  ["Panama City","America/Panama"],["Havana","America/Havana"],["San Juan","America/Puerto_Rico"],
+  ["Halifax","America/Halifax"],["Toronto","America/Toronto"],["Montreal","America/Toronto"],
+  ["New York","America/New_York"],["Boston","America/New_York"],["Washington DC","America/New_York"],
+  ["Miami","America/New_York"],["Atlanta","America/New_York"],["Detroit","America/Detroit"],
+  ["Chicago","America/Chicago"],["Dallas","America/Chicago"],["Houston","America/Chicago"],
+  ["Minneapolis","America/Chicago"],["Denver","America/Denver"],["Phoenix","America/Phoenix"],
+  ["Calgary","America/Edmonton"],["Los Angeles","America/Los_Angeles"],["San Francisco","America/Los_Angeles"],
+  ["Seattle","America/Los_Angeles"],["Las Vegas","America/Los_Angeles"],["Vancouver","America/Vancouver"],
+  ["Anchorage","America/Anchorage"],["Honolulu","Pacific/Honolulu"],["Nadi","Pacific/Fiji"]
+];
+
+/* ---------------- time helpers ---------------- */
+
+/* UTC offset (hours, can be fractional) of an IANA zone at a given instant */
+function tzOffset(tz, date){
+  var dtf = new Intl.DateTimeFormat("en-US",{
+    timeZone:tz, hour12:false,
+    year:"numeric",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit",second:"2-digit"
+  });
+  var p = {}, parts = dtf.formatToParts(date), i;
+  for(i=0;i<parts.length;i++){ p[parts[i].type] = parts[i].value; }
+  var h = parseInt(p.hour,10); if(h === 24) h = 0;
+  var asUTC = Date.UTC(parseInt(p.year,10), parseInt(p.month,10)-1, parseInt(p.day,10),
+                       h, parseInt(p.minute,10), parseInt(p.second,10));
+  return Math.round((asUTC - date.getTime())/60000)/60;
+}
+
+var use24 = false;
+
+function fmt(h){
+  h = ((h % 24) + 24) % 24;
+  var hh = Math.floor(h + 1e-9);
+  var mm = Math.round((h - hh) * 60);
+  if(mm === 60){ mm = 0; hh = (hh + 1) % 24; }
+  var m2 = mm < 10 ? "0" + mm : "" + mm;
+  if(use24) return (hh < 10 ? "0" + hh : "" + hh) + ":" + m2;
+  var ap = hh < 12 ? "AM" : "PM", h12 = hh % 12; if(h12 === 0) h12 = 12;
+  return h12 + ":" + m2 + " " + ap;
+}
+function parseTime(v){
+  var m = /^(\d{1,2}):(\d{2})/.exec(v || "");
+  if(!m) return null;
+  return parseInt(m[1],10) + parseInt(m[2],10)/60;
+}
+function dur(a,b){ var d = b - a; while(d <= 0) d += 24; return d; }
+function plural(n,w){ return n + " " + w + (Math.abs(n) === 1 ? "" : "s"); }
+function hLabel(x){
+  var s = Math.abs(x), wh = Math.floor(s + 1e-9), mn = Math.round((s - wh)*60);
+  if(mn === 60){ mn = 0; wh++; }
+  return wh + (mn ? ":" + (mn<10?"0"+mn:mn) : "") + " h";
+}
+
+var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function dateFromInput(v){
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
+  if(!m) return null;
+  return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], 12, 0, 0));
+}
+function addDays(d,n){ return new Date(d.getTime() + n*86400000); }
+function dLabel(d){ return DOW[d.getUTCDay()] + " " + MON[d.getUTCMonth()] + " " + d.getUTCDate(); }
+function isoDate(d){
+  var m = d.getUTCMonth()+1, dd = d.getUTCDate();
+  return d.getUTCFullYear() + "-" + (m<10?"0":"") + m + "-" + (dd<10?"0":"") + dd;
+}
+
+/* ---------------- the model ----------------
+   CBTmin (core body temperature minimum) ~= usual wake time - 2 h.
+   Light in the ~4 h AFTER CBTmin  -> phase ADVANCE (body clock moves earlier)  [eastward]
+   Light in the ~4 h BEFORE CBTmin -> phase DELAY   (body clock moves later)    [westward]
+   Practical, achievable rates with deliberate light timing:
+     advance ~1.0 h/day, delay ~1.5 h/day.
+   Unmanaged drift is roughly half that eastward, and a bit slower westward.
+------------------------------------------------ */
+var ADV_RATE = 1.0, DEL_RATE = 1.5;
+var ADV_NAT  = 0.6, DEL_NAT  = 1.0;
+var AXIS = 16;              /* timeline runs 16:00 -> 16:00 */
+var SEEK_LEN = 3.5;         /* hours of bright light to chase */
+var AVOID_LEN = 4;          /* hours of light to shield against */
+
+function buildPlan(o){
+  var D = o.shift;                          /* signed hours: + = need to advance (east) */
+  var T = Math.abs(D);
+  var east = D > 0;
+  var rate = east ? ADV_RATE : DEL_RATE;
+  var nat  = east ? ADV_NAT  : DEL_NAT;
+  var sign = east ? 1 : -1;
+
+  var targetCBT = ((o.wake - 2) % 24 + 24) % 24;   /* CBTmin at home, and the goal at destination */
+  /* never shift for more nights than the trip actually needs — start as late as possible */
+  var effPrep = Math.min(o.prep, Math.ceil(T / rate - 1e-9));
+  var preMag = Math.min(effPrep * rate, T);
+  var postDays = Math.ceil((T - preMag) / rate - 1e-9);
+
+  var days = [], i, P, cbt, bed, wk, seek, avoid;
+
+  /* --- pre-flight days, still on the home clock --- */
+  for(i = effPrep; i >= 1; i--){
+    P = sign * Math.min((effPrep - i + 1) * rate, T);   /* signed shift achieved that night */
+    cbt = targetCBT - P;
+    bed = o.bed - P;
+    wk  = o.wake - P;
+    seek  = east ? [wk, wk + SEEK_LEN]                 : [bed - SEEK_LEN, bed];
+    avoid = east ? [bed - AVOID_LEN, bed]              : [wk, wk + AVOID_LEN];
+    days.push({
+      kind:"pre",
+      date: addDays(o.arrDate, -i),
+      title: i === 1 ? "Night before" : plural(i,"day") + " out",
+      zone: o.fromName,
+      bed: bed, wake: wk, cbt: cbt, seek: seek, avoid: avoid,
+      mel: east ? bed - 5 : null,
+      shifted: Math.abs(P)
+    });
+  }
+
+  /* --- destination days: sleep snaps to local clock, light windows chase the drifting CBTmin --- */
+  for(i = 1; i <= Math.min(postDays, 8); i++){
+    /* phase achieved at the START of destination day i */
+    P = sign * Math.min(preMag + (i - 1) * rate, T);
+    cbt = targetCBT - P + D;                 /* CBTmin read on the destination clock */
+    bed = o.bed; wk = o.wake;                /* live on local time immediately */
+    seek  = east ? [cbt, cbt + SEEK_LEN]           : [cbt - SEEK_LEN, cbt];
+    avoid = east ? [cbt - AVOID_LEN, cbt]          : [cbt, cbt + AVOID_LEN];
+    days.push({
+      kind:"post",
+      date: addDays(o.arrDate, i - 1),
+      title: i === 1 ? "Landing day" : "Day " + i,
+      zone: o.toName,
+      bed: bed, wake: wk, cbt: cbt, seek: seek, avoid: avoid,
+      mel: east ? bed - 5 : null,
+      remaining: T - Math.abs(P)
+    });
+  }
+
+  return {
+    D:D, T:T, east:east, rate:rate, effPrep:effPrep,
+    preMag:preMag, postDays:postDays,
+    naturalDays: Math.ceil(T / nat - 1e-9),
+    planDays: postDays,
+    targetCBT: targetCBT,
+    days: days
+  };
+}
+
+/* ---------------- rendering ---------------- */
+
+function segs(a, b){
+  /* split an [a,b) hour interval into 1-2 [left,width] fractions on the 24h axis */
+  if(b - a >= 24) return [[0,1]];
+  var s = (((a - AXIS) % 24) + 24) % 24;
+  var e = (((b - AXIS) % 24) + 24) % 24;
+  if(e <= s) return [[s/24,(24-s)/24],[0,e/24]];
+  return [[s/24,(e-s)/24]];
+}
+function segHTML(cls, a, b){
+  var r = segs(a,b), out = "", i;
+  for(i=0;i<r.length;i++){
+    if(r[i][1] <= 0) continue;
+    out += '<div class="seg ' + cls + '" style="left:' + (r[i][0]*100).toFixed(3) +
+           '%;width:' + (r[i][1]*100).toFixed(3) + '%"></div>';
+  }
+  return out;
+}
+function tickHTML(){
+  var out = "", k;
+  for(k=1;k<6;k++) out += '<div class="grid-t" style="left:' + (k*4/24*100).toFixed(3) + '%"></div>';
+  return out;
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function rowHTML(d, east){
+  var h = '<div class="row"><div class="rlab"><b>' + esc(d.title) + '</b><span>' + dLabel(d.date) + '</span></div>';
+  h += '<div class="bar">' + tickHTML();
+  h += segHTML("s-avoid", d.avoid[0], d.avoid[1]);
+  h += segHTML("s-sleep", d.bed, d.wake);
+  h += segHTML("s-seek",  d.seek[0], d.seek[1]);
+  h += '</div></div>';
+
+  var det = '<div class="daydetail">Sleep ' + fmt(d.bed) + ' – ' + fmt(d.wake) +
+            ' &nbsp;·&nbsp; <em>Bright light ' + fmt(d.seek[0]) + ' – ' + fmt(d.seek[1]) + '</em>' +
+            ' &nbsp;·&nbsp; keep it dim ' + fmt(d.avoid[0]) + ' – ' + fmt(d.avoid[1]);
+  if(d.kind === "post" && d.remaining > 0.05){
+    det += ' &nbsp;·&nbsp; still ' + hLabel(d.remaining) + ' off';
+  }
+  det += '</div>';
+  return h + det;
+}
+
+function render(){
+  var out = document.getElementById("out");
+  var fromSel = document.getElementById("from"), toSel = document.getElementById("to");
+  /* option values are indexes into CITIES, so cities sharing a zone stay distinct */
+  var fromCity = CITIES[parseInt(fromSel.value,10)] || CITIES[0];
+  var toCity   = CITIES[parseInt(toSel.value,10)]   || CITIES[0];
+  var fromTz = fromCity[1], toTz = toCity[1];
+  var fromName = fromCity[0], toName = toCity[0];
+
+  var arrDate = dateFromInput(document.getElementById("arr").value);
+  var bed = parseTime(document.getElementById("bed").value);
+  var wake = parseTime(document.getElementById("wake").value);
+  var prep = parseInt(document.getElementById("prep").value,10);
+
+  if(!arrDate || bed === null || wake === null){
+    out.innerHTML = '<div class="card zero"><div class="big">✈️</div><p>Pick a landing date and your usual sleep times.</p></div>';
+    lastPlanText = "";
+    return;
+  }
+  var sleepLen = dur(bed, wake);
+  if(sleepLen < 3 || sleepLen > 14){
+    out.innerHTML = '<div class="card zero"><div class="big">🤔</div><p>That sleep window is ' + hLabel(sleepLen) +
+      ' long. Double-check your bedtime and wake time.</p></div>';
+    lastPlanText = "";
+    return;
+  }
+
+  var offA = tzOffset(fromTz, arrDate), offB = tzOffset(toTz, arrDate);
+  var D = offB - offA;
+  while(D > 12) D -= 24;
+  while(D <= -12) D += 24;
+  if(D === 12) D = -12;            /* a 12 h jump: delaying is the easier direction */
+
+  if(Math.abs(D) < 0.5){
+    out.innerHTML = '<div class="card zero"><div class="big">😌</div>' +
+      '<div class="vmain">No jet lag to plan for</div>' +
+      '<p>' + esc(fromName) + ' and ' + esc(toName) + ' are ' +
+      (Math.abs(D) < 0.01 ? "on the same clock" : "within half an hour of each other") +
+      ' on ' + dLabel(arrDate) + '. Just keep your normal bedtime and get outside the morning after you land.</p></div>';
+    lastPlanText = "";
+    return;
+  }
+
+  var P = buildPlan({
+    shift:D, bed:bed, wake:wake, prep:prep, arrDate:arrDate,
+    fromName:fromName, toName:toName
+  });
+
+  var east = P.east;
+  var dirWord = east ? "earlier" : "later";
+  var dirName = east ? "eastward" : "westward";
+  var lw = window.innerWidth < 560 ? "72px" : "108px";
+
+  /* ---- summary ---- */
+  var h = '<div class="card" style="--lw:' + lw + '">';
+  h += '<div class="verdict"><div class="arrow">' + (east ? "➡️" : "⬅️") + '</div><div>' +
+       '<div class="vmain">' + esc(fromName) + ' → ' + esc(toName) + ' &nbsp;·&nbsp; ' +
+       (D > 0 ? "+" : "−") + hLabel(D) + '</div>' +
+       '<div class="vsub">A ' + dirName + ' hop. Your body clock has to move <b>' + hLabel(P.T) +
+       ' ' + dirWord + '</b> — and ' + (east ? "moving earlier is the harder direction" : "moving later is the easier direction") +
+       ', shifting about ' + P.rate + ' h a day with well-timed light.</div>' +
+       '</div></div>';
+
+  h += '<div class="stats">' +
+    '<div class="stat good"><div class="n">' + hLabel(P.preMag) + '</div><div class="l">Banked before you fly</div>' +
+      '<div class="s">' + (P.effPrep === 0 ? "Add prep days to bank some of the shift early." :
+        "From " + plural(P.effPrep,"day") + " of shifting bedtime " + dirWord +
+        (P.effPrep < prep ? " — that is all this trip needs." : ".")) + '</div></div>' +
+    '<div class="stat good"><div class="n">' + plural(P.planDays,"day") + '</div><div class="l">To adjust after landing</div>' +
+      '<div class="s">Following the light plan below.</div></div>' +
+    '<div class="stat meh"><div class="n">' + plural(P.naturalDays,"day") + '</div><div class="l">If you wing it</div>' +
+      '<div class="s">Typical unmanaged drift from the same trip.</div></div>' +
+    '</div></div>';
+
+  /* ---- timeline ---- */
+  h += '<div class="card" style="--lw:' + lw + '">';
+  h += '<h2>Your plan</h2>';
+  h += '<div class="legend">' +
+    '<div class="lg"><div class="sw s-sleep"></div>Sleep</div>' +
+    '<div class="lg"><div class="sw s-seek"></div>Get bright light</div>' +
+    '<div class="lg"><div class="sw s-avoid"></div>Keep it dim / sunglasses</div>' +
+    '</div>';
+  h += '<div class="axis"><span>4p</span><span>8p</span><span>12a</span><span>4a</span><span>8a</span><span>12p</span></div>';
+
+  var i, d, shownDivider = false;
+  for(i=0;i<P.days.length;i++){
+    d = P.days[i];
+    if(d.kind === "post" && !shownDivider){
+      shownDivider = true;
+      h += '<div class="divider">Land in ' + esc(toName) + ' — local time from here</div>';
+      h += '<div class="axis"><span>4p</span><span>8p</span><span>12a</span><span>4a</span><span>8a</span><span>12p</span></div>';
+    }
+    h += rowHTML(d, east);
+  }
+  if(P.effPrep > 0 && P.days.length && P.days[0].kind === "pre"){
+    h += '<div class="note">Times above the divider are on ' + esc(fromName) +
+         "'s clock; times below are on " + esc(toName) + "'s.</div>";
+  }
+  h += '</div>';
+
+  /* ---- tips ---- */
+  var first = P.days.length ? P.days[0] : null;
+  var land = null;
+  for(i=0;i<P.days.length;i++){ if(P.days[i].kind === "post"){ land = P.days[i]; break; } }
+
+  h += '<div class="card"><h2>How to actually do this</h2><ul class="tips">';
+
+  if(P.effPrep > 0 && first){
+    h += '<li data-i="🛏️"><b>Before you fly:</b> move bedtime <b>' + hLabel(P.rate) + ' ' + dirWord +
+      '</b> each night, and your alarm with it. Starting ' + dLabel(first.date) + ': lights out ' +
+      fmt(first.bed) + ', up at ' + fmt(first.wake) + '.</li>';
+    /* an aggressive advance can put the light window before sunrise */
+    var earliest = 24, k;
+    for(k=0;k<P.days.length;k++){
+      if(P.days[k].kind !== "pre") continue;
+      var sh = ((P.days[k].seek[0] % 24) + 24) % 24;
+      if(sh < earliest) earliest = sh;
+    }
+    if(east && earliest < 6){
+      h += '<li data-i="💡"><b>You will need a lamp.</b> The prep-week light window starts at ' + fmt(earliest) +
+        ', before the sun is up. A bright desk lamp or a 10,000-lux light box works; ordinary room lighting is too weak ' +
+        'to move a body clock. If that is not practical, use fewer prep days and lean on the days after you land.</li>';
+    }
+  } else {
+    h += '<li data-i="🛏️"><b>No prep time?</b> That is fine — the plan just starts the day you land. Even one prep night ' +
+      'banks ' + hLabel(P.rate) + ' of the shift, so drag the slider if you can spare an evening.</li>';
+  }
+
+  h += '<li data-i="☀️"><b>The light window is the whole trick.</b> ' +
+    (east
+      ? "Bright light in the hours right after you wake pulls your clock earlier. Get outside — even an overcast morning is 10× brighter than any room. Screens are far too dim to count."
+      : "Bright light in the evening, in the hours before bed, pushes your clock later. Stay somewhere brightly lit, go outside at sunset, and don't dim the house down early.") +
+    '</li>';
+
+  h += '<li data-i="🕶️"><b>The dim window matters just as much.</b> ' +
+    (east
+      ? "Light in the late evening cancels your morning gains, so dim the lights and go easy on screens in the striped window."
+      : "Morning light in the striped window drags you back the wrong way — wear sunglasses if you have to be out early, and keep the curtains shut.") +
+    '</li>';
+
+  h += '<li data-i="✈️"><b>On the plane:</b> set your watch to ' + esc(toName) +
+    ' time the moment you board and start thinking in it. Sleep only when it is night there' +
+    (east ? " — an eastbound red-eye is your first night of the new schedule, so eye mask on early." :
+            " — resist napping if it is daytime at your destination.") +
+    '</li>';
+
+  if(land){
+    h += '<li data-i="🌅"><b>Landing day:</b> go to bed at ' + fmt(land.bed) + ' local no matter how you feel, and be up at ' +
+      fmt(land.wake) + '. Your bright-light window is <b>' + fmt(land.seek[0]) + ' – ' + fmt(land.seek[1]) +
+      '</b>. If you must nap, keep it under 30 minutes and before 3 PM.</li>';
+  }
+
+  h += '<li data-i="☕"><b>Caffeine:</b> helpful early in the local day, costly late. Your last cup should be around <b>' +
+    fmt(bed - 8) + '</b> local — caffeine takes roughly 5–6 hours to halve, so an afternoon coffee is still working at bedtime.</li>';
+
+  if(east){
+    h += '<li data-i="💊"><b>Melatonin (optional):</b> a low dose (0.5–1 mg) about 5 hours before your target bedtime — around <b>' +
+      fmt(bed - 5) + '</b> — nudges the clock earlier and stacks with morning light. It is a timing signal, not a sleeping pill, so more is not better. Check with a doctor or pharmacist first.</li>';
+  } else {
+    h += '<li data-i="💊"><b>Melatonin:</b> mostly unhelpful going west — evening light is doing the opposite job. Lean on the light plan instead.</li>';
+  }
+
+  h += '<li data-i="🍽️"><b>Eat on local time from day one.</b> Meals are a weaker clock signal than light, but a regular breakfast at ' +
+    fmt(wake + 0.5) + ' local helps everything else line up.</li>';
+
+  h += '</ul></div>';
+
+  out.innerHTML = h;
+  lastPlanText = plainText(P, fromName, toName, arrDate, bed);
+}
+
+/* ---------------- plain-text export ---------------- */
+var lastPlanText = "";
+function plainText(P, fromName, toName, arrDate, bed){
+  var L = [], i, d;
+  L.push("SKYSHIFT — jet lag plan");
+  L.push(fromName + " -> " + toName + "   (" + (P.D>0?"+":"-") + hLabel(P.D) + ", landing " + dLabel(arrDate) + ")");
+  L.push("Body clock must move " + hLabel(P.T) + " " + (P.east?"earlier":"later") + ".");
+  L.push("Banked before the flight: " + hLabel(P.preMag) + "  |  Days to adjust after landing: " + P.planDays +
+         "  |  Unmanaged: about " + P.naturalDays + " days");
+  L.push("");
+  var flagged = false;
+  for(i=0;i<P.days.length;i++){
+    d = P.days[i];
+    if(d.kind === "post" && !flagged){ flagged = true; L.push("--- land in " + toName + ", local time below ---"); }
+    L.push(d.title + " (" + dLabel(d.date) + ")");
+    L.push("   sleep " + fmt(d.bed) + " - " + fmt(d.wake));
+    L.push("   BRIGHT LIGHT " + fmt(d.seek[0]) + " - " + fmt(d.seek[1]));
+    L.push("   keep dim    " + fmt(d.avoid[0]) + " - " + fmt(d.avoid[1]));
+  }
+  L.push("");
+  L.push("Last caffeine: " + fmt(bed - 8) + ". " + (P.east ? "Optional 0.5-1mg melatonin at " + fmt(bed - 5) + "." : ""));
+  return L.join("\n");
+}
+
+/* ---------------- wiring ---------------- */
+(function init(){
+  var fromSel = document.getElementById("from"), toSel = document.getElementById("to");
+  var i, order = [];
+  for(i=0;i<CITIES.length;i++) order.push(i);
+  order.sort(function(a,b){ return CITIES[a][0].localeCompare(CITIES[b][0]); });
+  var html = "";
+  for(i=0;i<order.length;i++){
+    html += '<option value="' + order[i] + '">' + esc(CITIES[order[i]][0]) + '</option>';
+  }
+  fromSel.innerHTML = html; toSel.innerHTML = html;
+
+  /* first city listed for a zone is the "primary" one, so prefer New York over Atlanta etc. */
+  function idForTz(tz){
+    for(var k=0;k<CITIES.length;k++) if(CITIES[k][1] === tz) return k;
+    return -1;
+  }
+  /* default landing date: a week out */
+  var t = new Date();
+  var today = new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate(), 12));
+  var soon = addDays(today, 7);
+  document.getElementById("arr").value = isoDate(soon);
+
+  /* default "from" to the device's own zone if we recognise it */
+  var localTz = "";
+  try { localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch(e){}
+  var homeId = idForTz(localTz);
+  if(homeId < 0) homeId = idForTz("America/New_York");
+  fromSel.value = String(homeId);
+
+  /* pick a destination that is actually far away from home */
+  var candidates = ["Asia/Tokyo","Europe/London","America/New_York","Europe/Paris",
+                    "America/Los_Angeles","Australia/Sydney","Asia/Dubai"];
+  var homeOff = tzOffset(CITIES[homeId][1], soon), bestId = -1, bestGap = -1, gap, cid;
+  for(i=0;i<candidates.length;i++){
+    cid = idForTz(candidates[i]);
+    if(cid < 0) continue;
+    gap = Math.abs(tzOffset(CITIES[cid][1], soon) - homeOff);
+    if(gap > 12) gap = 24 - gap;
+    if(gap >= 5){ bestId = cid; break; }
+    if(gap > bestGap){ bestGap = gap; bestId = cid; }
+  }
+  toSel.value = String(bestId < 0 ? idForTz("Europe/London") : bestId);
+
+  document.getElementById("swap").addEventListener("click", function(){
+    var a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
+    render();
+  });
+
+  var prep = document.getElementById("prep"), prepVal = document.getElementById("prepVal");
+  function syncPrep(){
+    var n = parseInt(prep.value,10);
+    prepVal.textContent = n === 0 ? "none" : plural(n,"day");
+  }
+  prep.addEventListener("input", function(){ syncPrep(); render(); });
+  syncPrep();
+
+  var ids = ["from","to","arr","bed","wake"];
+  for(i=0;i<ids.length;i++){
+    document.getElementById(ids[i]).addEventListener("change", render);
+  }
+
+  document.getElementById("fmtToggle").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("button") : null;
+    if(!b) return;
+    use24 = b.getAttribute("data-f") === "24";
+    var bs = this.getElementsByTagName("button"), k;
+    for(k=0;k<bs.length;k++) bs[k].className = (bs[k] === b) ? "on" : "";
+    render();
+  });
+
+  document.getElementById("copy").addEventListener("click", function(){
+    var btn = this;
+    if(!lastPlanText){ btn.textContent = "Nothing to copy"; setTimeout(function(){ btn.textContent = "Copy plan as text"; },1400); return; }
+    var done = function(){ btn.textContent = "Copied ✓"; setTimeout(function(){ btn.textContent = "Copy plan as text"; },1400); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(lastPlanText).then(done, fallback);
+      } else fallback();
+    }catch(err){ fallback(); }
+    function fallback(){
+      var ta = document.createElement("textarea");
+      ta.value = lastPlanText;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); done(); }
+      catch(e2){ btn.textContent = "Copy failed"; setTimeout(function(){ btn.textContent = "Copy plan as text"; },1400); }
+      document.body.removeChild(ta);
+    }
+  });
+
+  var rt;
+  window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(render, 160); });
+
+  render();
+})();
+</script>
+</body>
+</html>

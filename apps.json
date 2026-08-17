@@ -2,148 +2,155 @@
   {
     "file": "apps/app-2026-07-04-pocket-pyro.html",
     "name": "Pocket Pyro",
-    "emoji": "\ud83c\udf86",
+    "emoji": "🎆",
     "date": "2026-07-04",
-    "blurb": "Design your own fireworks show \u2014 tap the sky, pick burst styles, unleash the finale."
+    "blurb": "Design your own fireworks show — tap the sky, pick burst styles, unleash the finale."
   },
   {
     "file": "apps/app-2026-07-04-orbit-runner.html",
     "name": "Orbit Runner",
-    "emoji": "\ud83d\udef8",
+    "emoji": "🛸",
     "date": "2026-07-04",
     "blurb": "One-tap arcade: reverse your orbit to dodge red arcs and snag gold sparks as the ring speeds up."
   },
   {
     "file": "apps/app-2026-07-04-fairshare.html",
     "name": "FairShare",
-    "emoji": "\ud83e\uddfe",
+    "emoji": "🧾",
     "date": "2026-07-04",
-    "blurb": "Split any bill by what each person actually ordered \u2014 tax and tip divided proportionally, pennies always add up."
+    "blurb": "Split any bill by what each person actually ordered — tax and tip divided proportionally, pennies always add up."
   },
   {
     "file": "apps/app-2026-07-05-timebridge.html",
     "name": "TimeBridge",
-    "emoji": "\ud83c\udf10",
+    "emoji": "🌐",
     "date": "2026-07-05",
     "blurb": "Pick your cities, see everyone's waking hours side by side, and tap the starred hour that works for all."
   },
   {
     "file": "apps/app-2026-07-07-kaleidodraw.html",
     "name": "KaleidoDraw",
-    "emoji": "\ud83d\udd2e",
+    "emoji": "🔮",
     "date": "2026-07-07",
-    "blurb": "Drag to paint glowing, ever-shifting kaleidoscope art with adjustable mirror symmetry \u2014 then save your bloom as a PNG."
+    "blurb": "Drag to paint glowing, ever-shifting kaleidoscope art with adjustable mirror symmetry — then save your bloom as a PNG."
   },
   {
     "file": "apps/app-2026-08-01-cyclesleep.html",
     "name": "CycleSleep",
-    "emoji": "\ud83c\udf19",
+    "emoji": "🌙",
     "date": "2026-08-01",
     "blurb": "Enter your wake-up or bedtime and get the exact times that align with full 90-minute sleep cycles, so you wake up rested instead of groggy."
   },
   {
     "file": "apps/app-2026-08-01-emoji-alchemy.html",
     "name": "Emoji Alchemy",
-    "emoji": "\u2728",
+    "emoji": "✨",
     "date": "2026-08-01",
-    "blurb": "Combine emoji elements to discover 70+ hidden creations \u2014 and a built-in alchemy engine invents something new for literally any pair you try."
+    "blurb": "Combine emoji elements to discover 70+ hidden creations — and a built-in alchemy engine invents something new for literally any pair you try."
   },
   {
     "file": "apps/app-2026-08-02-burn-meter.html",
     "name": "Burn Meter",
-    "emoji": "\ud83d\udd25",
+    "emoji": "🔥",
     "date": "2026-08-02",
     "blurb": "A live-ticking dollar counter that shows exactly what a meeting is costing in real time, based on attendees' salaries."
   },
   {
     "file": "apps/app-2026-08-03-groove-grid.html",
     "name": "Groove Grid",
-    "emoji": "\ud83e\udd41",
+    "emoji": "🥁",
     "date": "2026-08-03",
     "blurb": "A pocket drum machine: tap the glowing grid to build beats with six synthesized instruments, swing, presets, and a smart randomizer."
   },
   {
     "file": "apps/app-2026-08-04-payoff-pilot.html",
     "name": "Payoff Pilot",
-    "emoji": "\ud83e\udded",
+    "emoji": "🧭",
     "date": "2026-08-04",
-    "blurb": "List your debts and instantly compare snowball vs. avalanche payoff plans \u2014 debt-free date, total interest, and a payoff curve, side by side."
+    "blurb": "List your debts and instantly compare snowball vs. avalanche payoff plans — debt-free date, total interest, and a payoff curve, side by side."
   },
   {
     "file": "apps/app-2026-08-05-prism-path.html",
     "name": "Prism Path",
-    "emoji": "\ud83d\udd3a",
+    "emoji": "🔺",
     "date": "2026-08-05",
     "blurb": "A light-bending puzzle: place mirrors to steer coloured beams through splitters and filters until every target glows its exact colour."
   },
   {
     "file": "apps/app-2026-08-06-prism.html",
     "name": "Prism",
-    "emoji": "\ud83d\udd2e",
+    "emoji": "🔮",
     "date": "2026-08-06",
-    "blurb": "A neon light-routing puzzle: flip mirrors and beam splitters to steer coloured lasers into every ring \u2014 mix red and green to make yellow, all three for white."
+    "blurb": "A neon light-routing puzzle: flip mirrors and beam splitters to steer coloured lasers into every ring — mix red and green to make yellow, all three for white."
   },
   {
     "file": "apps/app-2026-08-07-batchwise.html",
     "name": "Batchwise",
-    "emoji": "\ud83e\udd63",
+    "emoji": "🥣",
     "date": "2026-08-07",
-    "blurb": "Paste any recipe and resize it by servings or pan size \u2014 quantities come back as fractions you can actually measure, with one-tap cups\u2194grams."
+    "blurb": "Paste any recipe and resize it by servings or pan size — quantities come back as fractions you can actually measure, with one-tap cups↔grams."
   },
   {
     "file": "apps/app-2026-08-08-lumen.html",
     "name": "Lumen",
-    "emoji": "\ud83d\udd26",
+    "emoji": "🔦",
     "date": "2026-08-08",
-    "blurb": "Flip mirrors and beam splitters to route coloured light across a grid \u2014 10 hand-built puzzles where red plus green really does make yellow."
+    "blurb": "Flip mirrors and beam splitters to route coloured light across a grid — 10 hand-built puzzles where red plus green really does make yellow."
   },
   {
     "file": "apps/app-2026-08-09-caffeine-curve.html",
     "name": "Caffeine Curve",
-    "emoji": "\u2615",
+    "emoji": "☕",
     "date": "2026-08-09",
-    "blurb": "Log your coffees and see the real pharmacokinetic curve of caffeine in your bloodstream \u2014 including how much is left at bedtime and the last hour you can safely have one more cup."
+    "blurb": "Log your coffees and see the real pharmacokinetic curve of caffeine in your bloodstream — including how much is left at bedtime and the last hour you can safely have one more cup."
   },
   {
     "file": "apps/app-2026-08-10-astro-putt.html",
     "name": "Astro Putt",
-    "emoji": "\ud83e\ude90",
+    "emoji": "🪐",
     "date": "2026-08-10",
-    "blurb": "Nine holes of golf in deep space \u2014 slingshot your ball past gravity wells and repulsors, with a live trajectory preview that makes every bank shot plannable."
+    "blurb": "Nine holes of golf in deep space — slingshot your ball past gravity wells and repulsors, with a live trajectory preview that makes every bank shot plannable."
   },
   {
     "file": "apps/app-2026-08-11-crossover.html",
     "name": "Crossover",
-    "emoji": "\ud83c\udfe1",
+    "emoji": "🏡",
     "date": "2026-08-11",
-    "blurb": "Rent or buy? Watch two net-worth curves race each other and find the exact year buying pulls ahead \u2014 mortgage, taxes, upkeep, PMI and the investment return you give up, all in today's dollars."
+    "blurb": "Rent or buy? Watch two net-worth curves race each other and find the exact year buying pulls ahead — mortgage, taxes, upkeep, PMI and the investment return you give up, all in today's dollars."
   },
   {
     "file": "apps/app-2026-08-12-pace-ace.html",
     "name": "Pace Ace",
-    "emoji": "\ud83c\udfc3",
+    "emoji": "🏃",
     "date": "2026-08-12",
-    "blurb": "Enter any two of distance, time and pace and it solves the third \u2014 plus a split plan you can tune from negative split to fade, equivalent race times, and training paces."
+    "blurb": "Enter any two of distance, time and pace and it solves the third — plus a split plan you can tune from negative split to fade, equivalent race times, and training paces."
   },
   {
     "file": "apps/app-2026-08-13-primordial.html",
     "name": "Primordial",
-    "emoji": "\ud83e\udda0",
+    "emoji": "🦠",
     "date": "2026-08-13",
-    "blurb": "A living petri dish: five species of glowing particle obey nothing but a table of attraction numbers, and cells, chains and hunting swarms emerge on their own \u2014 tune the table and watch life change."
+    "blurb": "A living petri dish: five species of glowing particle obey nothing but a table of attraction numbers, and cells, chains and hunting swarms emerge on their own — tune the table and watch life change."
   },
   {
     "file": "apps/app-2026-08-14-plated.html",
     "name": "Plated",
-    "emoji": "\ud83c\udf7d\ufe0f",
+    "emoji": "🍽️",
     "date": "2026-08-14",
-    "blurb": "Tell it when you want to eat and it works backwards \u2014 every dish gets a start time, hands-on prep is spread so one cook can actually do it, and it warns you when the oven is double-booked."
+    "blurb": "Tell it when you want to eat and it works backwards — every dish gets a start time, hands-on prep is spread so one cook can actually do it, and it warns you when the oven is double-booked."
   },
   {
     "file": "apps/app-2026-08-16-grainfall.html",
     "name": "Grainfall",
-    "emoji": "\u23f3",
+    "emoji": "⏳",
     "date": "2026-08-16",
     "blurb": "A pixel sandbox where sand piles, water finds its level, oil floats and burns, and one drop of lava into the pool turns it to stone and steam."
+  },
+  {
+    "file": "apps/app-2026-08-17-skyshift.html",
+    "name": "Skyshift",
+    "emoji": "🛬",
+    "date": "2026-08-17",
+    "blurb": "Enter your flight and it builds a day-by-day sleep and bright-light schedule that shifts your body clock before you take off — so you land days ahead of the jet lag."
   }
 ]
