@@ -152,5 +152,12 @@
     "emoji": "🛬",
     "date": "2026-08-17",
     "blurb": "Enter your flight and it builds a day-by-day sleep and bright-light schedule that shifts your body clock before you take off — so you land days ahead of the jet lag."
+  },
+  {
+    "file": "apps/app-2026-08-18-echoes.html",
+    "name": "Echoes",
+    "emoji": "🕰️",
+    "date": "2026-08-18",
+    "blurb": "A time-loop puzzle: rewind and a ghost of your last run replays every step, so you can be in two places at once — eight levels of holding your own doors open."
   }
 ]

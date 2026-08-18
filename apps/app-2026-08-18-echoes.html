@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Echoes — a time-loop puzzle</title>
+<style>
+  :root{
+    --bg:#080b14;
+    --panel:#111827;
+    --line:#1f2b45;
+    --ink:#e8eefc;
+    --dim:#8093b4;
+    --cyan:#3ee8ff;
+    --violet:#a78bfa;
+    --amber:#f5a623;
+    --pink:#ff6b9d;
+    --green:#6ef2a8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #16224080 0%, transparent 60%),
+      radial-gradient(800px 600px at 100% 110%, #2a154a66 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100%;overflow-x:hidden;
+    padding:14px 12px 22px;
+  }
+  .wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  h1{
+    font-size:26px;margin:0;letter-spacing:.14em;font-weight:800;
+    background:linear-gradient(90deg,var(--cyan),var(--violet) 70%,var(--pink));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tag{font-size:11px;color:var(--dim);letter-spacing:.18em;text-transform:uppercase}
+
+  .levelbar{display:flex;gap:6px;flex-wrap:wrap}
+  .lv{
+    width:28px;height:28px;border-radius:9px;border:1px solid var(--line);
+    background:#0e1626;color:var(--dim);font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:.15s;
+  }
+  .lv.done{color:var(--green);border-color:#1f4a38;background:#0d1d18}
+  .lv.cur{color:#04121a;background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 14px #3ee8ff55}
+  .lv.locked{opacity:.32;cursor:default}
+
+  .card{
+    background:linear-gradient(180deg,#0f1729ee,#0b1220ee);
+    border:1px solid var(--line);border-radius:18px;padding:14px;
+    box-shadow:0 18px 40px -20px #000;
+  }
+  .title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+  .title b{font-size:17px;letter-spacing:.02em}
+  .par{font-size:11px;color:var(--dim);white-space:nowrap}
+  .hint{font-size:12.5px;color:var(--dim);line-height:1.45;margin:0 0 12px}
+
+  .boardwrap{display:flex;justify-content:center}
+  .board{
+    position:relative;
+    display:grid;
+    gap:2px;
+    touch-action:none;
+    border-radius:12px;
+  }
+  .cell{
+    width:var(--cs);height:var(--cs);border-radius:5px;position:relative;
+  }
+  .cell.wall{background:linear-gradient(180deg,#1a2540,#131c31);box-shadow:inset 0 -2px 0 #0a0f1c}
+  .cell.void{background:transparent}
+  .cell.floor,.cell.plate,.cell.door,.cell.exit{background:#0c1424;box-shadow:inset 0 0 0 1px #17223a}
+
+  .plate-ring{
+    position:absolute;inset:18%;border-radius:50%;
+    border:2px solid var(--pink);opacity:.45;transition:.18s;
+  }
+  .cell.plate.on .plate-ring{opacity:1;background:#ff6b9d33;box-shadow:0 0 12px #ff6b9d88;inset:12%}
+
+  .door-bar{position:absolute;background:linear-gradient(180deg,#ffd479,#e0912a);border-radius:4px;transition:.2s;box-shadow:0 0 10px #f5a62366}
+  .door-bar.h{left:4%;right:4%;top:28%;bottom:28%}
+  .door-bar.v{top:4%;bottom:4%;left:28%;right:28%}
+  .cell.door.open .door-bar{opacity:.16;box-shadow:none}
+  .cell.door.open .door-bar.h{top:44%;bottom:44%}
+  .cell.door.open .door-bar.v{left:44%;right:44%}
+
+  .exit-mark{
+    position:absolute;inset:14%;border-radius:50%;
+    border:2px dashed var(--green);
+    animation:spin 7s linear infinite;
+  }
+  .exit-glow{position:absolute;inset:30%;border-radius:50%;background:var(--green);opacity:.5;animation:pulse 1.9s ease-in-out infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{transform:scale(.75);opacity:.35}50%{transform:scale(1.05);opacity:.75}}
+
+  .layer{position:absolute;left:0;top:0;pointer-events:none}
+  .ent{
+    position:absolute;width:var(--cs);height:var(--cs);
+    transition:transform .11s ease-out;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ent i{
+    display:block;width:64%;height:64%;border-radius:50%;font-style:normal;
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--cs)*.34);font-weight:800;
+  }
+  .ent.ghost i{
+    background:#a78bfa2e;border:2px solid #a78bfa;color:#d9c9ff;
+    box-shadow:0 0 10px #a78bfa55;
+  }
+  .ent.me i{
+    background:radial-gradient(circle at 35% 30%,#bff8ff,#28c8e6);
+    border:2px solid #d7fbff;color:#06202b;
+    box-shadow:0 0 16px #3ee8ffaa;
+  }
+  .ent.crate i{
+    width:74%;height:74%;border-radius:6px;
+    background:linear-gradient(160deg,#f6b950,#c9791b);
+    border:2px solid #ffd89a;box-shadow:0 3px 0 #8a4e0d inset,0 0 12px #f5a62355;
+  }
+
+  .status{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .chip{
+    font-size:11.5px;color:var(--dim);background:#0d1526;border:1px solid var(--line);
+    border-radius:99px;padding:5px 11px;letter-spacing:.02em;
+  }
+  .chip b{color:var(--ink);font-weight:700}
+
+  .controls{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:12px}
+  .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:5px}
+  .btn{
+    border:1px solid var(--line);background:#131d33;color:var(--ink);
+    border-radius:12px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;user-select:none;transition:.1s;font-family:inherit;
+  }
+  .btn:active{transform:translateY(1px);background:#1b2a49}
+  .btn.ghosted{color:var(--dim)}
+  .side{display:flex;flex-direction:column;gap:5px}
+  .side .btn{padding:0 12px;height:44px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;min-width:104px}
+  .btn.primary{background:linear-gradient(180deg,#7c5cf5,#5b39d8);border-color:#8d72ff;box-shadow:0 0 18px #7c5cf544}
+  .kbd{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;letter-spacing:.03em}
+
+  .overlay{
+    position:absolute;inset:0;border-radius:12px;
+    background:#060a13e0;backdrop-filter:blur(3px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    opacity:0;pointer-events:none;transition:.22s;
+  }
+  .overlay.show{opacity:1;pointer-events:auto}
+  .overlay h2{margin:0;font-size:22px;color:var(--green);letter-spacing:.04em}
+  .overlay p{margin:0;font-size:13px;color:var(--dim);text-align:center;padding:0 18px;line-height:1.5}
+  .overlay .btn{height:42px;padding:0 22px}
+  @media (max-width:420px){
+    .dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px)}
+    .side .btn{min-width:92px;height:40px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ECHOES</h1>
+    <span class="tag">time-loop puzzle</span>
+  </header>
+
+  <div class="levelbar" id="levelbar"></div>
+
+  <div class="card">
+    <div class="title"><b id="lvname">—</b><span class="par" id="lvpar"></span></div>
+    <p class="hint" id="lvhint"></p>
+    <div class="boardwrap">
+      <div class="board" id="board">
+        <div class="layer" id="layer"></div>
+        <div class="overlay" id="overlay">
+          <h2 id="ovh">Loop closed</h2>
+          <p id="ovp"></p>
+          <button class="btn primary" id="ovbtn" style="height:42px">Next level</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status">
+      <span class="chip">Echoes <b id="stEchoes">0</b></span>
+      <span class="chip">Steps <b id="stSteps">0</b></span>
+      <span class="chip">Par <b id="stPar">0</b></span>
+    </div>
+
+    <div class="controls">
+      <div class="dpad">
+        <span></span>
+        <button class="btn" data-act="U">▲</button>
+        <span></span>
+        <button class="btn" data-act="L">◀</button>
+        <button class="btn ghosted" data-act="." title="wait one tick">•</button>
+        <button class="btn" data-act="R">▶</button>
+        <span></span>
+        <button class="btn" data-act="D">▼</button>
+        <span></span>
+      </div>
+      <div class="side">
+        <button class="btn primary" id="bRewind">↺ Rewind</button>
+        <button class="btn" id="bUndo">Undo</button>
+        <button class="btn" id="bReset">Restart</button>
+      </div>
+    </div>
+    <div class="kbd">Arrows / WASD move · Space waits · Z undo · R rewind · swipe on mobile</div>
+  </div>
+</div>
+
+<script>
+// ==SIM-START==
+var RAW_LEVELS = [
+  {
+    name:"Ghost Duty", par:1,
+    hint:"A gate is open only while something sits on its pad — and you can't be on the pad and in the gateway at once. So: walk somewhere, hit REWIND. Time restarts, but an echo of your last run replays every step you took, and then waits there forever.",
+    map:[
+      "#########",
+      "#S.....1#",
+      "#.......#",
+      "###A#####",
+      "#.......#",
+      "#...E...#",
+      "#########"
+    ]
+  },
+  {
+    name:"Deadweight", par:0,
+    hint:"Crates get pushed, and crates are heavy enough to hold a pad down on their own. No rewind needed here.",
+    map:[
+      "#########",
+      "#S......#",
+      "#..o..1.#",
+      "###A#####",
+      "#.......#",
+      "#...E...#",
+      "#########"
+    ]
+  },
+  {
+    name:"Double Duty", par:2,
+    hint:"Two gates, two pads. You'll need a small crowd of yourself.",
+    map:[
+      "#########",
+      "#S.3...2#",
+      "#.......#",
+      "###C#####",
+      "#.......#",
+      "#####B###",
+      "#...E...#",
+      "#########"
+    ]
+  },
+  {
+    name:"Relay", par:2,
+    hint:"The second pad sits behind the first gate — so an echo has to get in there before you can.",
+    map:[
+      "###########",
+      "#S...1....#",
+      "#####A#####",
+      "#....2....#",
+      "#####B#####",
+      "#....E....#",
+      "###########"
+    ]
+  },
+  {
+    name:"Ballast", par:1,
+    hint:"This gate needs BOTH of its pads held at once. You only have to be one of them.",
+    map:[
+      "###########",
+      "#S...o...1#",
+      "#.........#",
+      "#....1....#",
+      "#####A#####",
+      "#....E....#",
+      "###########"
+    ]
+  },
+  {
+    name:"Handoff", par:1,
+    hint:"One echo, two pads, one route. Time your walk so it steps off the first pad only after you're through.",
+    map:[
+      "###########",
+      "#S........#",
+      "#.1...2...#",
+      "#####A#####",
+      "#.........#",
+      "####B######",
+      "#....E....#",
+      "###########"
+    ]
+  },
+  {
+    name:"Cargo Run", par:1,
+    hint:"Crates can travel through an open gate too — if someone is holding it open for you.",
+    map:[
+      "###########",
+      "#S..1.....#",
+      "#..o......#",
+      "#####A#####",
+      "#.........#",
+      "#.....2...#",
+      "#####B#####",
+      "#....E....#",
+      "###########"
+    ]
+  },
+  {
+    name:"The Long Way", par:2,
+    hint:"Last one. Two pads for the final gate, and only one of them is anywhere near a crate.",
+    map:[
+      "###########",
+      "#S...1...2#",
+      "#.........#",
+      "###A#######",
+      "#.........#",
+      "#...2..o..#",
+      "#######B###",
+      "#....E....#",
+      "###########"
+    ]
+  }
+];
+
+var DIRS = { U:[0,-1], D:[0,1], L:[-1,0], R:[1,0] };
+var DOOR_OF = { A:"1", B:"2", C:"3" };
+
+function parseLevel(raw){
+  var h = raw.map.length, w = raw.map[0].length;
+  var grid = [], start = null, crates = [], plates = {}, allPlates = [];
+  for(var y=0;y<h;y++){
+    var row = [];
+    for(var x=0;x<w;x++){
+      var ch = raw.map[y][x];
+      var cell = {t:'floor', g:null};
+      if(ch === '#'){ cell.t = 'wall'; }
+      else if(ch === ' '){ cell.t = 'void'; }
+      else if(ch === 'E'){ cell.t = 'exit'; }
+      else if(ch === 'S'){ start = {x:x, y:y}; }
+      else if(ch === 'o'){ crates.push({x:x, y:y}); }
+      else if(ch >= '1' && ch <= '3'){
+        cell.t = 'plate'; cell.g = ch;
+        if(!plates[ch]) plates[ch] = [];
+        plates[ch].push({x:x, y:y});
+        allPlates.push({x:x, y:y, g:ch});
+      }
+      else if(ch >= 'A' && ch <= 'C'){ cell.t = 'door'; cell.g = DOOR_OF[ch]; }
+      row.push(cell);
+    }
+    grid.push(row);
+  }
+  return {name:raw.name, hint:raw.hint, par:raw.par, w:w, h:h,
+          grid:grid, start:start, crates:crates, plates:plates, allPlates:allPlates};
+}
+
+// Full re-simulation from tick 0 every time: every past life replays its recorded
+// inputs, so the world is always perfectly consistent (and undo is free).
+function simulate(L, lives, current){
+  var crates = L.crates.map(function(c){ return {x:c.x, y:c.y}; });
+  var all = lives.concat([current]);
+  var ents = all.map(function(inp){ return {x:L.start.x, y:L.start.y, inp:inp}; });
+  var T = current.length;
+
+  function tileAt(x,y){
+    if(y<0 || y>=L.h || x<0 || x>=L.w) return {t:'wall', g:null};
+    return L.grid[y][x];
+  }
+  function crateAt(x,y){
+    for(var i=0;i<crates.length;i++) if(crates[i].x===x && crates[i].y===y) return i;
+    return -1;
+  }
+  // Anything in transit stops counting as weight on a pad: you cannot hold a pad
+  // down and stand in its gateway on the same tick.
+  function covered(x,y,skipE,skipC){
+    for(var i=0;i<ents.length;i++){
+      if(ents[i] === skipE) continue;
+      if(ents[i].x===x && ents[i].y===y) return true;
+    }
+    var ci = crateAt(x,y);
+    return ci >= 0 && ci !== skipC;
+  }
+  function doorOpen(g,skipE,skipC){
+    var ps = L.plates[g];
+    if(!ps || !ps.length) return false;
+    for(var i=0;i<ps.length;i++) if(!covered(ps[i].x, ps[i].y, skipE, skipC)) return false;
+    return true;
+  }
+  function passable(x,y,skipE,skipC){
+    var t = tileAt(x,y);
+    if(t.t === 'wall' || t.t === 'void') return false;
+    if(t.t === 'door') return doorOpen(t.g, skipE, skipC);
+    return true;
+  }
+  function step(e, act){
+    var d = DIRS[act];
+    if(!d) return;
+    var nx = e.x + d[0], ny = e.y + d[1];
+    if(!passable(nx, ny, e, -1)) return;
+    var ci = crateAt(nx,ny);
+    if(ci >= 0){
+      var px = nx + d[0], py = ny + d[1];
+      if(!passable(px, py, e, ci) || crateAt(px,py) >= 0) return;
+      crates[ci].x = px; crates[ci].y = py;
+    }
+    e.x = nx; e.y = ny;
+  }
+
+  for(var t=0;t<T;t++){
+    for(var i=0;i<ents.length;i++){
+      step(ents[i], ents[i].inp[t] || '.');
+    }
+  }
+
+  var me = ents[ents.length-1];
+  var open = {};
+  for(var g in L.plates) open[g] = doorOpen(g);
+  var cov = L.allPlates.map(function(p){ return covered(p.x, p.y); });
+  return {ents:ents, crates:crates, open:open, cov:cov,
+          won: tileAt(me.x, me.y).t === 'exit'};
+}
+// ==SIM-END==
+
+/* ---------- app ---------- */
+if(typeof document !== 'undefined'){
+(function(){
+  var board = document.getElementById('board');
+  var layer = document.getElementById('layer');
+  var overlay = document.getElementById('overlay');
+  var levelbar = document.getElementById('levelbar');
+
+  var LI = 0, L = null, lives = [], cur = [], sim = null;
+  var solved = RAW_LEVELS.map(function(){ return false; });
+  var unlocked = 0;
+  var cellEls = [], entEls = [], cs = 40, done = false;
+
+  function fitCell(){
+    var maxW = Math.min(window.innerWidth - 40, 520);
+    var maxH = Math.max(220, window.innerHeight - 430);
+    var byW = Math.floor((maxW - (L.w-1)*2) / L.w);
+    var byH = Math.floor((maxH - (L.h-1)*2) / L.h);
+    cs = Math.max(22, Math.min(46, Math.min(byW, byH)));
+    board.style.setProperty('--cs', cs + 'px');
+  }
+
+  function buildBoard(){
+    fitCell();
+    board.style.gridTemplateColumns = 'repeat(' + L.w + ', var(--cs))';
+    board.style.gridTemplateRows = 'repeat(' + L.h + ', var(--cs))';
+    // clear tiles but keep layer + overlay
+    Array.prototype.slice.call(board.querySelectorAll('.cell')).forEach(function(n){ n.remove(); });
+    cellEls = [];
+    for(var y=0;y<L.h;y++){
+      var row = [];
+      for(var x=0;x<L.w;x++){
+        var c = L.grid[y][x];
+        var d = document.createElement('div');
+        d.className = 'cell ' + c.t;
+        if(c.t === 'plate'){
+          var r = document.createElement('div'); r.className = 'plate-ring'; d.appendChild(r);
+        } else if(c.t === 'door'){
+          var horiz = L.grid[y][x-1] && L.grid[y][x-1].t === 'wall' && L.grid[y][x+1] && L.grid[y][x+1].t === 'wall';
+          var b = document.createElement('div'); b.className = 'door-bar ' + (horiz ? 'h' : 'v'); d.appendChild(b);
+        } else if(c.t === 'exit'){
+          var e1 = document.createElement('div'); e1.className = 'exit-mark';
+          var e2 = document.createElement('div'); e2.className = 'exit-glow';
+          d.appendChild(e1); d.appendChild(e2);
+        }
+        board.insertBefore(d, layer);
+        row.push(d);
+      }
+      cellEls.push(row);
+    }
+  }
+
+  function buildEntities(){
+    layer.innerHTML = '';
+    entEls = [];
+    var n = lives.length + 1;
+    for(var i=0;i<n;i++){
+      var d = document.createElement('div');
+      var me = (i === n-1);
+      d.className = 'ent ' + (me ? 'me' : 'ghost');
+      var ic = document.createElement('i');
+      ic.textContent = me ? '' : String(i+1);
+      d.appendChild(ic);
+      layer.appendChild(d);
+      entEls.push(d);
+    }
+    for(var k=0;k<L.crates.length;k++){
+      var cd = document.createElement('div');
+      cd.className = 'ent crate';
+      cd.appendChild(document.createElement('i'));
+      layer.appendChild(cd);
+      entEls.push(cd);
+    }
+  }
+
+  function pos(el, x, y){
+    el.style.transform = 'translate(' + (x*(cs+2)) + 'px,' + (y*(cs+2)) + 'px)';
+  }
+
+  function render(){
+    // plates
+    for(var i=0;i<L.allPlates.length;i++){
+      var p = L.allPlates[i];
+      cellEls[p.y][p.x].classList.toggle('on', !!sim.cov[i]);
+    }
+    // doors
+    for(var y=0;y<L.h;y++) for(var x=0;x<L.w;x++){
+      var c = L.grid[y][x];
+      if(c.t === 'door') cellEls[y][x].classList.toggle('open', !!sim.open[c.g]);
+    }
+    // entities
+    var n = sim.ents.length;
+    for(var i2=0;i2<n;i2++){
+      var e = sim.ents[i2];
+      var el = entEls[i2];
+      if(!el) continue;
+      pos(el, e.x, e.y);
+      el.style.opacity = (i2 === n-1) ? 1 : (0.42 + 0.36 * (i2+1) / n);
+    }
+    for(var k=0;k<sim.crates.length;k++){
+      pos(entEls[n + k], sim.crates[k].x, sim.crates[k].y);
+    }
+    document.getElementById('stEchoes').textContent = lives.length;
+    document.getElementById('stSteps').textContent = cur.length;
+    document.getElementById('stPar').textContent = L.par + (L.par === 1 ? ' rewind' : ' rewinds');
+
+    if(sim.won && !done){
+      done = true;
+      solved[LI] = true;
+      if(LI + 1 > unlocked) unlocked = LI + 1;
+      drawLevelBar();
+      var last = (LI === RAW_LEVELS.length - 1);
+      document.getElementById('ovh').textContent = last ? 'All loops closed' : 'Loop closed';
+      var msg = 'Solved with ' + lives.length + (lives.length === 1 ? ' echo' : ' echoes') +
+                ' — par is ' + L.par + '.';
+      if(lives.length < L.par) msg += ' Under par. Show-off.';
+      if(last) msg += ' That was the last level. You are free of the loop.';
+      document.getElementById('ovp').textContent = msg;
+      document.getElementById('ovbtn').textContent = last ? 'Play again' : 'Next level →';
+      setTimeout(function(){ overlay.classList.add('show'); }, 240);
+    }
+  }
+
+  function resim(){ sim = simulate(L, lives, cur); render(); }
+
+  function act(a){
+    if(done) return;
+    cur.push(a);
+    resim();
+  }
+  function undo(){
+    if(done || !cur.length) return;
+    cur.pop();
+    resim();
+  }
+  function rewind(){
+    if(done) return;
+    lives.push(cur.slice());
+    cur = [];
+    buildEntities();
+    resim();
+  }
+  function reset(){
+    lives = []; cur = []; done = false;
+    overlay.classList.remove('show');
+    buildEntities();
+    resim();
+  }
+
+  function loadLevel(i){
+    LI = i;
+    L = parseLevel(RAW_LEVELS[i]);
+    lives = []; cur = []; done = false;
+    overlay.classList.remove('show');
+    document.getElementById('lvname').textContent = (i+1) + '. ' + L.name;
+    document.getElementById('lvpar').textContent = 'Level ' + (i+1) + ' / ' + RAW_LEVELS.length;
+    document.getElementById('lvhint').textContent = L.hint;
+    buildBoard();
+    buildEntities();
+    resim();
+    drawLevelBar();
+  }
+
+  function drawLevelBar(){
+    levelbar.innerHTML = '';
+    RAW_LEVELS.forEach(function(r, i){
+      var b = document.createElement('div');
+      var lock = i > unlocked;
+      b.className = 'lv' + (i === LI ? ' cur' : (solved[i] ? ' done' : '')) + (lock ? ' locked' : '');
+      b.textContent = i + 1;
+      if(!lock) b.onclick = function(){ loadLevel(i); };
+      levelbar.appendChild(b);
+    });
+  }
+
+  // input
+  document.addEventListener('keydown', function(ev){
+    var k = ev.key.toLowerCase();
+    var map = {arrowup:'U', w:'U', arrowdown:'D', s:'D', arrowleft:'L', a:'L', arrowright:'R', d:'R'};
+    if(map[k]){ ev.preventDefault(); act(map[k]); }
+    else if(k === ' '){ ev.preventDefault(); act('.'); }
+    else if(k === 'z'){ undo(); }
+    else if(k === 'r'){ rewind(); }
+    else if(k === 'enter' && done){ document.getElementById('ovbtn').click(); }
+  });
+  Array.prototype.slice.call(document.querySelectorAll('[data-act]')).forEach(function(b){
+    b.onclick = function(){ act(b.getAttribute('data-act')); };
+  });
+  document.getElementById('bRewind').onclick = rewind;
+  document.getElementById('bUndo').onclick = undo;
+  document.getElementById('bReset').onclick = reset;
+  document.getElementById('ovbtn').onclick = function(){
+    overlay.classList.remove('show');
+    if(LI + 1 < RAW_LEVELS.length) loadLevel(LI + 1);
+    else { solved = RAW_LEVELS.map(function(){ return false; }); unlocked = 0; loadLevel(0); }
+  };
+
+  // swipe
+  var sx = 0, sy = 0, tracking = false;
+  board.addEventListener('touchstart', function(e){
+    if(e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+  }, {passive:true});
+  board.addEventListener('touchend', function(e){
+    if(!tracking) return;
+    tracking = false;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+    act(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+  }, {passive:true});
+
+  window.addEventListener('resize', function(){
+    if(!L) return;
+    fitCell();
+    render();
+  });
+
+  loadLevel(0);
+})();
+}
+</script>
+</body>
+</html>
