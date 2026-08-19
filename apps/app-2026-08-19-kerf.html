@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kerf — Cut List Optimizer</title>
+<style>
+  :root{
+    --bg:#14120f;
+    --bg2:#1c1915;
+    --panel:#221e19;
+    --panel2:#2a251f;
+    --line:#3a332b;
+    --txt:#f0e9df;
+    --dim:#a29684;
+    --accent:#f0a83c;
+    --accent2:#48c9a9;
+    --bad:#ef6b5a;
+    --offcut:#3a332b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 15% -10%, #2b2318 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #1b2622 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:0 0 60px;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 16px}
+
+  header{padding:30px 0 18px;text-align:center}
+  h1{
+    margin:0;font-size:32px;letter-spacing:-.5px;font-weight:800;
+    background:linear-gradient(95deg,var(--accent),#ffd89b 55%,var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{color:var(--dim);font-size:14px;margin-top:6px}
+
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--line);border-radius:16px;
+    padding:16px;margin-bottom:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .card h2{
+    margin:0 0 12px;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--dim);font-weight:700;display:flex;align-items:center;gap:8px;
+  }
+  .card h2 .pill{
+    margin-left:auto;font-size:11px;letter-spacing:.5px;text-transform:none;
+    color:var(--dim);font-weight:600;
+  }
+
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:11px;letter-spacing:1px;
+    text-transform:uppercase;color:var(--dim);font-weight:700}
+  input[type=text]{
+    background:#100e0b;border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:10px 11px;font-size:15px;font-family:inherit;width:100%;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,168,60,.16)}
+  input.err{border-color:var(--bad)}
+  input::placeholder{color:#6b6157}
+
+  .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+
+  .seg{display:flex;background:#100e0b;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg button{
+    flex:1;background:transparent;border:0;color:var(--dim);font:600 14px/1 inherit;
+    padding:9px 6px;border-radius:8px;cursor:pointer;transition:.15s;
+  }
+  .seg button.on{background:var(--accent);color:#1a1409}
+
+  table{width:100%;border-collapse:collapse}
+  .rowhead{display:grid;gap:8px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--dim);font-weight:700;margin-bottom:6px;padding:0 2px}
+  .row{display:grid;gap:8px;margin-bottom:8px;align-items:center}
+  .stockgrid{grid-template-columns:1.4fr .8fr .9fr 36px}
+  .partgrid{grid-template-columns:1.4fr 1.1fr .7fr 36px}
+  .del{
+    background:transparent;border:1px solid var(--line);color:var(--dim);
+    border-radius:9px;height:38px;cursor:pointer;font-size:17px;line-height:1;transition:.15s;
+  }
+  .del:hover{border-color:var(--bad);color:var(--bad)}
+  .add{
+    background:transparent;border:1px dashed var(--line);color:var(--accent);
+    border-radius:10px;padding:9px;width:100%;cursor:pointer;font:600 13px/1 inherit;transition:.15s;
+  }
+  .add:hover{border-color:var(--accent);background:rgba(240,168,60,.07)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .stat{background:#100e0b;border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .stat .k{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);font-weight:700}
+  .stat .v{font-size:21px;font-weight:800;margin-top:3px;letter-spacing:-.4px}
+  .stat .v.good{color:var(--accent2)}
+  .stat .v.warn{color:var(--accent)}
+
+  .board{margin-bottom:16px}
+  .blabel{display:flex;gap:8px;align-items:baseline;font-size:12px;color:var(--dim);margin-bottom:5px;flex-wrap:wrap}
+  .blabel b{color:var(--txt);font-size:13px;letter-spacing:.3px}
+  .blabel .eff{margin-left:auto;font-variant-numeric:tabular-nums}
+  .bar{
+    position:relative;height:46px;background:var(--offcut);border:1px solid var(--line);
+    border-radius:8px;overflow:hidden;
+    background-image:repeating-linear-gradient(135deg,transparent 0 7px,rgba(255,255,255,.035) 7px 14px);
+  }
+  .seg-piece{
+    position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;color:#14120f;overflow:hidden;white-space:nowrap;
+    border-right:1px solid rgba(0,0,0,.45);
+  }
+  .seg-piece span{padding:0 4px;text-overflow:ellipsis;overflow:hidden}
+  .seg-piece .len{opacity:.72;font-weight:600;margin-left:4px}
+  .cuts{font-size:12px;color:var(--dim);margin-top:6px;font-variant-numeric:tabular-nums;word-spacing:2px}
+  .cuts b{color:#d8cbb8;font-weight:600}
+
+  .warn{
+    background:rgba(239,107,90,.1);border:1px solid rgba(239,107,90,.4);
+    color:#ffbdb2;border-radius:11px;padding:11px 13px;font-size:13px;margin-bottom:12px;
+  }
+  .warn b{color:#fff}
+
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .btn{
+    background:var(--accent);color:#1a1409;border:0;border-radius:10px;
+    padding:11px 16px;font:700 14px/1 inherit;cursor:pointer;transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+  .hint{font-size:12px;color:var(--dim);margin-top:9px;line-height:1.6}
+  .hint code{background:#100e0b;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:#e0d3bd;font-size:11.5px}
+
+  .empty{color:var(--dim);font-size:14px;text-align:center;padding:22px 0}
+
+  footer{text-align:center;color:#6b6157;font-size:12px;margin-top:22px}
+
+  @media (max-width:600px){
+    h1{font-size:26px}
+    .stats{grid-template-columns:1fr 1fr}
+    .topgrid{grid-template-columns:1fr}
+    .stockgrid{grid-template-columns:1.2fr .7fr .8fr 34px}
+    .partgrid{grid-template-columns:1.2fr 1fr .6fr 34px}
+    input[type=text]{padding:9px;font-size:16px}
+    .rowhead{font-size:9px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Kerf</h1>
+    <div class="sub">Tell it what you need cut. It tells you how to cut it with the least waste.</div>
+  </header>
+
+  <div class="card">
+    <h2>Setup</h2>
+    <div class="topgrid">
+      <label class="fld">Units
+        <div class="seg" id="unitSeg">
+          <button data-u="in" class="on">inches</button>
+          <button data-u="mm">mm</button>
+          <button data-u="cm">cm</button>
+        </div>
+      </label>
+      <label class="fld">Saw blade kerf
+        <input type="text" id="kerf" value="1/8">
+      </label>
+    </div>
+    <div class="hint">Type lengths however you like — <code>36</code>, <code>34 1/2</code>, <code>8'</code>, <code>6' 3 1/4</code>. Everything recalculates as you type.</div>
+  </div>
+
+  <div class="card">
+    <h2>Stock you can buy <span class="pill">length &nbsp;·&nbsp; how many &nbsp;·&nbsp; price each</span></h2>
+    <div class="rowhead stockgrid"><div>Length</div><div>Qty</div><div>Price</div><div></div></div>
+    <div id="stockRows"></div>
+    <button class="add" id="addStock">+ Add stock size</button>
+    <div class="hint">Leave Qty blank for unlimited. Price is optional.</div>
+  </div>
+
+  <div class="card">
+    <h2>Pieces you need <span class="pill">name &nbsp;·&nbsp; length &nbsp;·&nbsp; qty</span></h2>
+    <div class="rowhead partgrid"><div>Part</div><div>Length</div><div>Qty</div><div></div></div>
+    <div id="partRows"></div>
+    <button class="add" id="addPart">+ Add part</button>
+    <div class="btnrow">
+      <button class="btn ghost" id="clearBtn">Clear all</button>
+      <button class="btn ghost" id="sampleBtn">Load example</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>The plan</h2>
+    <div id="warnings"></div>
+    <div id="stats"></div>
+    <div id="plan"></div>
+    <div class="btnrow" id="planBtns" style="display:none">
+      <button class="btn" id="copyBtn">Copy cut list</button>
+    </div>
+  </div>
+
+  <footer>Kerf is included in every cut. Measure from the same end each time.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- state ---------------- */
+var unit = "in";
+var stocks = [];
+var parts  = [];
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+var SAMPLE = {
+  stocks:[{id:uid(),len:"8'",qty:"12",price:"23.50"},{id:uid(),len:"6'",qty:"",price:"18.00"}],
+  parts:[
+    {id:uid(),name:"Side",len:"72",qty:"2"},
+    {id:uid(),name:"Shelf",len:"34 1/2",qty:"5"},
+    {id:uid(),name:"Top",len:"36",qty:"1"},
+    {id:uid(),name:"Bottom",len:"36",qty:"1"},
+    {id:uid(),name:"Cleat",len:"34 1/2",qty:"2"}
+  ]
+};
+
+/* ---------------- length parsing ---------------- */
+// Accepts: 36 | 36.5 | 34 1/2 | 1/2 | 8' | 6' 3 1/4 | 8ft | 36in | 36"
+function parseLen(raw){
+  if(raw === null || raw === undefined) return NaN;
+  var s = String(raw).toLowerCase().trim();
+  if(!s) return NaN;
+  s = s.replace(/[,]/g,"");
+  s = s.replace(/millimet(er|re)s?/g,"").replace(/centimet(er|re)s?/g,"");
+  s = s.replace(/\bmm\b/g,"").replace(/\bcm\b/g,"");
+  s = s.replace(/inches|inch/g,"").replace(/\bin\b/g,"").replace(/"/g,"");
+  s = s.replace(/feet|foot|ft/g,"'");
+  var feet = 0;
+  var fi = s.indexOf("'");
+  if(fi >= 0){
+    var fpart = s.slice(0,fi).trim();
+    feet = parseFloat(fpart);
+    if(isNaN(feet)) feet = 0;
+    s = s.slice(fi+1);
+  }
+  s = s.trim();
+  var val = 0, sawNum = false;
+  if(s){
+    var toks = s.split(/\s+/);
+    for(var i=0;i<toks.length;i++){
+      var t = toks[i];
+      if(!t) continue;
+      if(t.indexOf("/") > -1){
+        var ab = t.split("/");
+        var a = parseFloat(ab[0]), b = parseFloat(ab[1]);
+        if(!isNaN(a) && !isNaN(b) && b !== 0){ val += a/b; sawNum = true; }
+        else return NaN;
+      } else {
+        var n = parseFloat(t);
+        if(isNaN(n)) return NaN;
+        val += n; sawNum = true;
+      }
+    }
+  }
+  if(!sawNum && fi < 0) return NaN;
+  var total = (unit === "in" ? feet*12 : 0) + val;
+  if(!isFinite(total) || total <= 0) return NaN;
+  return total;
+}
+
+function parseQty(raw){
+  var s = String(raw === null || raw === undefined ? "" : raw).trim();
+  if(!s) return null;                 // null = unlimited / unspecified
+  var n = parseInt(s,10);
+  if(isNaN(n) || n < 0) return NaN;
+  return n;
+}
+function parseMoney(raw){
+  var s = String(raw === null || raw === undefined ? "" : raw).trim().replace(/[$,\s]/g,"");
+  if(!s) return 0;
+  var n = parseFloat(s);
+  return (isNaN(n) || n < 0) ? NaN : n;
+}
+
+/* ---------------- formatting ---------------- */
+function gcd(a,b){ while(b){ var t=a%b; a=b; b=t; } return a; }
+
+function fmt(v){
+  if(!isFinite(v)) return "—";
+  if(unit !== "in"){
+    var r = Math.round(v*10)/10;
+    return (Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.round(r)) : r.toFixed(1)) + (unit === "mm" ? " mm" : " cm");
+  }
+  var neg = v < 0; v = Math.abs(v);
+  var six = Math.round(v*16);
+  var whole = Math.floor(six/16);
+  var rem = six - whole*16;
+  var out;
+  if(rem === 0){ out = whole + '"'; }
+  else {
+    var g = gcd(rem,16);
+    out = (whole ? whole + " " : "") + (rem/g) + "/" + (16/g) + '"';
+  }
+  return (neg ? "-" : "") + out;
+}
+// long-form label, adds feet for big imperial numbers
+function fmtLong(v){
+  if(unit === "in" && v >= 24){
+    var ft = Math.floor(v/12), inch = v - ft*12;
+    if(ft >= 1) return fmt(v) + " (" + ft + "'" + (inch > 0.0005 ? " " + fmt(inch) : "") + ")";
+  }
+  return fmt(v);
+}
+function money(n){ return "$" + n.toFixed(2); }
+
+/* ---------------- optimizer ---------------- */
+var EPS = 1e-7;
+
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Greedily fill one board of length L from the (desc-sorted) pool.
+// Kerf is consumed between consecutive pieces: n pieces need sum + (n-1)*kerf.
+function greedyFill(pool, L, kerf, rnd, jitter){
+  var idx = [], used = 0;
+  for(var i=0;i<pool.length;i++){
+    var need = (idx.length ? kerf : 0) + pool[i].len;
+    if(used + need <= L + EPS){
+      if(jitter && idx.length && rnd() < 0.13) continue;   // shake it up for restarts
+      idx.push(i); used += need;
+    }
+  }
+  return { idx:idx, used:used };
+}
+
+// mode 0 = least waste on this board, 1 = prefer longest stock, 2 = randomised
+// restrict >= 0 limits the whole plan to a single stock size
+function attempt(pool0, stockDefs, kerf, seed, mode, restrict){
+  var rnd = mulberry32((seed * 2654435761 + mode * 40503 + (restrict + 2) * 97) >>> 0);
+  var pool = pool0.slice();
+  if(seed > 0){
+    for(var s=0;s<pool.length;s++) pool[s]._j = rnd();
+    pool.sort(function(a,b){ return (b.len - a.len) || (a._j - b._j); });
+  } else {
+    pool.sort(function(a,b){ return b.len - a.len; });
+  }
+
+  var avail = stockDefs.map(function(d){ return { len:d.len, price:d.price, qty:(d.qty === null ? Infinity : d.qty) }; });
+  var boards = [], unfit = [];
+
+  var maxLen = 0;
+  for(var m=0;m<avail.length;m++){
+    if(restrict >= 0 && m !== restrict) continue;
+    if(avail[m].len > maxLen) maxLen = avail[m].len;
+  }
+  pool = pool.filter(function(p){
+    if(p.len > maxLen + EPS){ unfit.push(p); return false; }
+    return true;
+  });
+
+  var guard = 0;
+  while(pool.length && guard++ < 5000){
+    var best = null;
+    for(var i=0;i<avail.length;i++){
+      var st = avail[i];
+      if(st.qty <= 0) continue;
+      if(restrict >= 0 && i !== restrict) continue;
+      var fill = greedyFill(pool, st.len, kerf, rnd, seed > 0);
+      if(!fill.idx.length) continue;
+      var waste = st.len - fill.used;
+      var score = mode === 1 ? (waste - st.len * 1000)
+                : mode === 2 ? (waste * (0.4 + rnd() * 1.4))
+                : waste;
+      if(!best || score < best.score - EPS ||
+         (Math.abs(score - best.score) < EPS && st.len < best.len)){
+        best = { i:i, score:score, fill:fill, len:st.len, price:st.price };
+      }
+    }
+    if(!best){ unfit = unfit.concat(pool); pool = []; break; }
+
+    avail[best.i].qty--;
+    var taken = {}, chosen = [];
+    for(var k=0;k<best.fill.idx.length;k++){ taken[best.fill.idx[k]] = 1; chosen.push(pool[best.fill.idx[k]]); }
+    pool = pool.filter(function(_,ix){ return !taken[ix]; });
+
+    // offcut: if anything is left over you still pay one final kerf to free it
+    var off = best.len - best.fill.used;
+    if(off > EPS) off = Math.max(0, off - kerf);
+    boards.push({ len:best.len, price:best.price, pieces:chosen, used:best.fill.used, offcut:off });
+  }
+
+  var totalStock = 0, cost = 0, maxOff = 0, cut = 0;
+  for(var b=0;b<boards.length;b++){
+    totalStock += boards[b].len;
+    cost += boards[b].price;
+    if(boards[b].offcut > maxOff) maxOff = boards[b].offcut;
+    for(var q=0;q<boards[b].pieces.length;q++) cut += boards[b].pieces[q].len;
+  }
+  return { boards:boards, unfit:unfit, totalStock:totalStock, cost:cost, maxOffcut:maxOff, cutLen:cut };
+}
+
+function better(a,b,byCost){
+  if(a.unfit.length !== b.unfit.length) return a.unfit.length < b.unfit.length;
+  if(byCost && Math.abs(a.cost - b.cost) > 1e-4) return a.cost < b.cost;  // priced? spend less
+  if(Math.abs(a.totalStock - b.totalStock) > EPS) return a.totalStock < b.totalStock;
+  if(a.boards.length !== b.boards.length) return a.boards.length < b.boards.length;
+  return a.maxOffcut > b.maxOffcut + EPS;   // prefer waste pooled into one reusable offcut
+}
+
+function solve(pool, stockDefs, kerf){
+  var iters = pool.length > 120 ? 30 : (pool.length > 40 ? 70 : 130);
+  var plans = [];
+  // deterministic strategies first
+  for(var m=0;m<3;m++) plans.push([0,m,-1]);
+  // then each stock size on its own — often beats any mixed greedy
+  for(var s=0;s<stockDefs.length && s<8;s++){ plans.push([0,0,s]); plans.push([0,1,s]); }
+  // then randomised restarts across all strategies
+  for(var i=1;i<=iters;i++) plans.push([i, i%3, -1]);
+
+  // only optimise for money when every stock size is priced, otherwise "free" stock wins unfairly
+  var byCost = stockDefs.length > 0 && stockDefs.every(function(d){ return d.price > 0; });
+  var best = null;
+  for(var p=0;p<plans.length;p++){
+    var sol = attempt(pool, stockDefs, kerf, plans[p][0], plans[p][1], plans[p][2]);
+    if(!best || better(sol,best,byCost)) best = sol;
+    if(best.unfit.length === 0 && best.totalStock - best.cutLen < EPS) break; // zero waste, can't beat it
+  }
+  return best;
+}
+
+/* ---------------- colours ---------------- */
+function hueFor(name, idx){
+  var h = 0;
+  for(var i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) >>> 0;
+  return (h + idx*67) % 360;
+}
+var colorMap = {};
+function colorFor(name){
+  if(!colorMap[name]){
+    var n = Object.keys(colorMap).length;
+    var hue = (hueFor(name, n) + n*47) % 360;
+    colorMap[name] = "hsl(" + hue + " 62% 62%)";
+  }
+  return colorMap[name];
+}
+
+/* ---------------- rendering: inputs ---------------- */
+var $ = function(id){ return document.getElementById(id); };
+
+function makeInput(val, ph, cls){
+  var el = document.createElement("input");
+  el.type = "text"; el.value = val || ""; el.placeholder = ph || "";
+  if(cls) el.className = cls;
+  el.setAttribute("autocomplete","off"); el.setAttribute("autocapitalize","off");
+  el.setAttribute("spellcheck","false");
+  return el;
+}
+
+function renderStocks(){
+  var host = $("stockRows"); host.innerHTML = "";
+  stocks.forEach(function(s){
+    var row = document.createElement("div");
+    row.className = "row stockgrid";
+    var a = makeInput(s.len, unit === "in" ? "8'" : "2400");
+    var b = makeInput(s.qty, "∞");
+    var c = makeInput(s.price, "—");
+    a.oninput = function(){ s.len = a.value; run(); };
+    b.oninput = function(){ s.qty = b.value; run(); };
+    c.oninput = function(){ s.price = c.value; run(); };
+    var d = document.createElement("button");
+    d.className = "del"; d.textContent = "×"; d.title = "Remove";
+    d.onclick = function(){ stocks = stocks.filter(function(x){ return x !== s; }); renderStocks(); run(); };
+    row.appendChild(a); row.appendChild(b); row.appendChild(c); row.appendChild(d);
+    host.appendChild(row);
+  });
+}
+
+function renderParts(){
+  var host = $("partRows"); host.innerHTML = "";
+  parts.forEach(function(p){
+    var row = document.createElement("div");
+    row.className = "row partgrid";
+    var a = makeInput(p.name, "Shelf");
+    var b = makeInput(p.len, unit === "in" ? "34 1/2" : "876");
+    var c = makeInput(p.qty, "1");
+    a.oninput = function(){ p.name = a.value; run(); };
+    b.oninput = function(){ p.len = b.value; run(); };
+    c.oninput = function(){ p.qty = c.value; run(); };
+    var d = document.createElement("button");
+    d.className = "del"; d.textContent = "×"; d.title = "Remove";
+    d.onclick = function(){ parts = parts.filter(function(x){ return x !== p; }); renderParts(); run(); };
+    row.appendChild(a); row.appendChild(b); row.appendChild(c); row.appendChild(d);
+    host.appendChild(row);
+  });
+}
+
+/* ---------------- run + render results ---------------- */
+var lastText = "";
+
+function run(){
+  var warnHost = $("warnings"), statHost = $("stats"), planHost = $("plan");
+  warnHost.innerHTML = ""; statHost.innerHTML = ""; planHost.innerHTML = "";
+  $("planBtns").style.display = "none";
+  lastText = "";
+
+  var kerf = parseLen($("kerf").value);
+  if(!isFinite(kerf)){
+    if(String($("kerf").value).trim() === "0" || String($("kerf").value).trim() === "") kerf = 0;
+    else { warn(warnHost, "That kerf doesn't parse. Try <b>1/8</b>, <b>0.125</b> or <b>3</b> (mm)."); kerf = 0; }
+  }
+
+  var stockDefs = [], badStock = false;
+  stocks.forEach(function(s){
+    var L = parseLen(s.len);
+    var q = parseQty(s.qty);
+    var pr = parseMoney(s.price);
+    if(!isFinite(L)){ if(String(s.len).trim()) badStock = true; return; }
+    if(isNaN(q) || isNaN(pr)){ badStock = true; return; }
+    stockDefs.push({ len:L, qty:q, price:pr });
+  });
+  if(badStock) warn(warnHost, "Some stock rows couldn't be read and were skipped.");
+
+  var pool = [], badPart = false, totalPieces = 0;
+  parts.forEach(function(p){
+    var L = parseLen(p.len);
+    var q = parseQty(p.qty);
+    if(q === null) q = 1;
+    if(!isFinite(L) || isNaN(q)){ if(String(p.len).trim()) badPart = true; return; }
+    if(q > 500) q = 500;
+    var nm = String(p.name || "").trim() || "Part";
+    for(var i=0;i<q;i++){ pool.push({ name:nm, len:L }); totalPieces++; }
+  });
+  if(badPart) warn(warnHost, "Some part rows couldn't be read and were skipped.");
+
+  if(!stockDefs.length || !pool.length){
+    planHost.innerHTML = '<div class="empty">Add at least one stock size and one part, and the plan appears here.</div>';
+    return;
+  }
+
+  var sol = solve(pool, stockDefs, kerf);
+
+  if(sol.unfit.length){
+    var names = {};
+    sol.unfit.forEach(function(u){ names[u.name + " " + fmt(u.len)] = (names[u.name + " " + fmt(u.len)] || 0) + 1; });
+    var list = Object.keys(names).map(function(k){ return names[k] + " × " + k; }).join(", ");
+    warn(warnHost, "<b>Couldn't place " + sol.unfit.length + " piece" + (sol.unfit.length > 1 ? "s" : "") +
+      ":</b> " + list + ". Either it's longer than your stock, or you've run out of the quantity you allowed.");
+  }
+
+  /* stats */
+  var used = sol.cutLen;
+  var waste = sol.totalStock - used;
+  var wastePct = sol.totalStock > 0 ? (waste / sol.totalStock * 100) : 0;
+  var anyPrice = sol.boards.some(function(b){ return b.price > 0; });
+
+  statHost.className = "stats";
+  statHost.appendChild(stat("Boards needed", sol.boards.length, ""));
+  statHost.appendChild(stat(anyPrice ? "Est. cost" : "Material used",
+    anyPrice ? money(sol.cost) : fmt(sol.totalStock), ""));
+  statHost.appendChild(stat("Waste", wastePct.toFixed(1) + "%", wastePct <= 10 ? "good" : (wastePct <= 22 ? "warn" : "")));
+  statHost.appendChild(stat("Longest offcut", fmt(sol.maxOffcut), "good"));
+
+  /* board diagrams */
+  var lines = [];
+  var counts = {};
+  sol.boards.forEach(function(b, bi){
+    var wrapEl = document.createElement("div");
+    wrapEl.className = "board";
+
+    var head = document.createElement("div");
+    head.className = "blabel";
+    var eff = b.len > 0 ? (b.pieces.reduce(function(a,p){ return a + p.len; }, 0) / b.len * 100) : 0;
+    head.innerHTML = "<b>Board " + (bi+1) + "</b> · " + fmtLong(b.len) +
+      "<span class='eff'>" + eff.toFixed(0) + "% used · offcut " + fmt(b.offcut) + "</span>";
+    wrapEl.appendChild(head);
+
+    var bar = document.createElement("div");
+    bar.className = "bar";
+    var pos = 0, cutsAt = [], pieceTxt = [];
+    b.pieces.forEach(function(p, pi){
+      if(pi > 0) pos += kerf;
+      var seg = document.createElement("div");
+      seg.className = "seg-piece";
+      seg.style.left = (pos / b.len * 100) + "%";
+      seg.style.width = (p.len / b.len * 100) + "%";
+      seg.style.background = colorFor(p.name);
+      seg.innerHTML = "<span>" + esc(p.name) + "<span class='len'>" + fmt(p.len) + "</span></span>";
+      seg.title = p.name + " — " + fmt(p.len);
+      bar.appendChild(seg);
+      pos += p.len;
+      cutsAt.push(pos);
+      pieceTxt.push(p.name + " " + fmt(p.len));
+      counts[p.name] = (counts[p.name] || 0) + 1;
+    });
+    wrapEl.appendChild(bar);
+
+    var cuts = document.createElement("div");
+    cuts.className = "cuts";
+    cuts.innerHTML = "Mark from one end at: " + cutsAt.map(function(c){ return "<b>" + fmt(c) + "</b>"; }).join(" · ");
+    wrapEl.appendChild(cuts);
+    planHost.appendChild(wrapEl);
+
+    lines.push("Board " + (bi+1) + " (" + fmt(b.len) + "): " + pieceTxt.join(" | ") +
+      "  ->  cut at " + cutsAt.map(fmt).join(", ") + "   [offcut " + fmt(b.offcut) + "]");
+  });
+
+  lastText = "KERF CUT LIST\n" +
+    "Kerf " + fmt(kerf) + " · " + sol.boards.length + " boards · " +
+    wastePct.toFixed(1) + "% waste" + (anyPrice ? " · " + money(sol.cost) : "") + "\n\n" +
+    lines.join("\n") + "\n\nParts: " +
+    Object.keys(counts).map(function(k){ return counts[k] + " × " + k; }).join(", ") + "\n";
+
+  if(sol.boards.length) $("planBtns").style.display = "flex";
+}
+
+function stat(k, v, cls){
+  var d = document.createElement("div");
+  d.className = "stat";
+  d.innerHTML = "<div class='k'>" + k + "</div><div class='v " + (cls || "") + "'>" + v + "</div>";
+  return d;
+}
+function warn(host, html){
+  var d = document.createElement("div");
+  d.className = "warn"; d.innerHTML = html; host.appendChild(d);
+}
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c];
+  });
+}
+
+/* ---------------- wiring ---------------- */
+$("addStock").onclick = function(){ stocks.push({ id:uid(), len:"", qty:"", price:"" }); renderStocks(); run(); };
+$("addPart").onclick  = function(){ parts.push({ id:uid(), name:"", len:"", qty:"1" }); renderParts(); run(); };
+$("kerf").oninput = run;
+
+$("clearBtn").onclick = function(){
+  stocks = [{ id:uid(), len:"", qty:"", price:"" }];
+  parts  = [{ id:uid(), name:"", len:"", qty:"1" }];
+  renderStocks(); renderParts(); run();
+};
+$("sampleBtn").onclick = function(){ loadSample(); };
+
+function loadSample(){
+  colorMap = {};
+  stocks = SAMPLE.stocks.map(function(s){ return { id:uid(), len:s.len, qty:s.qty, price:s.price }; });
+  parts  = SAMPLE.parts.map(function(p){ return { id:uid(), name:p.name, len:p.len, qty:p.qty }; });
+  if(unit !== "in"){
+    // convert the demo so it still makes sense in metric
+    var k = unit === "mm" ? 25.4 : 2.54;
+    stocks = [
+      { id:uid(), len:String(Math.round(2400*(unit === "mm" ? 1 : 0.1))), qty:"12", price:"23.50" },
+      { id:uid(), len:String(Math.round(1800*(unit === "mm" ? 1 : 0.1))), qty:"", price:"18.00" }
+    ];
+    parts = SAMPLE.parts.map(function(p){
+      var inches = parseLenAs(p.len, "in");
+      return { id:uid(), name:p.name, len:String(Math.round(inches*k*10)/10), qty:p.qty };
+    });
+    $("kerf").value = unit === "mm" ? "3" : "0.3";
+  }
+  renderStocks(); renderParts(); run();
+}
+function parseLenAs(v, u){
+  var old = unit; unit = u;
+  var r = parseLen(v);
+  unit = old;
+  return r;
+}
+
+Array.prototype.forEach.call($("unitSeg").querySelectorAll("button"), function(btn){
+  btn.onclick = function(){
+    if(btn.classList.contains("on")) return;
+    Array.prototype.forEach.call($("unitSeg").querySelectorAll("button"), function(b){ b.classList.remove("on"); });
+    btn.classList.add("on");
+    var prev = unit;
+    unit = btn.getAttribute("data-u");
+    // convert every entered length so the numbers stay meaningful
+    var f = factor(prev, unit);
+    if(f !== 1){
+      var conv = function(v){
+        var n = parseLenAs(v, prev);
+        if(!isFinite(n)) return v;
+        var out = n * f;
+        return unit === "in" ? String(Math.round(out*16)/16) : String(Math.round(out*10)/10);
+      };
+      stocks.forEach(function(s){ s.len = conv(s.len); });
+      parts.forEach(function(p){ p.len = conv(p.len); });
+      var kn = parseLenAs($("kerf").value, prev);
+      if(isFinite(kn)) $("kerf").value = unit === "in" ? String(Math.round(kn*f*64)/64) : String(Math.round(kn*f*10)/10);
+    }
+    renderStocks(); renderParts(); run();
+  };
+});
+function factor(from, to){
+  var toMm = { in:25.4, cm:10, mm:1 };
+  return toMm[from] / toMm[to];
+}
+
+$("copyBtn").onclick = function(){
+  var btn = $("copyBtn"), done = function(){
+    var t = btn.textContent; btn.textContent = "Copied ✓";
+    setTimeout(function(){ btn.textContent = t; }, 1400);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(lastText).then(done, fallback);
+  } else fallback();
+  function fallback(){
+    var ta = document.createElement("textarea");
+    ta.value = lastText; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){}
+    document.body.removeChild(ta);
+  }
+};
+
+loadSample();
+
+/* --------- self-test (console only) --------- */
+if(typeof window !== "undefined" && window.location && /[?&]selftest/.test(window.location.search)){
+  var T = [];
+  var chk = function(n, got, want){ T.push((Math.abs(got-want) < 1e-6 ? "ok  " : "FAIL") + " " + n + " got=" + got + " want=" + want); };
+  unit = "in";
+  chk("34 1/2", parseLen("34 1/2"), 34.5);
+  chk("8'", parseLen("8'"), 96);
+  chk("6' 3 1/4", parseLen("6' 3 1/4"), 75.25);
+  chk("1/8", parseLen("1/8"), 0.125);
+  chk('36"', parseLen('36"'), 36);
+  chk("fmt round", parseLen("2.5"), 2.5);
+  console.log(T.join("\n"));
+}
+
+})();
+</script>
+</body>
+</html>
