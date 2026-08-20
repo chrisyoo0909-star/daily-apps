@@ -166,5 +166,12 @@
     "emoji": "🪚",
     "date": "2026-08-19",
     "blurb": "Enter the pieces you need and the stock you can buy, and it packs them onto the fewest boards — kerf included, with a visual cut diagram and the exact marks to make."
+  },
+  {
+    "file": "apps/app-2026-08-20-rungs.html",
+    "name": "Rungs",
+    "emoji": "🪜",
+    "date": "2026-08-20",
+    "blurb": "A word ladder puzzle: climb from one word to another one letter at a time, with only real-word swaps offered and a compass showing how many rungs are left."
   }
 ]
