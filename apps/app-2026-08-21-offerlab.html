@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offer Lab — compare job offers for what they're really worth</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#131a2a; --panel2:#182136; --line:#26314b;
+    --txt:#e8edf7; --dim:#96a2bd; --dimmer:#6b7794;
+    --accent:#7dd3fc; --good:#34d399; --bad:#fb7185;
+    --c0:#7dd3fc; --c1:#a78bfa; --c2:#fbbf24; --c3:#34d399;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 15% -10%, #1a2540 0%, transparent 60%),
+               radial-gradient(900px 600px at 100% 0%, #1d1a3a 0%, transparent 55%), var(--bg);
+    color:var(--txt);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    min-height:100vh;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 16px 70px}
+  header h1{font-size:27px;margin:0 0 4px;letter-spacing:-.5px}
+  header h1 span{color:var(--accent)}
+  header p{margin:0 0 20px;color:var(--dim);font-size:14px;max-width:640px}
+
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);
+        border:1px solid var(--line);border-radius:16px;padding:16px}
+
+  /* ---------- assumptions ---------- */
+  details.assump{margin-bottom:18px}
+  details.assump summary{
+    cursor:pointer;list-style:none;padding:11px 15px;border:1px solid var(--line);
+    border-radius:12px;background:var(--panel);color:var(--dim);font-size:13.5px;
+    display:flex;align-items:center;gap:8px;user-select:none;
+  }
+  details.assump summary::-webkit-details-marker{display:none}
+  details.assump summary::after{content:"▾";margin-left:auto;transition:.2s}
+  details.assump[open] summary::after{transform:rotate(180deg)}
+  details.assump summary b{color:var(--txt);font-weight:600}
+  .agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:14px;margin-top:12px}
+  .agrid .f label{font-size:11.5px}
+
+  /* ---------- offers ---------- */
+  .offers{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start}
+  .offer{position:relative;overflow:hidden}
+  .offer::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--oc)}
+  .otop{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--oc);flex:none;box-shadow:0 0 10px var(--oc)}
+  .oname{flex:1;background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--txt);
+         font-size:16px;font-weight:650;padding:2px 0;min-width:0;width:100%}
+  .oname:hover{border-bottom-color:var(--line)}
+  .oname:focus{outline:none;border-bottom-color:var(--oc)}
+  .xbtn{background:transparent;border:none;color:var(--dimmer);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
+  .xbtn:hover{color:var(--bad)}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .f{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .f.full{grid-column:1/-1}
+  .f label{font-size:11.5px;color:var(--dim);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inwrap{position:relative;display:flex;align-items:center}
+  .inwrap .pre,.inwrap .suf{position:absolute;color:var(--dimmer);font-size:12px;pointer-events:none}
+  .inwrap .pre{left:9px}
+  .inwrap .suf{right:9px}
+  input[type=number],input[type=text],select{
+    width:100%;background:#0d1424;border:1px solid var(--line);border-radius:9px;
+    color:var(--txt);padding:8px 10px;font-size:14px;font-variant-numeric:tabular-nums;
+    -moz-appearance:textfield;
+  }
+  input.pad{padding-left:20px}
+  input.padr{padding-right:26px}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(125,211,252,.13)}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dimmer) 50%),linear-gradient(135deg,var(--dimmer) 50%,transparent 50%);
+         background-position:calc(100% - 15px) 15px,calc(100% - 10px) 15px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px}
+  .addbtn{border:1px dashed var(--line);border-radius:16px;background:transparent;color:var(--dim);
+          min-height:120px;cursor:pointer;font-size:14px;width:100%}
+  .addbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ---------- results ---------- */
+  h2{font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dimmer);margin:30px 0 12px;font-weight:600}
+  .winner{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:16px}
+  .winner .big{font-size:26px;font-weight:700}
+  .winner .lead{color:var(--good);font-size:14px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);
+                padding:3px 10px;border-radius:999px}
+  .row{margin-bottom:18px}
+  .rhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;font-size:14px}
+  .rhead .nm{font-weight:650;display:flex;align-items:center;gap:7px;min-width:0}
+  .rhead .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rhead .amt{font-variant-numeric:tabular-nums;font-weight:650;white-space:nowrap}
+  .rhead .amt small{color:var(--dimmer);font-weight:400;font-size:11.5px}
+  .bar{display:flex;height:26px;border-radius:7px;overflow:hidden;background:#0d1424;border:1px solid var(--line)}
+  .seg{height:100%;position:relative}
+  .seg:hover{filter:brightness(1.25)}
+  .ded{display:flex;height:8px;border-radius:5px;overflow:hidden;background:#0d1424;margin-top:4px;border:1px solid var(--line)}
+  .dedseg{height:100%;background:repeating-linear-gradient(45deg,var(--bad),var(--bad) 4px,#9f1239 4px,#9f1239 8px)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 4px;font-size:12px;color:var(--dim)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .note{font-size:12.5px;color:var(--dimmer);margin-top:4px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;white-space:normal}
+  thead th{color:var(--dim);font-weight:600;font-size:12px;border-bottom:1px solid var(--line)}
+  tbody tr:last-child td{border-bottom:none}
+  tr.tot td{font-weight:700;border-top:1px solid var(--line);background:rgba(125,211,252,.05)}
+  td.neg{color:var(--bad)}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+
+  .chart{width:100%;height:auto;display:block}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:999px;
+       padding:5px 13px;font-size:12.5px;cursor:pointer}
+  .tab.on{background:rgba(125,211,252,.13);border-color:var(--accent);color:var(--accent)}
+  footer{margin-top:34px;color:var(--dimmer);font-size:12px;line-height:1.6}
+  @media (max-width:520px){
+    .wrap{padding:20px 12px 60px}
+    header h1{font-size:22px}
+    .winner .big{font-size:21px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Offer <span>Lab</span></h1>
+    <p>Two salaries are never the same salary. Add your offers and see what each one is really worth once equity, bonus, 401(k) match, time off, commute and cost of living are in the same currency.</p>
+  </header>
+
+  <details class="assump">
+    <summary><b>Assumptions</b> <span id="asum"></span></summary>
+    <div class="card" style="margin-top:10px">
+      <div class="agrid" id="agrid"></div>
+    </div>
+  </details>
+
+  <div class="offers" id="offers"></div>
+
+  <h2>Result</h2>
+  <div id="winner" class="winner"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="card">
+    <div id="bars"></div>
+    <div class="legend" id="legend"></div>
+    <div class="note" id="barnote"></div>
+  </div>
+
+  <h2>Value per year</h2>
+  <div class="card"><svg id="chart" class="chart" viewBox="0 0 720 260" preserveAspectRatio="xMidYMid meet"></svg></div>
+
+  <h2>Line by line <span id="tblyr" style="text-transform:none;letter-spacing:0"></span></h2>
+  <div class="card scroll"><table id="tbl"></table></div>
+
+  <footer>
+    Pre-tax comparison — taxes depend on filing status and state, so Offer Lab compares gross value and lets the cost-of-living index stand in for the biggest local difference. Equity is valued at the price you enter; private-company paper is worth what someone will actually pay for it. Nothing is saved or sent anywhere.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLORS = ["#7dd3fc","#a78bfa","#fbbf24","#34d399"];
+  var NAMES  = ["Offer A","Offer B","Offer C","Offer D"];
+
+  var A = {
+    years: 4,        // horizon
+    raise: 3,        // % annual raise on base
+    growth: 0,       // % annual equity price growth
+    timeVal: 50,     // % of hourly rate that commuting time is worth
+    ptoRef: 15,      // PTO baseline in days
+    col: 1           // apply cost of living adjustment
+  };
+
+  var offers = [
+    mk(0,{name:"Offer A", base:145000, bonus:10, signon:15000, equity:160000, vest:"even",
+          match:4, pto:20, onsite:3, commute:35, ccost:12, col:118}),
+    mk(1,{name:"Offer B", base:132000, bonus:15, signon:0, equity:40000, vest:"back",
+          match:6, pto:25, onsite:0, commute:0, ccost:0, col:96})
+  ];
+
+  function mk(i,o){ o.id = i + "-" + Math.random().toString(36).slice(2,7); return o; }
+
+  var VEST = {
+    even : {label:"Even (25% / yr)",        f:[.25,.25,.25,.25]},
+    back : {label:"Backloaded 10/20/30/40", f:[.10,.20,.30,.40]},
+    front: {label:"Frontloaded 40/30/20/10",f:[.40,.30,.20,.10]},
+    yr1  : {label:"All in year 1",          f:[1,0,0,0]},
+    none : {label:"No equity",              f:[0,0,0,0]}
+  };
+
+  // ---- components of value -------------------------------------------------
+  var COMP = [
+    {k:"base",   label:"Base",          c:"#38bdf8"},
+    {k:"bonus",  label:"Bonus",         c:"#818cf8"},
+    {k:"signon", label:"Sign-on",       c:"#c084fc"},
+    {k:"equity", label:"Equity vested", c:"#f472b6"},
+    {k:"match",  label:"401(k) match",  c:"#fbbf24"},
+    {k:"pto",    label:"Extra PTO",     c:"#34d399"}
+  ];
+  var DED = [
+    {k:"ccost", label:"Commute cost", },
+    {k:"ctime", label:"Commute time"}
+  ];
+
+  var view = "total"; // "total" | year index 1..4
+
+  // ---- math ----------------------------------------------------------------
+  function num(v,d){ v = parseFloat(v); return isFinite(v) ? v : (d||0); }
+
+  function yearRows(o){
+    var rows = [], vf = (VEST[o.vest]||VEST.even).f;
+    for (var y = 1; y <= A.years; y++){
+      var base   = num(o.base) * Math.pow(1 + A.raise/100, y - 1);
+      var bonus  = base * num(o.bonus)/100;
+      var signon = (y === 1) ? num(o.signon) : 0;
+      var equity = num(o.equity) * (vf[y-1]||0) * Math.pow(1 + A.growth/100, y);
+      var match  = base * num(o.match)/100;
+
+      var dayRate = base / 260;
+      var pto     = (num(o.pto) - A.ptoRef) * dayRate;
+
+      // working days actually spent on site
+      var workDays  = Math.max(0, 260 - num(o.pto) - 10);          // 10 public holidays
+      var onDays    = workDays * Math.min(5, Math.max(0, num(o.onsite))) / 5;
+      var ccost     = onDays * num(o.ccost);
+      var hourly    = base / 2080;
+      var ctime     = onDays * (num(o.commute) * 2 / 60) * hourly * (A.timeVal/100);
+
+      var gross = base + bonus + signon + equity + match + Math.max(0, pto);
+      // PTO below the baseline counts as a deduction so the bar stays honest
+      var ptoPenalty = pto < 0 ? -pto : 0;
+      var ded   = ccost + ctime + ptoPenalty;
+      var net   = gross - ded;
+      var colf  = A.col ? 100 / Math.max(1, num(o.col,100)) : 1;
+
+      rows.push({
+        y:y, base:base, bonus:bonus, signon:signon, equity:equity, match:match,
+        pto:Math.max(0,pto), ptoPenalty:ptoPenalty, ccost:ccost, ctime:ctime,
+        gross:gross, ded:ded, net:net, adj:net * colf, colf:colf
+      });
+    }
+    return rows;
+  }
+
+  function summarize(o){
+    var rows = yearRows(o), s = {rows:rows};
+    var keys = ["base","bonus","signon","equity","match","pto","ptoPenalty","ccost","ctime","gross","ded","net","adj"];
+    keys.forEach(function(k){ s[k] = rows.reduce(function(a,r){ return a + r[k]; }, 0); });
+    s.perYearAdj = s.adj / A.years;
+    return s;
+  }
+
+  function slice(s){                       // the numbers the current view shows
+    if (view === "total") return s;
+    var r = s.rows[view - 1];
+    return r ? r : s;
+  }
+
+  // ---- formatting ----------------------------------------------------------
+  function money(n){
+    var neg = n < 0; n = Math.round(Math.abs(n));
+    return (neg ? "-$" : "$") + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  function compact(n){
+    var a = Math.abs(n);
+    if (a >= 1000000) return (n/1000000).toFixed(a >= 10000000 ? 0 : 1).replace(/\.0$/,"") + "M";
+    if (a >= 1000)    return Math.round(n/1000) + "k";
+    return Math.round(n).toString();
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  // ---- inputs --------------------------------------------------------------
+  var FIELDS = [
+    {k:"base",   label:"Base salary",       pre:"$", step:1000, full:true},
+    {k:"bonus",  label:"Target bonus",      suf:"%", step:1},
+    {k:"signon", label:"Sign-on bonus",     pre:"$", step:1000},
+    {k:"equity", label:"Equity grant (total)", pre:"$", step:5000, full:true},
+    {k:"vest",   label:"Vesting",           sel:VEST, full:true},
+    {k:"match",  label:"401(k) match",      suf:"%", step:.5},
+    {k:"pto",    label:"PTO days",          suf:"d", step:1},
+    {k:"onsite", label:"On-site days/wk",   suf:"/5", step:1},
+    {k:"commute",label:"Commute one-way",   suf:"m", step:5},
+    {k:"ccost",  label:"Commute $/day",     pre:"$", step:1},
+    {k:"col",    label:"Cost-of-living idx",step:1}
+  ];
+
+  function field(o, f){
+    var v = o[f.k];
+    if (f.sel){
+      var opts = Object.keys(f.sel).map(function(key){
+        return '<option value="'+key+'"'+(v===key?" selected":"")+'>'+esc(f.sel[key].label)+"</option>";
+      }).join("");
+      return '<div class="f'+(f.full?" full":"")+'"><label>'+f.label+'</label>'+
+             '<select data-id="'+o.id+'" data-k="'+f.k+'">'+opts+"</select></div>";
+    }
+    var cls = (f.pre?"pad ":"") + (f.suf?"padr":"");
+    return '<div class="f'+(f.full?" full":"")+'"><label>'+f.label+'</label><div class="inwrap">'+
+           (f.pre?'<span class="pre">'+f.pre+"</span>":"")+
+           '<input class="'+cls+'" type="number" inputmode="decimal" step="'+(f.step||1)+'" '+
+           'value="'+v+'" data-id="'+o.id+'" data-k="'+f.k+'">'+
+           (f.suf?'<span class="suf">'+f.suf+"</span>":"")+"</div></div>";
+  }
+
+  function renderOffers(){
+    var el = document.getElementById("offers"), h = "";
+    offers.forEach(function(o, i){
+      h += '<div class="card offer" style="--oc:'+COLORS[i%4]+'">'+
+             '<div class="otop"><span class="dot"></span>'+
+             '<input class="oname" type="text" value="'+esc(o.name)+'" data-id="'+o.id+'" data-k="name">'+
+             (offers.length > 1 ? '<button class="xbtn" data-del="'+o.id+'" title="Remove">&times;</button>' : "")+
+             "</div><div class=\"fgrid\">"+
+             FIELDS.map(function(f){ return field(o,f); }).join("")+
+           "</div></div>";
+    });
+    if (offers.length < 4) h += '<button class="addbtn" id="add">+ Add another offer</button>';
+    el.innerHTML = h;
+  }
+
+  var AF = [
+    {k:"years",  label:"Horizon",         suf:"yr", step:1, min:1, max:4},
+    {k:"raise",  label:"Annual raise",    suf:"%",  step:.5},
+    {k:"growth", label:"Equity growth/yr",suf:"%",  step:5},
+    {k:"timeVal",label:"Commute time is worth", suf:"% of pay", step:10},
+    {k:"ptoRef", label:"PTO baseline",    suf:"d",  step:1},
+    {k:"col",    label:"Adjust for cost of living", sel:{1:"Yes",0:"No"}}
+  ];
+
+  function renderAssump(){
+    document.getElementById("agrid").innerHTML = AF.map(function(f){
+      if (f.sel) return '<div class="f"><label>'+f.label+"</label>"+
+        '<select data-a="'+f.k+'">'+Object.keys(f.sel).map(function(k){
+          return '<option value="'+k+'"'+(String(A[f.k])===k?" selected":"")+">"+f.sel[k]+"</option>";
+        }).join("")+"</select></div>";
+      return '<div class="f"><label>'+f.label+'</label><div class="inwrap">'+
+        '<input class="padr" type="number" inputmode="decimal" step="'+f.step+'" value="'+A[f.k]+'" data-a="'+f.k+'">'+
+        '<span class="suf">'+f.suf+"</span></div></div>";
+    }).join("");
+    document.getElementById("asum").textContent =
+      "· " + A.years + "-year horizon · " + A.raise + "% raises · " +
+      (A.col ? "cost-of-living on" : "cost-of-living off");
+  }
+
+  // ---- results -------------------------------------------------------------
+  function render(){
+    var data = offers.map(function(o,i){
+      var s = summarize(o); s.name = o.name || NAMES[i]; s.color = COLORS[i%4]; s.o = o; return s;
+    });
+
+    // tabs
+    var tabs = ['<button class="tab'+(view==="total"?" on":"")+'" data-v="total">All '+A.years+' years</button>'];
+    for (var y = 1; y <= A.years; y++)
+      tabs.push('<button class="tab'+(view===y?" on":"")+'" data-v="'+y+'">Year '+y+"</button>");
+    document.getElementById("tabs").innerHTML = tabs.join("");
+    document.getElementById("tblyr").textContent =
+      view === "total" ? "(" + A.years + "-year total)" : "(year " + view + ")";
+
+    var cur = data.map(function(s){
+      var r = slice(s);
+      return {s:s, adj:r.adj, net:r.net, gross:r.gross, ded:r.ded, r:r};
+    });
+    var ranked = cur.slice().sort(function(a,b){ return b.adj - a.adj; });
+    var maxGross = Math.max.apply(null, cur.map(function(c){ return c.gross; }).concat([1]));
+
+    // headline
+    var w = ranked[0], runner = ranked[1];
+    var wh = '<span class="big" style="color:'+w.s.color+'">'+esc(w.s.name)+"</span>";
+    if (runner){
+      var gap = w.adj - runner.adj;
+      wh += gap < 1 ? '<span class="lead">tied with '+esc(runner.s.name)+"</span>"
+                    : '<span class="lead">+'+money(gap)+" vs "+esc(runner.s.name)+"</span>";
+    }
+    wh += '<span style="color:var(--dim);font-size:13.5px">' +
+          (A.col ? "cost-of-living adjusted, " : "") +
+          (view === "total" ? A.years + "-year total " : "year " + view + " ") +
+          money(w.adj) + "</span>";
+    document.getElementById("winner").innerHTML = wh;
+
+    // bars
+    document.getElementById("bars").innerHTML = ranked.map(function(c){
+      var r = c.r, segs = COMP.map(function(comp){
+        var v = r[comp.k]; if (v <= 0) return "";
+        return '<div class="seg" style="width:'+(v/maxGross*100)+'%;background:'+comp.c+'" title="'+
+               comp.label+" "+money(v)+'"></div>';
+      }).join("");
+      var dedBar = r.ded > 0
+        ? '<div class="ded"><div class="dedseg" style="width:'+(r.ded/maxGross*100)+'%" title="Deductions '+
+          money(r.ded)+'"></div></div>' : "";
+      var adjNote = (A.col && Math.abs(r.colf - 1) > .001)
+        ? "<small> · " + money(r.adj) + " adjusted</small>" : "";
+      return '<div class="row"><div class="rhead"><div class="nm">'+
+             '<span class="swatch" style="background:'+c.s.color+'"></span><span>'+esc(c.s.name)+"</span></div>"+
+             '<div class="amt">'+money(r.net)+adjNote+"</div></div>"+
+             '<div class="bar">'+segs+"</div>"+dedBar+"</div>";
+    }).join("");
+
+    document.getElementById("legend").innerHTML =
+      COMP.map(function(c){ return '<span><i style="background:'+c.c+'"></i>'+c.label+"</span>"; }).join("") +
+      '<span><i style="background:repeating-linear-gradient(45deg,#fb7185,#fb7185 3px,#9f1239 3px,#9f1239 6px)"></i>Commute &amp; lost time</span>';
+
+    document.getElementById("barnote").textContent =
+      "Bars show gross value; the striped strip underneath is what commuting (and any PTO below the " +
+      A.ptoRef + "-day baseline) takes back out. The figure on the right is net" +
+      (A.col ? ", with the cost-of-living-adjusted number beside it." : ".");
+
+    drawChart(data);
+    drawTable(data);
+  }
+
+  // ---- per-year chart ------------------------------------------------------
+  function drawChart(data){
+    var W = 720, H = 260, L = 58, R = 16, T = 18, B = 40;
+    var iw = W - L - R, ih = H - T - B;
+    var maxV = 0;
+    data.forEach(function(s){ s.rows.forEach(function(r){ maxV = Math.max(maxV, r.adj); }); });
+    maxV = maxV * 1.12 || 1;
+
+    var svg = ["<defs></defs>"];
+    // gridlines
+    var ticks = 4;
+    for (var t = 0; t <= ticks; t++){
+      var v = maxV * t / ticks, y = T + ih - (v / maxV) * ih;
+      svg.push('<line x1="'+L+'" y1="'+y.toFixed(1)+'" x2="'+(W-R)+'" y2="'+y.toFixed(1)+
+               '" stroke="#26314b" stroke-width="1"/>');
+      svg.push('<text x="'+(L-8)+'" y="'+(y+4).toFixed(1)+'" fill="#6b7794" font-size="11" text-anchor="end">$'+
+               compact(v)+"</text>");
+    }
+    var n = A.years;
+    var xOf = function(y){ return n === 1 ? L + iw/2 : L + (y - 1) / (n - 1) * iw; };
+    for (var y1 = 1; y1 <= n; y1++){
+      svg.push('<text x="'+xOf(y1).toFixed(1)+'" y="'+(T+ih+22)+'" fill="#96a2bd" font-size="12" text-anchor="middle">Year '+y1+"</text>");
+    }
+    data.forEach(function(s){
+      var pts = s.rows.map(function(r){
+        return xOf(r.y).toFixed(1) + "," + (T + ih - (r.adj / maxV) * ih).toFixed(1);
+      });
+      if (n > 1)
+        svg.push('<polyline points="'+pts.join(" ")+'" fill="none" stroke="'+s.color+
+                 '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+      pts.forEach(function(p,i){
+        var xy = p.split(",");
+        svg.push('<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="4" fill="#0b0f1a" stroke="'+s.color+'" stroke-width="2.5"/>');
+        if (i === s.rows.length - 1)
+          svg.push('<text x="'+(parseFloat(xy[0]) - 6)+'" y="'+(parseFloat(xy[1]) - 11)+
+                   '" fill="'+s.color+'" font-size="12" font-weight="600" text-anchor="end">$'+
+                   compact(s.rows[i].adj)+"</text>");
+      });
+    });
+    document.getElementById("chart").innerHTML = svg.join("");
+  }
+
+  // ---- table ---------------------------------------------------------------
+  function drawTable(data){
+    var lines = [
+      {k:"base",   label:"Base salary"},
+      {k:"bonus",  label:"Target bonus"},
+      {k:"signon", label:"Sign-on bonus"},
+      {k:"equity", label:"Equity vested"},
+      {k:"match",  label:"401(k) match"},
+      {k:"pto",    label:"PTO above baseline"},
+      {k:"ptoPenalty", label:"PTO below baseline", neg:true},
+      {k:"ccost",  label:"Commute cost", neg:true},
+      {k:"ctime",  label:"Commute time", neg:true}
+    ];
+    var head = "<thead><tr><th>" + (view === "total" ? A.years + "-year total" : "Year " + view) + "</th>" +
+      data.map(function(s){
+        return '<th><span class="swatch" style="background:'+s.color+'"></span>'+esc(s.name)+"</th>";
+      }).join("") + "</tr></thead>";
+
+    var body = lines.map(function(ln){
+      var vals = data.map(function(s){ return slice(s)[ln.k] || 0; });
+      if (vals.every(function(v){ return Math.abs(v) < 1; })) return "";
+      return "<tr><td>"+ln.label+"</td>"+vals.map(function(v){
+        return '<td'+(ln.neg?' class="neg"':"")+">"+(ln.neg && v > 0 ? "−" + money(v) : money(v))+"</td>";
+      }).join("")+"</tr>";
+    }).join("");
+
+    body += '<tr class="tot"><td>Net value</td>'+data.map(function(s){
+      return "<td>"+money(slice(s).net)+"</td>"; }).join("")+"</tr>";
+
+    if (A.col){
+      body += '<tr><td>Cost-of-living index</td>'+data.map(function(s){
+        return "<td>"+num(s.o.col,100)+"</td>"; }).join("")+"</tr>";
+      body += '<tr class="tot"><td>Adjusted value</td>'+data.map(function(s){
+        return "<td>"+money(slice(s).adj)+"</td>"; }).join("")+"</tr>";
+    }
+    if (view === "total"){
+      body += "<tr><td>Average per year</td>"+data.map(function(s){
+        return "<td>"+money(s.adj / A.years)+"</td>"; }).join("")+"</tr>";
+    }
+    document.getElementById("tbl").innerHTML = head + "<tbody>" + body + "</tbody>";
+  }
+
+  // ---- events --------------------------------------------------------------
+  function find(id){ for (var i=0;i<offers.length;i++) if (offers[i].id === id) return offers[i]; return null; }
+
+  document.addEventListener("input", function(e){
+    var t = e.target;
+    if (t.dataset && t.dataset.id){
+      var o = find(t.dataset.id); if (!o) return;
+      o[t.dataset.k] = (t.dataset.k === "name" || t.dataset.k === "vest") ? t.value : t.value;
+      render();
+    } else if (t.dataset && t.dataset.a){
+      var k = t.dataset.a, v = parseFloat(t.value);
+      if (!isFinite(v)) return;
+      if (k === "years") v = Math.min(4, Math.max(1, Math.round(v)));
+      A[k] = v;
+      if (k === "years" && view !== "total" && view > A.years) view = "total";
+      renderAssump(); render();
+    }
+  });
+
+  document.addEventListener("change", function(e){
+    var t = e.target;
+    if (t.tagName !== "SELECT") return;
+    if (t.dataset.id){ var o = find(t.dataset.id); if (o){ o[t.dataset.k] = t.value; render(); } }
+    else if (t.dataset.a){ A[t.dataset.a] = parseFloat(t.value); renderAssump(); render(); }
+  });
+
+  document.addEventListener("click", function(e){
+    var t = e.target;
+    if (t.id === "add" && offers.length < 4){
+      var i = offers.length;
+      offers.push(mk(i,{name:NAMES[i], base:130000, bonus:10, signon:0, equity:0, vest:"none",
+                        match:4, pto:20, onsite:2, commute:25, ccost:8, col:100}));
+      renderOffers(); render();
+      return;
+    }
+    if (t.dataset && t.dataset.del){
+      offers = offers.filter(function(o){ return o.id !== t.dataset.del; });
+      renderOffers(); render();
+      return;
+    }
+    if (t.classList && t.classList.contains("tab")){
+      view = t.dataset.v === "total" ? "total" : parseInt(t.dataset.v, 10);
+      render();
+    }
+  });
+
+  renderAssump();
+  renderOffers();
+  render();
+})();
+</script>
+</body>
+</html>
