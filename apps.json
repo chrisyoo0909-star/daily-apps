@@ -180,5 +180,12 @@
     "emoji": "\u2696\ufe0f",
     "date": "2026-08-21",
     "blurb": "Put two job offers in the same currency \u2014 equity vesting, bonus, 401(k) match, PTO, commute time and cost of living all folded into one number, year by year."
+  },
+  {
+    "file": "apps/app-2026-08-22-alibi.html",
+    "name": "Alibi",
+    "emoji": "\ud83d\udd75\ufe0f",
+    "date": "2026-08-22",
+    "blurb": "A noir deduction case: every guest gets a room, an item and a departure time, and a freshly generated set of statements that always has exactly one answer \u2014 pin the board, then name the thief."
   }
 ]

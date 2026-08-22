@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alibi — a deduction case file</title>
+<style>
+  :root{
+    --bg:#12131a;
+    --bg2:#191b25;
+    --card:#1e2130;
+    --card2:#252939;
+    --line:#333849;
+    --ink:#e8e6df;
+    --dim:#8f92a3;
+    --gold:#e3b23c;
+    --gold-soft:rgba(227,178,60,.14);
+    --green:#5fbf8f;
+    --red:#e0665f;
+    --blue:#7aa2f7;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 15% -10%, #232739 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #1d2233 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.5;
+    min-height:100vh;
+    padding:0 0 90px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 0}
+
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .mark{font-size:26px;line-height:1}
+  .brand h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:27px;margin:0;letter-spacing:.045em;font-weight:600;
+  }
+  .brand .sub{color:var(--dim);font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin-top:1px}
+
+  .diffs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px}
+  .diffs button{
+    background:none;border:0;color:var(--dim);font:inherit;font-size:13px;
+    padding:6px 14px;border-radius:999px;cursor:pointer;transition:.15s;
+  }
+  .diffs button.on{background:var(--gold);color:#191b25;font-weight:600}
+  .diffs button:hover:not(.on){color:var(--ink)}
+
+  .case{
+    background:linear-gradient(180deg,var(--card) 0%, var(--bg2) 100%);
+    border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:12px;padding:14px 16px;margin-bottom:14px;
+  }
+  .case .label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+  .case p{margin:0;font-family:Georgia,serif;font-size:17px;line-height:1.45}
+  .case .q{color:var(--dim);font-size:13.5px;font-family:inherit;margin-top:6px}
+
+  .cols{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:900px){ .cols{grid-template-columns:340px 1fr;align-items:start} }
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel h2{
+    margin:0;padding:11px 14px;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);border-bottom:1px solid var(--line);background:rgba(0,0,0,.15);
+    display:flex;justify-content:space-between;align-items:center;font-weight:600;
+  }
+  .panel h2 .tog{
+    font-size:10.5px;letter-spacing:.08em;text-transform:none;color:var(--dim);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;cursor:pointer;background:none;font-family:inherit;
+  }
+  .panel h2 .tog.on{color:var(--gold);border-color:rgba(227,178,60,.45);background:var(--gold-soft)}
+
+  ol.clues{margin:0;padding:8px 10px 10px 10px;list-style:none;counter-reset:c}
+  ol.clues li{
+    counter-increment:c;position:relative;padding:8px 10px 8px 34px;border-radius:8px;
+    font-size:14.2px;cursor:pointer;transition:.12s;border:1px solid transparent;
+  }
+  ol.clues li::before{
+    content:counter(c);position:absolute;left:8px;top:8px;width:19px;height:19px;border-radius:5px;
+    background:var(--card2);color:var(--dim);font-size:11px;display:flex;align-items:center;justify-content:center;
+    font-variant-numeric:tabular-nums;
+  }
+  ol.clues li:hover{background:rgba(255,255,255,.03)}
+  ol.clues li.done{opacity:.42;text-decoration:line-through}
+  ol.clues li.ok::before{background:rgba(95,191,143,.18);color:var(--green)}
+  ol.clues li.bad{border-color:rgba(224,102,95,.5);background:rgba(224,102,95,.09)}
+  ol.clues li.bad::before{background:rgba(224,102,95,.22);color:var(--red)}
+
+  .board{display:grid;grid-template-columns:1fr;gap:10px;padding:12px}
+  @media(min-width:640px){ .board{grid-template-columns:1fr 1fr} }
+  @media(min-width:900px){ .board{grid-template-columns:1fr 1fr} }
+  @media(min-width:1180px){ .board{grid-template-columns:1fr 1fr} }
+
+  .sus{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 11px 11px}
+  .sus.solvedRow{border-color:rgba(227,178,60,.4)}
+  .sus .nm{
+    font-family:Georgia,serif;font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;
+  }
+  .sus .av{
+    width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;font-family:inherit;color:#12131a;
+  }
+  .rowlab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6d7185;margin:7px 0 4px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{
+    font:inherit;font-size:12.5px;line-height:1;padding:6px 9px;border-radius:7px;cursor:pointer;
+    background:var(--card2);border:1px solid #313649;color:#b9bccb;transition:.12s;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .chip:hover{border-color:#4a5068;color:var(--ink)}
+  .chip.no{opacity:.3;text-decoration:line-through;background:transparent}
+  .chip.yes{background:var(--gold);border-color:var(--gold);color:#17181f;font-weight:700;opacity:1;text-decoration:none}
+  .chip.auto{border-color:rgba(227,178,60,.55);color:var(--gold);background:var(--gold-soft)}
+  .chip.shake{animation:sh .3s}
+  @keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+  .bar{
+    position:fixed;left:0;right:0;bottom:0;background:rgba(18,19,26,.94);
+    backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 16px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+    display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;z-index:20;
+  }
+  .btn{
+    font:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;cursor:pointer;
+    background:var(--card2);border:1px solid var(--line);color:var(--ink);transition:.14s;
+  }
+  .btn:hover{border-color:#525873}
+  .btn.gold{background:var(--gold);border-color:var(--gold);color:#17181f;font-weight:700}
+  .btn.gold:hover{filter:brightness(1.08)}
+  .btn.ghost{background:none;color:var(--dim)}
+  .stat{color:var(--dim);font-size:12.5px;font-variant-numeric:tabular-nums;margin-right:2px}
+
+  .modal{
+    position:fixed;inset:0;background:rgba(9,10,14,.78);display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:50;
+  }
+  .modal.show{display:flex}
+  .sheet{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:440px;width:100%;
+    padding:20px;max-height:86vh;overflow:auto;
+  }
+  .sheet h3{margin:0 0 4px;font-family:Georgia,serif;font-size:22px}
+  .sheet p{margin:0 0 14px;color:var(--dim);font-size:14px}
+  .picks{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+  .pick{
+    text-align:left;font:inherit;font-size:15px;padding:11px 13px;border-radius:9px;cursor:pointer;
+    background:var(--bg2);border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;gap:9px;
+  }
+  .pick:hover{border-color:var(--gold);background:var(--card2)}
+  .verdict{font-family:Georgia,serif;font-size:20px;margin:0 0 8px}
+  .verdict.win{color:var(--gold)}
+  .verdict.lose{color:var(--red)}
+  table.sol{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 14px}
+  table.sol th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6d7185;text-align:left;padding:4px 6px;font-weight:600}
+  table.sol td{padding:6px;border-top:1px solid var(--line)}
+  table.sol tr.guilty td{color:var(--gold);font-weight:600}
+  .loading{text-align:center;color:var(--dim);padding:40px 0;font-family:Georgia,serif;font-size:16px}
+  .hintNote{font-size:12px;color:var(--dim);padding:0 12px 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">🕵️</div>
+      <div>
+        <h1>Alibi</h1>
+        <div class="sub">Case file · deduction</div>
+      </div>
+    </div>
+    <div class="diffs" id="diffs">
+      <button data-d="easy">Easy</button>
+      <button data-d="medium" class="on">Medium</button>
+      <button data-d="hard">Hard</button>
+    </div>
+  </header>
+
+  <div class="case" id="caseBox">
+    <div class="label">The Wrenfield Heist</div>
+    <p id="caseText">Building case…</p>
+    <div class="q" id="caseQ"></div>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Statements <button class="tog on" id="togCheck">auto-check</button></h2>
+      <ol class="clues" id="clues"></ol>
+      <div class="hintNote">Tap a statement to cross it off once you've used it. Green = confirmed by your board, red = your board contradicts it.</div>
+    </div>
+    <div class="panel">
+      <h2>The Board <span id="progress" style="color:var(--dim);letter-spacing:0;text-transform:none;font-size:11px"></span></h2>
+      <div class="board" id="board"><div class="loading">Building case…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="bar">
+  <span class="stat" id="timer">0:00</span>
+  <span class="stat" id="hintsUsed"></span>
+  <button class="btn" id="btnHint">Hint</button>
+  <button class="btn gold" id="btnAccuse">Name the thief</button>
+  <button class="btn ghost" id="btnNew">New case</button>
+</div>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ * Content pools
+ * ------------------------------------------------------------------ */
+const NAMES   = ["Mara Vex","Julian Roth","Iris Calloway","Nadia Shore","Cole Barrow","Dr. Petrov","Etta Lin","Silas Crane","Rosa Bell","Hugo Marsh"];
+const ROOMS   = ["Library","Conservatory","Cellar","Study","Ballroom","Gallery","Boathouse","Observatory","Kitchen","Billiard Room"];
+const OBJECTS = ["brass key","silver lighter","leather journal","crowbar","velvet glove","pocket watch","glass vial","coil of wire","opera fan","tin of matches"];
+const CLOCK   = ["7 PM","8 PM","9 PM","10 PM","11 PM","Midnight","1 AM","2 AM"];
+const AVCOL   = ["#e3b23c","#7aa2f7","#5fbf8f","#d98cc0","#e0865f","#8fd6d1"];
+
+const CATS = ["room","object","time"];
+const CATLAB = {room:"Room", object:"Item carried", time:"Left at"};
+const ORDER = {room:0, object:1, time:2};
+
+/* ------------------------------------------------------------------ *
+ * Small helpers
+ * ------------------------------------------------------------------ */
+function shuffle(a){ const r=a.slice(); for(let i=r.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=r[i]; r[i]=r[j]; r[j]=t; } return r; }
+function randInt(n){ return Math.floor(Math.random()*n); }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function permutations(n){
+  const out=[]; const arr=[]; for(let i=0;i<n;i++) arr.push(i);
+  const used=new Array(n).fill(false); const cur=[];
+  (function rec(){
+    if(cur.length===n){ out.push(cur.slice()); return; }
+    for(let i=0;i<n;i++){ if(used[i]) continue; used[i]=true; cur.push(i); rec(); cur.pop(); used[i]=false; }
+  })();
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Clue model — one evaluator used by both the solver and the UI.
+ * Assignments look like {room:[...], object:[...], time:[...]}
+ * where arr[suspectIndex] = value index, or -1 when unknown.
+ * ------------------------------------------------------------------ */
+function resolveRef(ref, a){
+  if(ref.kind === "s") return ref.i;
+  const arr = a[ref.cat];
+  for(let i=0;i<arr.length;i++) if(arr[i] === ref.v) return i;
+  return -1; // not (yet) known
+}
+function evalClue(c, a, n){
+  const r = resolveRef(c.ref, a);
+  if(r < 0) return null;
+  if(c.kind === "IS" || c.kind === "NOT" || c.kind === "EITHER"){
+    const x = a[c.cat][r];
+    if(x < 0) return null;
+    if(c.kind === "IS")     return x === c.v;
+    if(c.kind === "NOT")    return x !== c.v;
+    return x === c.v || x === c.v2;
+  }
+  if(c.kind === "BEFORE" || c.kind === "OFFSET"){
+    const r2 = resolveRef(c.ref2, a);
+    if(r2 < 0) return null;
+    const t1 = a.time[r], t2 = a.time[r2];
+    if(t1 < 0 || t2 < 0) return null;
+    return c.kind === "BEFORE" ? (t1 < t2) : (t1 + 1 === t2);
+  }
+  if(c.kind === "EXTREME"){
+    const t = a.time[r];
+    if(t < 0) return null;
+    return c.last ? (t === n-1) : (t === 0);
+  }
+  return null;
+}
+function refCats(ref){ return ref.kind === "s" ? [] : [ref.cat]; }
+function clueCats(c){
+  let s = refCats(c.ref);
+  if(c.kind === "IS" || c.kind === "NOT" || c.kind === "EITHER") s = s.concat([c.cat]);
+  else if(c.kind === "BEFORE" || c.kind === "OFFSET") s = s.concat(refCats(c.ref2), ["time"]);
+  else if(c.kind === "EXTREME") s = s.concat(["time"]);
+  return s.filter(function(x,i){ return s.indexOf(x) === i; });
+}
+
+/* ------------------------------------------------------------------ *
+ * Solver: staged brute force over permutations with early pruning.
+ * Returns { count, found } and stops counting at `limit`.
+ * ------------------------------------------------------------------ */
+function countSolutions(clues, n, perms, limit){
+  const stage = [[],[],[]];
+  for(const c of clues){
+    let s = 0;
+    for(const k of c.cats) s = Math.max(s, ORDER[k]);
+    stage[s].push(c);
+  }
+  const a = {room:null, object:perms[0], time:perms[0]};
+  let count = 0, found = null;
+  for(let ri=0; ri<perms.length; ri++){
+    a.room = perms[ri];
+    let ok = true;
+    for(const c of stage[0]) if(evalClue(c,a,n) !== true){ ok = false; break; }
+    if(!ok) continue;
+    for(let oi=0; oi<perms.length; oi++){
+      a.object = perms[oi];
+      ok = true;
+      for(const c of stage[1]) if(evalClue(c,a,n) !== true){ ok = false; break; }
+      if(!ok) continue;
+      for(let ti=0; ti<perms.length; ti++){
+        a.time = perms[ti];
+        ok = true;
+        for(const c of stage[2]) if(evalClue(c,a,n) !== true){ ok = false; break; }
+        if(!ok) continue;
+        count++;
+        if(!found) found = {room:a.room.slice(), object:a.object.slice(), time:a.time.slice()};
+        if(count >= limit) return {count:count, found:found};
+      }
+    }
+  }
+  return {count:count, found:found};
+}
+
+/* ------------------------------------------------------------------ *
+ * Case generation
+ * ------------------------------------------------------------------ */
+let G = null; // current game
+
+function textFor(c){
+  const R = refText(c.ref);
+  if(c.kind === "IS"){
+    if(c.cat === "time")   return cap(R + " left at " + G.times[c.v] + ".");
+    if(c.cat === "room")   return cap(R + " was in the " + G.rooms[c.v] + ".");
+    return cap(R + " had the " + G.objects[c.v] + ".");
+  }
+  if(c.kind === "NOT"){
+    if(c.cat === "time")   return cap(R + " did not leave at " + G.times[c.v] + ".");
+    if(c.cat === "room")   return cap(R + " was not in the " + G.rooms[c.v] + ".");
+    return cap(R + " did not have the " + G.objects[c.v] + ".");
+  }
+  if(c.kind === "EITHER"){
+    if(c.cat === "time")   return cap(R + " left at either " + G.times[c.v] + " or " + G.times[c.v2] + ".");
+    if(c.cat === "room")   return cap(R + " was in either the " + G.rooms[c.v] + " or the " + G.rooms[c.v2] + ".");
+    return cap(R + " had either the " + G.objects[c.v] + " or the " + G.objects[c.v2] + ".");
+  }
+  if(c.kind === "BEFORE")  return cap(R + " left before " + refText(c.ref2) + ".");
+  if(c.kind === "OFFSET")  return cap(R + " left exactly one hour before " + refText(c.ref2) + ".");
+  return cap(R + " was the " + (c.last ? "last" : "first") + " to leave.");
+}
+function refText(ref){
+  if(ref.kind === "s") return G.names[ref.i];
+  if(ref.cat === "room")   return "the person in the " + G.rooms[ref.v];
+  if(ref.cat === "object") return "whoever had the " + G.objects[ref.v];
+  return "the person who left at " + G.times[ref.v];
+}
+
+function buildPool(sol, n, difficulty){
+  const refs = [];
+  for(let i=0;i<n;i++) refs.push({kind:"s", i:i});
+  for(const cat of CATS) for(let v=0;v<n;v++) refs.push({kind:"c", cat:cat, v:v});
+
+  const pool = [];
+  const add = function(c, weight){
+    c.cats = clueCats(c);
+    if(evalClue(c, sol, n) !== true) return;      // only ever emit TRUE statements
+    c.text = textFor(c);
+    const w = weight || 1;
+    for(let k=0;k<w;k++) pool.push(c);
+  };
+
+  const allowIS   = difficulty === "easy" ? 2 : (difficulty === "medium" ? 0 : 0);
+  const allowISc  = difficulty === "hard" ? 0 : 1;   // "the person in the X had the Y"
+
+  for(const ref of refs){
+    const who = resolveRef(ref, sol);
+    for(const cat of CATS){
+      if(ref.kind === "c" && ref.cat === cat) continue;    // trivial
+      const trueV = sol[cat][who];
+
+      // IS
+      if(ref.kind === "s"){ if(allowIS)  add({kind:"IS", ref:ref, cat:cat, v:trueV}, allowIS); }
+      else               { if(allowISc) add({kind:"IS", ref:ref, cat:cat, v:trueV}, allowISc); }
+
+      // NOT + EITHER
+      for(let v=0; v<n; v++){
+        if(v === trueV) continue;
+        add({kind:"NOT", ref:ref, cat:cat, v:v}, 1);
+        const flip = Math.random() < 0.5;
+        add({kind:"EITHER", ref:ref, cat:cat, v: flip?trueV:v, v2: flip?v:trueV}, difficulty === "hard" ? 2 : 1);
+      }
+    }
+  }
+
+  // Time-ordering statements
+  const nonTime = refs.filter(function(r){ return r.kind === "s" || r.cat !== "time"; });
+  for(const A of nonTime){
+    const ia = resolveRef(A, sol);
+    // extremes
+    if(sol.time[ia] === 0)     add({kind:"EXTREME", ref:A, last:false}, 1);
+    if(sol.time[ia] === n-1)   add({kind:"EXTREME", ref:A, last:true}, 1);
+    for(const B of nonTime){
+      const ib = resolveRef(B, sol);
+      if(ia === ib) continue;
+      if(A.kind === "c" && B.kind === "c" && A.cat === B.cat) continue; // clunky phrasing
+      add({kind:"BEFORE", ref:A, ref2:B}, difficulty === "hard" ? 2 : 1);
+      add({kind:"OFFSET", ref:A, ref2:B}, difficulty === "hard" ? 2 : 1);
+    }
+  }
+  return pool;
+}
+
+function generateCase(difficulty){
+  const n = difficulty === "easy" ? 4 : 5;
+  const perms = permutations(n);
+
+  const names   = shuffle(NAMES).slice(0,n);
+  const rooms   = shuffle(ROOMS).slice(0,n);
+  const objects = shuffle(OBJECTS).slice(0,n);
+  const start   = randInt(CLOCK.length - n + 1);
+  const times   = CLOCK.slice(start, start + n);
+
+  const sol = {
+    room:   shuffle(perms[randInt(perms.length)]),
+    object: shuffle(perms[randInt(perms.length)]),
+    time:   shuffle(perms[randInt(perms.length)])
+  };
+  // shuffle() of a permutation is still a permutation — fine.
+
+  G = {n:n, difficulty:difficulty, names:names, rooms:rooms, objects:objects, times:times, sol:sol};
+
+  const pool = shuffle(buildPool(sol, n, difficulty));
+  const seen = {};
+  const chosen = [];
+  let unique = false;
+
+  for(let i=0; i<pool.length; i++){
+    const c = pool[i];
+    if(seen[c.text]) continue;
+    seen[c.text] = true;
+    chosen.push(c);
+    if(chosen.length < 4) continue;
+    const res = countSolutions(chosen, n, perms, 2);
+    if(res.count === 1){ unique = true; break; }
+    if(res.count === 0){ chosen.pop(); }   // shouldn't happen (all clues true) but be safe
+    if(chosen.length > 48) break;
+  }
+  if(!unique) return null;
+
+  // Minimise: drop any statement the rest already implies.
+  for(let i = chosen.length - 1; i >= 0; i--){
+    const trial = chosen.slice(0,i).concat(chosen.slice(i+1));
+    if(trial.length < 2) continue;
+    if(countSolutions(trial, n, perms, 2).count === 1) chosen.splice(i,1);
+  }
+
+  // The question: identify the thief from one piece of physical evidence.
+  const culprit = randInt(n);
+  const revealCat = CATS[randInt(3)];
+  let evidence;
+  if(revealCat === "room")        evidence = "A footman saw the thief slip out of the " + rooms[sol.room[culprit]] + ".";
+  else if(revealCat === "object") evidence = "The thief was carrying the " + objects[sol.object[culprit]] + ".";
+  else                            evidence = "The vault alarm puts the thief leaving the house at " + times[sol.time[culprit]] + ".";
+
+  G.clues   = shuffle(chosen);
+  G.culprit = culprit;
+  G.evidence = evidence;
+  G.perms   = perms;
+  G.marks   = {};
+  for(const cat of CATS){
+    const m = [];
+    for(let i=0;i<n;i++) m.push(new Array(n).fill(0));
+    G.marks[cat] = m;
+  }
+  G.crossed = new Array(G.clues.length).fill(false);
+  G.hints   = 0;
+  G.done    = false;
+  G.t0      = Date.now();
+  return G;
+}
+
+/* ------------------------------------------------------------------ *
+ * Board state helpers
+ * ------------------------------------------------------------------ */
+function effState(cat, i, v){
+  const m = G.marks[cat], n = G.n;
+  if(m[i][v] === 1) return 1;
+  if(m[i][v] === 2) return 2;
+  for(let x=0;x<n;x++) if(x !== v && m[i][x] === 1) return 2;
+  for(let y=0;y<n;y++) if(y !== i && m[y][v] === 1) return 2;
+  return 0;
+}
+function canSetYes(cat, i, v){
+  const m = G.marks[cat], n = G.n;
+  for(let x=0;x<n;x++) if(x !== v && m[i][x] === 1) return false;
+  for(let y=0;y<n;y++) if(y !== i && m[y][v] === 1) return false;
+  return true;
+}
+// Logical closure of the player's marks -> partial assignment (-1 = unknown)
+function derivedAssignment(){
+  const n = G.n, out = {};
+  for(const cat of CATS){
+    const cand = [];
+    for(let i=0;i<n;i++){
+      cand.push([]);
+      for(let v=0;v<n;v++) cand[i].push(effState(cat,i,v) !== 2);
+    }
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(let i=0;i<n;i++){
+        let only = -1, cnt = 0;
+        for(let v=0;v<n;v++) if(cand[i][v]){ cnt++; only = v; }
+        if(cnt === 1){
+          for(let y=0;y<n;y++) if(y !== i && cand[y][only]){ cand[y][only] = false; changed = true; }
+        }
+      }
+      for(let v=0;v<n;v++){
+        let only = -1, cnt = 0;
+        for(let i=0;i<n;i++) if(cand[i][v]){ cnt++; only = i; }
+        if(cnt === 1){
+          for(let x=0;x<n;x++) if(x !== v && cand[only][x]){ cand[only][x] = false; changed = true; }
+        }
+      }
+    }
+    const arr = new Array(n).fill(-1);
+    for(let i=0;i<n;i++){
+      let only = -1, cnt = 0;
+      for(let v=0;v<n;v++) if(cand[i][v]){ cnt++; only = v; }
+      if(cnt === 1) arr[i] = only;
+    }
+    out[cat] = arr;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Rendering
+ * ------------------------------------------------------------------ */
+const $ = function(id){ return document.getElementById(id); };
+let autoCheck = true;
+
+function render(){
+  const n = G.n;
+  const der = derivedAssignment();
+
+  // case text
+  $("caseText").textContent = G.evidence;
+  $("caseQ").textContent = (n === 4 ? "Four" : "Five") +
+    " guests, one each of every room, item and departure time. Work out who was where — then name the thief.";
+
+  // clues
+  const ol = $("clues");
+  ol.innerHTML = "";
+  G.clues.forEach(function(c, idx){
+    const li = document.createElement("li");
+    li.textContent = c.text;
+    if(G.crossed[idx]) li.className = "done";
+    if(autoCheck){
+      const r = evalClue(c, der, n);
+      if(r === true)  li.className += " ok";
+      if(r === false) li.className += " bad";
+    }
+    li.onclick = function(){ G.crossed[idx] = !G.crossed[idx]; render(); };
+    ol.appendChild(li);
+  });
+
+  // board
+  const board = $("board");
+  board.innerHTML = "";
+  let known = 0;
+  for(let i=0;i<n;i++){
+    const card = document.createElement("div");
+    card.className = "sus";
+    let rowDone = true;
+    for(const cat of CATS) if(der[cat][i] < 0) rowDone = false;
+    if(rowDone) card.className += " solvedRow";
+
+    const nm = document.createElement("div");
+    nm.className = "nm";
+    const av = document.createElement("span");
+    av.className = "av";
+    av.style.background = AVCOL[i % AVCOL.length];
+    av.textContent = G.names[i].replace("Dr. ","").charAt(0);
+    nm.appendChild(av);
+    nm.appendChild(document.createTextNode(G.names[i]));
+    card.appendChild(nm);
+
+    for(const cat of CATS){
+      const lab = document.createElement("div");
+      lab.className = "rowlab";
+      lab.textContent = CATLAB[cat];
+      card.appendChild(lab);
+
+      const row = document.createElement("div");
+      row.className = "chips";
+      const vals = cat === "room" ? G.rooms : (cat === "object" ? G.objects : G.times);
+      for(let v=0; v<n; v++){
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.textContent = vals[v];
+        const e = effState(cat,i,v);
+        if(e === 1) b.className += " yes";
+        else if(e === 2) b.className += " no";
+        else if(der[cat][i] === v) b.className += " auto";
+        b.onclick = function(){ tapChip(cat,i,v,b); };
+        row.appendChild(b);
+      }
+      card.appendChild(row);
+      if(der[cat][i] >= 0) known++;
+    }
+    board.appendChild(card);
+  }
+  $("progress").textContent = known + " / " + (n*3) + " facts pinned";
+  $("hintsUsed").textContent = G.hints ? (G.hints + " hint" + (G.hints>1?"s":"")) : "";
+}
+
+function tapChip(cat,i,v,el){
+  if(G.done) return;
+  const m = G.marks[cat];
+  const cur = m[i][v];
+  if(cur === 0){
+    if(canSetYes(cat,i,v)) m[i][v] = 1;
+    else { m[i][v] = 2; el.className += " shake"; }
+  } else if(cur === 1){ m[i][v] = 2; }
+  else { m[i][v] = 0; }
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * Actions
+ * ------------------------------------------------------------------ */
+function giveHint(){
+  if(G.done) return;
+  const der = derivedAssignment();
+  const opts = [];
+  for(const cat of CATS) for(let i=0;i<G.n;i++) if(der[cat][i] < 0) opts.push([cat,i]);
+  if(!opts.length){ flash("Nothing left to reveal — you've got the whole board."); return; }
+  const pick = opts[randInt(opts.length)];
+  const cat = pick[0], i = pick[1], v = G.sol[cat][i];
+  for(let x=0;x<G.n;x++) G.marks[cat][i][x] = (x === v) ? 1 : 2;
+  for(let y=0;y<G.n;y++) if(y !== i && G.marks[cat][y][v] === 1) G.marks[cat][y][v] = 0;
+  G.hints++;
+  render();
+}
+
+function openAccuse(){
+  const s = $("sheet");
+  s.innerHTML = "";
+  const h = document.createElement("h3"); h.textContent = "Name the thief";
+  const p = document.createElement("p"); p.textContent = G.evidence;
+  s.appendChild(h); s.appendChild(p);
+  const box = document.createElement("div"); box.className = "picks";
+  for(let i=0;i<G.n;i++){
+    const b = document.createElement("button");
+    b.className = "pick";
+    const av = document.createElement("span");
+    av.className = "av"; av.style.background = AVCOL[i % AVCOL.length];
+    av.textContent = G.names[i].replace("Dr. ","").charAt(0);
+    b.appendChild(av);
+    b.appendChild(document.createTextNode(G.names[i]));
+    b.onclick = function(){ accuse(i); };
+    box.appendChild(b);
+  }
+  s.appendChild(box);
+  const cancel = document.createElement("button");
+  cancel.className = "btn ghost"; cancel.textContent = "Keep thinking";
+  cancel.onclick = closeModal;
+  s.appendChild(cancel);
+  $("modal").className = "modal show";
+}
+
+function accuse(i){
+  const win = (i === G.culprit);
+  const secs = Math.floor((Date.now() - G.t0)/1000);
+  G.done = true;
+  const s = $("sheet");
+  s.innerHTML = "";
+  const v = document.createElement("div");
+  v.className = "verdict " + (win ? "win" : "lose");
+  v.textContent = win ? "Case closed." : "Wrong guest.";
+  s.appendChild(v);
+  const p = document.createElement("p");
+  p.textContent = win
+    ? "It was " + G.names[G.culprit] + ". Solved in " + fmt(secs) + (G.hints ? " with " + G.hints + " hint" + (G.hints>1?"s":"") : " with no hints") + "."
+    : "You accused " + G.names[i] + ". The thief was " + G.names[G.culprit] + ".";
+  s.appendChild(p);
+
+  const t = document.createElement("table"); t.className = "sol";
+  const hd = document.createElement("tr");
+  ["Guest","Room","Item","Left at"].forEach(function(x){ const th=document.createElement("th"); th.textContent=x; hd.appendChild(th); });
+  t.appendChild(hd);
+  for(let k=0;k<G.n;k++){
+    const tr = document.createElement("tr");
+    if(k === G.culprit) tr.className = "guilty";
+    [G.names[k], G.rooms[G.sol.room[k]], G.objects[G.sol.object[k]], G.times[G.sol.time[k]]]
+      .forEach(function(x){ const td=document.createElement("td"); td.textContent=x; tr.appendChild(td); });
+    t.appendChild(tr);
+  }
+  s.appendChild(t);
+
+  const again = document.createElement("button");
+  again.className = "btn gold"; again.textContent = "New case";
+  again.onclick = function(){ closeModal(); newCase(); };
+  s.appendChild(again);
+  const cl = document.createElement("button");
+  cl.className = "btn ghost"; cl.textContent = "Close";
+  cl.onclick = closeModal;
+  s.appendChild(cl);
+  $("modal").className = "modal show";
+}
+
+function flash(msg){
+  const s = $("sheet");
+  s.innerHTML = "";
+  const p = document.createElement("p"); p.textContent = msg; p.style.margin = "0 0 12px";
+  s.appendChild(p);
+  const b = document.createElement("button"); b.className="btn"; b.textContent="OK"; b.onclick=closeModal;
+  s.appendChild(b);
+  $("modal").className = "modal show";
+}
+function closeModal(){ $("modal").className = "modal"; }
+function fmt(s){ const m = Math.floor(s/60); return m + ":" + String(s%60).padStart(2,"0"); }
+
+/* ------------------------------------------------------------------ *
+ * Boot
+ * ------------------------------------------------------------------ */
+let difficulty = "medium";
+
+function newCase(){
+  $("board").innerHTML = '<div class="loading">Interviewing the household…</div>';
+  $("clues").innerHTML = "";
+  setTimeout(function(){
+    let g = null, tries = 0;
+    while(!g && tries < 25){ g = generateCase(difficulty); tries++; }
+    if(!g){ $("board").innerHTML = '<div class="loading">Couldn\'t compose a case — tap "New case".</div>'; return; }
+    render();
+  }, 30);
+}
+
+$("diffs").onclick = function(e){
+  const b = e.target.closest("button");
+  if(!b) return;
+  const btns = $("diffs").querySelectorAll("button");
+  for(const x of btns) x.className = "";
+  b.className = "on";
+  difficulty = b.getAttribute("data-d");
+  newCase();
+};
+$("togCheck").onclick = function(e){
+  e.stopPropagation();
+  autoCheck = !autoCheck;
+  $("togCheck").className = "tog" + (autoCheck ? " on" : "");
+  render();
+};
+$("btnHint").onclick = giveHint;
+$("btnAccuse").onclick = openAccuse;
+$("btnNew").onclick = newCase;
+$("modal").onclick = function(e){ if(e.target === $("modal")) closeModal(); };
+
+setInterval(function(){
+  if(G && !G.done) $("timer").textContent = fmt(Math.floor((Date.now()-G.t0)/1000));
+}, 1000);
+
+newCase();
+</script>
+</body>
+</html>
