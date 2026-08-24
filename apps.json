@@ -194,5 +194,12 @@
     "emoji": "📊",
     "date": "2026-08-23",
     "blurb": "Work out how long an A/B test has to run before it can prove anything — then paste in the numbers you got and find out whether the winner is real or just noise."
+  },
+  {
+    "file": "apps/app-2026-08-24-plink.html",
+    "name": "Plink",
+    "emoji": "🎼",
+    "date": "2026-08-24",
+    "blurb": "A marble machine that plays music — paint pegs on the board and every bounce rings a note, with pitch set by height and six scales to fall through."
   }
 ]
