@@ -201,5 +201,12 @@
     "emoji": "🎼",
     "date": "2026-08-24",
     "blurb": "A marble machine that plays music — paint pegs on the board and every bounce rings a note, with pitch set by height and six scales to fall through."
+  },
+  {
+    "file": "apps/app-2026-08-25-wattage.html",
+    "name": "Wattage",
+    "emoji": "⚡",
+    "date": "2026-08-25",
+    "blurb": "Add up what every appliance in your home actually costs to run each year — ranked biggest-first, checked against your real bill, with payback math on the swaps worth making."
   }
 ]

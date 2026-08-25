@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wattage — what your home actually costs to run</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --bg2:#0f1730;
+    --card:#141d38;
+    --card2:#1a2547;
+    --line:#26325c;
+    --txt:#e8edff;
+    --dim:#93a0c8;
+    --dim2:#6b7aa6;
+    --amber:#ffc247;
+    --amber2:#ff9a2e;
+    --lime:#7ee787;
+    --red:#ff6b6b;
+    --blue:#6ba8ff;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -8%, #1c2a56 0%, transparent 60%),
+      radial-gradient(900px 500px at 92% 0%, #2a1f45 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 16px 90px}
+
+  header.top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .logo{
+    width:46px;height:46px;border-radius:13px;flex:none;
+    background:linear-gradient(150deg,var(--amber),var(--amber2));
+    display:grid;place-items:center;font-size:24px;
+    box-shadow:0 8px 22px rgba(255,154,46,.3);
+  }
+  h1{font-size:27px;margin:0;letter-spacing:-.6px;font-weight:750}
+  .tag{color:var(--dim);font-size:13.5px;margin-top:3px;max-width:60ch}
+
+  .panel{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+  .pad{padding:16px}
+
+  /* ---- settings bar ---- */
+  .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 16px}
+  .fld label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);margin-bottom:5px;font-weight:700}
+  .ctl{
+    width:100%;background:#0c132a;border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:9px 11px;font:inherit;font-variant-numeric:tabular-nums;
+  }
+  .ctl:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,194,71,.14)}
+  select.ctl{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);background-position:calc(100% - 17px) 51%,calc(100% - 12px) 51%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
+  .rate-wrap{position:relative}
+  .rate-wrap .cur{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim);pointer-events:none;font-size:14px}
+  .rate-wrap .ctl{padding-left:26px}
+
+  /* ---- summary ---- */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-bottom:18px}
+  .stat{background:linear-gradient(180deg,#16203d,#131b34);padding:15px 16px}
+  .stat .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);font-weight:700}
+  .stat .v{font-size:25px;font-weight:750;letter-spacing:-.8px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat .s{font-size:12px;color:var(--dim);margin-top:2px}
+  .v.money{color:var(--amber)}
+
+  .cols{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  h2{font-size:15px;margin:0 0 12px;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+  h2 .count{font-size:11px;color:var(--dim2);font-weight:600;background:#0c132a;border:1px solid var(--line);padding:2px 8px;border-radius:99px}
+
+  /* ---- appliance rows ---- */
+  .rows{display:flex;flex-direction:column;gap:10px}
+  .row{background:#101833;border:1px solid var(--line);border-radius:13px;padding:11px 12px;transition:border-color .15s}
+  .row:hover{border-color:#33447c}
+  .rhead{display:flex;align-items:center;gap:10px}
+  .rname{flex:1;min-width:0;font-weight:640;font-size:14.5px;background:none;border:none;color:var(--txt);font-family:inherit;padding:2px 0;border-bottom:1px dashed transparent}
+  .rname:focus{outline:none;border-bottom-color:var(--dim2)}
+  .rcost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--amber);white-space:nowrap;font-size:14.5px}
+  .rcost small{display:block;color:var(--dim2);font-weight:600;font-size:10.5px;text-align:right;letter-spacing:.04em}
+  .x{background:none;border:none;color:var(--dim2);cursor:pointer;font-size:19px;line-height:1;padding:2px 4px;border-radius:6px}
+  .x:hover{color:var(--red);background:rgba(255,107,107,.1)}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px}
+  @media(max-width:640px){.grid5{grid-template-columns:repeat(3,1fr)}}
+  .mini label{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);margin-bottom:3px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini input{width:100%;background:#0a1026;border:1px solid #24305a;color:var(--txt);border-radius:8px;padding:6px 7px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:center}
+  .mini input:focus{outline:none;border-color:var(--amber)}
+  .rnote{font-size:11.5px;color:var(--dim2);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{background:#0a1026;border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-variant-numeric:tabular-nums}
+
+  .empty{text-align:center;padding:34px 18px;color:var(--dim2)}
+  .empty .big{font-size:34px;margin-bottom:8px}
+
+  .btn{
+    background:linear-gradient(150deg,var(--amber),var(--amber2));color:#251500;border:none;
+    border-radius:11px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;
+    box-shadow:0 6px 18px rgba(255,154,46,.25);
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:#0c132a;color:var(--txt);border:1px solid var(--line);box-shadow:none;font-weight:600}
+  .btn.ghost:hover{border-color:#3a4a80}
+  .btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+
+  /* ---- chart ---- */
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bar{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+  .bl{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
+  .bv{font-size:13px;font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
+  .btrack{grid-column:1/-1;height:9px;background:#0a1026;border-radius:99px;overflow:hidden}
+  .bfill{height:100%;border-radius:99px;transition:width .45s cubic-bezier(.3,1,.4,1)}
+
+  /* ---- upgrades ---- */
+  .up{background:#101833;border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:11px;padding:12px;margin-bottom:10px}
+  .up .t{font-weight:700;font-size:13.5px;margin-bottom:3px}
+  .up .d{font-size:12.5px;color:var(--dim);line-height:1.45}
+  .up .n{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap}
+  .up .n div{font-size:11px;color:var(--dim2);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
+  .up .n b{display:block;font-size:16px;letter-spacing:-.3px;text-transform:none;margin-top:2px;font-variant-numeric:tabular-nums}
+  .good{color:var(--lime)}
+  .meh{color:var(--dim)}
+
+  /* ---- reconcile ---- */
+  .recon-bar{height:26px;background:#0a1026;border-radius:8px;overflow:hidden;display:flex;margin:12px 0 8px;border:1px solid var(--line)}
+  .recon-bar div{display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b1020;transition:width .4s}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+  /* ---- library modal ---- */
+  .scrim{position:fixed;inset:0;background:rgba(4,7,18,.72);backdrop-filter:blur(4px);display:none;z-index:40;align-items:flex-end;justify-content:center}
+  .scrim.on{display:flex}
+  .sheet{
+    background:var(--bg2);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:640px;
+    max-height:86vh;display:flex;flex-direction:column;box-shadow:0 -20px 60px rgba(0,0,0,.6)
+  }
+  @media(min-width:700px){.scrim{align-items:center}.sheet{border-radius:20px}}
+  .shead{padding:16px 16px 12px;border-bottom:1px solid var(--line);position:relative}
+  .shead h3{margin:0 0 11px;font-size:16px}
+  .sbody{overflow:auto;padding:8px 16px 20px;-webkit-overflow-scrolling:touch}
+  .catname{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--amber);font-weight:750;margin:16px 0 8px}
+  .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+  .litem{background:#101833;border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;text-align:left;color:var(--txt);font:inherit;transition:.13s}
+  .litem:hover{background:#182248;border-color:var(--amber);transform:translateY(-1px)}
+  .litem .ln{font-weight:640;font-size:13.5px}
+  .litem .lw{font-size:11.5px;color:var(--dim2);margin-top:2px;font-variant-numeric:tabular-nums}
+  .closex{position:absolute;top:13px;right:13px;background:#101833;border:1px solid var(--line);color:var(--dim);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:16px;line-height:1}
+  .closex:hover{color:var(--txt)}
+
+  .hint{font-size:12px;color:var(--dim2);line-height:1.55;margin-top:12px}
+  .sec{margin-top:18px}
+  footer{margin-top:26px;text-align:center;color:var(--dim2);font-size:11.5px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">⚡</div>
+    <div>
+      <h1>Wattage</h1>
+      <div class="tag">Add the things that use power in your home. Find out what each one really costs per year — and which upgrades actually pay for themselves.</div>
+    </div>
+  </header>
+
+  <div class="settings">
+    <div class="fld">
+      <label>Electricity rate</label>
+      <div class="rate-wrap">
+        <span class="cur" id="curSym">$</span>
+        <input class="ctl" id="rate" type="number" step="0.001" min="0" value="0.17">
+      </div>
+    </div>
+    <div class="fld">
+      <label>Currency</label>
+      <select class="ctl" id="cur">
+        <option value="$" data-r="0.17">$ USD — 17¢/kWh</option>
+        <option value="£" data-r="0.25">£ GBP — 25p/kWh</option>
+        <option value="€" data-r="0.29">€ EUR — 29c/kWh</option>
+        <option value="A$" data-r="0.33">A$ AUD — 33c/kWh</option>
+        <option value="C$" data-r="0.19">C$ CAD — 19c/kWh</option>
+        <option value="¥" data-r="31">¥ JPY — ¥31/kWh</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>Grid carbon</label>
+      <select class="ctl" id="grid">
+        <option value="0.37">US average — 370 g/kWh</option>
+        <option value="0.21">EU average — 210 g/kWh</option>
+        <option value="0.19">UK — 190 g/kWh</option>
+        <option value="0.55">Australia — 550 g/kWh</option>
+        <option value="0.12">Canada — 120 g/kWh</option>
+        <option value="0.03">Nuclear / hydro — 30 g/kWh</option>
+        <option value="0.82">Coal-heavy — 820 g/kWh</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>&nbsp;</label>
+      <button class="btn" id="addBtn" style="width:100%">+ Add appliance</button>
+    </div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="cols">
+    <div>
+      <div class="panel pad">
+        <h2>Your appliances <span class="count" id="cnt">0</span></h2>
+        <div class="rows" id="rows"></div>
+        <div class="btnrow">
+          <button class="btn" id="addBtn2">+ Add appliance</button>
+          <button class="btn ghost" id="sampleBtn">Load a sample home</button>
+          <button class="btn ghost" id="clearBtn">Clear all</button>
+        </div>
+        <div class="hint">Hours/day is time actually <em>drawing power</em>. Fridges and freezers are listed at their average 24-hour draw, so leave those at 24 h. Days/wk and months/yr let you handle things like an air conditioner that only runs four months a year.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel pad">
+        <h2>Where the money goes</h2>
+        <div id="chart"></div>
+      </div>
+
+      <div class="panel pad sec" id="upWrap" style="display:none">
+        <h2>Upgrades that pay for themselves</h2>
+        <div id="ups"></div>
+        <div class="hint">Payback = what the swap costs ÷ what it saves you a year, at your rate. Equipment prices are rough US retail averages — edit your rate above to see how the picture changes.</div>
+      </div>
+
+      <div class="panel pad sec">
+        <h2>Check it against your bill</h2>
+        <div class="fld" style="max-width:220px">
+          <label>Your actual monthly bill</label>
+          <div class="rate-wrap">
+            <span class="cur" id="curSym2">$</span>
+            <input class="ctl" id="bill" type="number" step="1" min="0" placeholder="e.g. 145">
+          </div>
+        </div>
+        <div id="recon"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Estimates only — real usage varies with weather, insulation, tariffs and how often the fridge door gets opened.<br>
+    Nothing is saved or sent anywhere; refreshing the page starts over.
+  </footer>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="sheet">
+    <div class="shead">
+      <h3>Add an appliance</h3>
+      <button class="closex" id="closeBtn">×</button>
+      <input class="ctl" id="search" placeholder="Search — fridge, dryer, PC, heater…" autocomplete="off">
+    </div>
+    <div class="sbody" id="lib"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------
+   Library. w = watts while drawing power, h = hours/day drawing,
+   d = days/week, m = months/year. Cycling appliances (fridges,
+   freezers) are given as their AVERAGE draw across a full 24h,
+   which is how manufacturer kWh/yr ratings work.
+----------------------------------------------------------------*/
+var LIB = [
+  {c:"Kitchen", items:[
+    {n:"Refrigerator (modern)", w:46, h:24, note:"~400 kWh/yr rating"},
+    {n:"Refrigerator (pre-2001)", w:137, h:24, note:"~1200 kWh/yr",
+      swap:{n:"a modern ENERGY STAR fridge", w:46, cost:900}},
+    {n:"Chest freezer", w:34, h:24},
+    {n:"Electric oven", w:2400, h:0.3, d:5},
+    {n:"Electric cooktop burner", w:1500, h:0.5, d:6},
+    {n:"Microwave", w:1100, h:0.12},
+    {n:"Dishwasher", w:1200, h:1, d:4, note:"heated wash + dry"},
+    {n:"Coffee maker", w:900, h:0.25},
+    {n:"Electric kettle", w:1500, h:0.15},
+    {n:"Toaster", w:1100, h:0.06},
+    {n:"Air fryer", w:1500, h:0.3, d:4}
+  ]},
+  {c:"Laundry & cleaning", items:[
+    {n:"Washing machine", w:500, h:1, d:4},
+    {n:"Electric clothes dryer", w:3000, h:0.75, d:4,
+      swap:{n:"a heat-pump dryer", w:1000, h:1.4, cost:1300}},
+    {n:"Iron", w:1100, h:0.15, d:2},
+    {n:"Vacuum cleaner", w:800, h:0.2, d:2},
+    {n:"Robot vacuum dock", w:6, h:24}
+  ]},
+  {c:"Heating & cooling", items:[
+    {n:"Central A/C (3-ton)", w:3500, h:6, m:4},
+    {n:"Window A/C unit", w:1000, h:8, m:4},
+    {n:"Portable space heater", w:1500, h:5, m:4},
+    {n:"Central heat pump", w:3000, h:6, m:5},
+    {n:"Electric baseboard heat", w:1500, h:8, m:5,
+      swap:{n:"a mini-split heat pump", w:500, cost:4000}},
+    {n:"Furnace blower fan", w:400, h:8, m:6},
+    {n:"Ceiling fan", w:60, h:8, m:6},
+    {n:"Dehumidifier", w:500, h:10, m:5},
+    {n:"Air purifier", w:35, h:24}
+  ]},
+  {c:"Water", items:[
+    {n:"Electric water heater", w:4500, h:2.5, note:"~4100 kWh/yr, family of 3",
+      swap:{n:"a heat-pump water heater", w:1350, cost:1800}},
+    {n:"Pool pump (single-speed)", w:1100, h:8, m:6,
+      swap:{n:"a variable-speed pump", w:300, cost:800}},
+    {n:"Hot tub", w:1500, h:4.5},
+    {n:"Well pump", w:750, h:1},
+    {n:"Towel radiator", w:150, h:6, m:6}
+  ]},
+  {c:"Electronics", items:[
+    {n:"TV — 55\" LED", w:90, h:4},
+    {n:"TV — 65\" plasma (old)", w:280, h:4,
+      swap:{n:"a modern LED TV", w:90, cost:500}},
+    {n:"Games console", w:150, h:2},
+    {n:"Desktop PC", w:200, h:6, d:5},
+    {n:"Gaming PC", w:450, h:3},
+    {n:"Laptop", w:50, h:7},
+    {n:"Monitor", w:30, h:7, d:5},
+    {n:"Wi-Fi router", w:10, h:24},
+    {n:"Set-top / streaming box", w:15, h:24},
+    {n:"Phone + tablet charging", w:8, h:4},
+    {n:"Phantom loads (things left plugged in)", w:40, h:24, note:"typical whole-home standby",
+      swap:{n:"smart power strips", w:15, cost:60}}
+  ]},
+  {c:"Lighting", items:[
+    {n:"Incandescent bulb (60 W)", w:60, h:5,
+      swap:{n:"an LED bulb", w:9, cost:3}},
+    {n:"Halogen bulb (43 W)", w:43, h:5,
+      swap:{n:"an LED bulb", w:6, cost:3}},
+    {n:"LED bulb", w:9, h:5},
+    {n:"LED strip / accent lighting", w:20, h:6},
+    {n:"Outdoor floodlight", w:100, h:8}
+  ]},
+  {c:"Workshop, garage & office", items:[
+    {n:"EV charging (level 2)", w:7200, h:1.3, note:"~12k mi/yr at 3.5 mi/kWh"},
+    {n:"Garage door opener", w:350, h:0.05},
+    {n:"Table saw / power tools", w:1500, h:0.5, d:1},
+    {n:"3D printer", w:120, h:6, d:3},
+    {n:"Printer (idle + jobs)", w:12, h:24},
+    {n:"Aquarium (heater + pump)", w:60, h:24},
+    {n:"Server / NAS", w:45, h:24}
+  ]}
+];
+
+var SAMPLE = ["Refrigerator (modern)","Electric water heater","Central A/C (3-ton)","Electric clothes dryer",
+              "TV — 55\" LED","Laptop","Wi-Fi router","Phantom loads (things left plugged in)",
+              "Dishwasher","Incandescent bulb (60 W)","Washing machine","Electric oven"];
+
+var HOURS_YEAR_FACTOR = 365;
+var items = [];
+var uid = 1;
+
+/* ---------------- core math ---------------- */
+function annualKwh(w, h, d, m, qty){
+  // watts drawing power, hours/day, days/week, months/year, count
+  return (qty * (w / 1000) * h * (d / 7) * (m / 12) * HOURS_YEAR_FACTOR);
+}
+function kwhOf(it){ return annualKwh(it.w, it.h, it.d, it.m, it.qty); }
+function swapKwh(it){
+  var s = it.swap;
+  return annualKwh(s.w, (s.h != null ? s.h : it.h), it.d, it.m, it.qty);
+}
+
+/* ---------------- formatting ---------------- */
+function rate(){ var v = parseFloat(document.getElementById("rate").value); return isFinite(v) && v >= 0 ? v : 0; }
+function symbol(){ return document.getElementById("cur").value; }
+function carbon(){ return parseFloat(document.getElementById("grid").value); }
+function money(v){
+  var s = symbol(), a = Math.abs(v);
+  var digits = (s === "¥") ? 0 : (a < 10 ? 2 : 0);
+  return s + v.toLocaleString(undefined, {minimumFractionDigits:digits, maximumFractionDigits:digits});
+}
+function num(v, dp){ return v.toLocaleString(undefined, {minimumFractionDigits:dp||0, maximumFractionDigits:dp||0}); }
+
+/* ---------------- state ---------------- */
+function addItem(def){
+  items.push({
+    id: uid++,
+    n: def.n,
+    w: def.w,
+    h: def.h,
+    d: def.d != null ? def.d : 7,
+    m: def.m != null ? def.m : 12,
+    qty: 1,
+    note: def.note || "",
+    swap: def.swap ? {n:def.swap.n, w:def.swap.w, h:def.swap.h, cost:def.swap.cost} : null
+  });
+}
+function findDef(name){
+  for (var i = 0; i < LIB.length; i++){
+    for (var j = 0; j < LIB[i].items.length; j++){
+      if (LIB[i].items[j].n === name) return LIB[i].items[j];
+    }
+  }
+  return null;
+}
+
+/* ---------------- rendering ---------------- */
+function render(){
+  var totalKwh = 0;
+  for (var i = 0; i < items.length; i++) totalKwh += kwhOf(items[i]);
+  var r = rate();
+  var yearCost = totalKwh * r;
+
+  document.getElementById("curSym").textContent = symbol();
+  document.getElementById("curSym2").textContent = symbol();
+  document.getElementById("cnt").textContent = items.length;
+
+  renderSummary(totalKwh, yearCost);
+  renderRows();
+  renderChart(totalKwh, r);
+  renderUpgrades(r);
+  renderRecon(yearCost);
+}
+
+function renderSummary(totalKwh, yearCost){
+  var co2 = totalKwh * carbon(); // kg/yr
+  var trees = co2 / 21;          // a mature tree absorbs ~21 kg CO2/yr
+  var html =
+    '<div class="stat"><div class="k">Per month</div><div class="v money">' + money(yearCost/12) + '</div><div class="s">' + num(totalKwh/12) + ' kWh</div></div>' +
+    '<div class="stat"><div class="k">Per year</div><div class="v money">' + money(yearCost) + '</div><div class="s">' + num(totalKwh) + ' kWh</div></div>' +
+    '<div class="stat"><div class="k">Per day</div><div class="v">' + money(yearCost/365) + '</div><div class="s">' + num(totalKwh/365, 1) + ' kWh</div></div>' +
+    '<div class="stat"><div class="k">Carbon</div><div class="v">' + num(co2/1000, 2) + ' t</div><div class="s">CO₂e/yr · ' + num(trees) + ' trees to offset</div></div>';
+  document.getElementById("summary").innerHTML = html;
+}
+
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function renderRows(){
+  var el = document.getElementById("rows");
+  if (!items.length){
+    el.innerHTML = '<div class="empty"><div class="big">🔌</div>Nothing plugged in yet.<br>Add an appliance, or load a sample home to see how it works.</div>';
+    return;
+  }
+  var r = rate(), out = "";
+  for (var i = 0; i < items.length; i++){
+    var it = items[i];
+    var k = kwhOf(it);
+    var cost = k * r;
+    out +=
+      '<div class="row" data-id="' + it.id + '">' +
+        '<div class="rhead">' +
+          '<input class="rname" value="' + esc(it.n) + '" data-f="n">' +
+          '<div class="rcost">' + money(cost) + '<small>' + num(k) + ' kWh/yr</small></div>' +
+          '<button class="x" data-del="1" title="Remove">×</button>' +
+        '</div>' +
+        '<div class="grid5">' +
+          minif("Watts", it.w, "w", 1) +
+          minif("Hours/day", it.h, "h", 0.25) +
+          minif("Days/wk", it.d, "d", 1) +
+          minif("Months/yr", it.m, "m", 1) +
+          minif("Qty", it.qty, "qty", 1) +
+        '</div>' +
+        '<div class="rnote">' +
+          '<span class="chip">' + money(cost/12) + '/mo</span>' +
+          (it.note ? '<span>' + esc(it.note) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+  }
+  el.innerHTML = out;
+}
+function minif(label, val, field, step){
+  return '<div class="mini"><label>' + label + '</label>' +
+         '<input type="number" step="' + step + '" min="0" value="' + val + '" data-f="' + field + '"></div>';
+}
+
+var PALETTE = ["#ff9a2e","#ffc247","#ffd97a","#7ee787","#5bd6c0","#6ba8ff","#a78bfa","#f472b6","#94a3b8"];
+
+function renderChart(totalKwh, r){
+  var el = document.getElementById("chart");
+  if (!items.length || totalKwh <= 0){
+    el.innerHTML = '<div class="empty" style="padding:22px 8px">Add something to see the breakdown.</div>';
+    return;
+  }
+  var list = items.map(function(it){ return {n:it.n, k:kwhOf(it)}; })
+                  .filter(function(x){ return x.k > 0; })
+                  .sort(function(a,b){ return b.k - a.k; });
+  if (!list.length){ el.innerHTML = '<div class="empty" style="padding:22px 8px">Everything is set to zero hours.</div>'; return; }
+
+  var shown = list.slice(0, 8);
+  var rest = list.slice(8);
+  if (rest.length){
+    var restK = 0;
+    for (var q = 0; q < rest.length; q++) restK += rest[q].k;
+    shown.push({n: "Everything else (" + rest.length + ")", k: restK});
+  }
+  var max = shown[0].k, out = "";
+  for (var i = 0; i < shown.length; i++){
+    var pct = (shown[i].k / totalKwh) * 100;
+    var wpct = Math.max(1.5, (shown[i].k / max) * 100);
+    var col = PALETTE[Math.min(i, PALETTE.length - 1)];
+    out +=
+      '<div class="bar">' +
+        '<div class="bl">' + esc(shown[i].n) + '</div>' +
+        '<div class="bv">' + money(shown[i].k * r) + ' · ' + num(pct) + '%</div>' +
+        '<div class="btrack"><div class="bfill" style="width:' + wpct + '%;background:linear-gradient(90deg,' + col + ',' + col + 'cc)"></div></div>' +
+      '</div>';
+  }
+  el.innerHTML = '<div class="bars">' + out + '</div>';
+}
+
+function renderUpgrades(r){
+  var wrap = document.getElementById("upWrap");
+  var list = [];
+  for (var i = 0; i < items.length; i++){
+    var it = items[i];
+    if (!it.swap) continue;
+    var saveK = kwhOf(it) - swapKwh(it);
+    if (saveK <= 0) continue;
+    var saveY = saveK * r;
+    var cost = it.swap.cost * it.qty;
+    list.push({it:it, saveK:saveK, saveY:saveY, cost:cost, pb: saveY > 0 ? cost / saveY : Infinity});
+  }
+  if (!list.length){ wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  list.sort(function(a,b){ return a.pb - b.pb; });
+
+  var out = "";
+  for (var j = 0; j < list.length; j++){
+    var u = list[j];
+    var pbTxt, cls;
+    if (u.pb < 1){ pbTxt = num(u.pb * 12) + " mo"; cls = "good"; }
+    else if (u.pb < 30){ pbTxt = num(u.pb, 1) + " yr"; cls = u.pb <= 8 ? "good" : "meh"; }
+    else { pbTxt = "30+ yr"; cls = "meh"; }
+    var verdict = u.pb <= 8
+      ? "Pays for itself well inside its own lifetime."
+      : "Worth doing when it dies anyway — not worth replacing early on cost alone.";
+    out +=
+      '<div class="up">' +
+        '<div class="t">Swap ' + esc(u.it.n) + (u.it.qty > 1 ? " ×" + u.it.qty : "") + ' for ' + esc(u.it.swap.n) + '</div>' +
+        '<div class="d">' + verdict + '</div>' +
+        '<div class="n">' +
+          '<div>Saves<b class="good">' + money(u.saveY) + '/yr</b></div>' +
+          '<div>Costs<b>' + money(u.cost) + '</b></div>' +
+          '<div>Payback<b class="' + cls + '">' + pbTxt + '</b></div>' +
+          '<div>Energy cut<b>' + num(u.saveK) + ' kWh</b></div>' +
+        '</div>' +
+      '</div>';
+  }
+  document.getElementById("ups").innerHTML = out;
+}
+
+function renderRecon(yearCost){
+  var el = document.getElementById("recon");
+  var bill = parseFloat(document.getElementById("bill").value);
+  if (!isFinite(bill) || bill <= 0){
+    el.innerHTML = '<div class="hint">Type in what you actually pay each month and this will show how much of the bill you have accounted for — the gap is usually standby loads, heating, or an appliance you forgot.</div>';
+    return;
+  }
+  var mine = yearCost / 12;
+  var pct = bill > 0 ? (mine / bill) * 100 : 0;
+  var capped = Math.max(0, Math.min(100, pct));
+  var gap = bill - mine;
+  var msg;
+  if (pct > 108){
+    msg = "You have listed <b>" + money(mine - bill) + "/mo more</b> than your bill. Some of these probably run less than you think — try trimming hours/day on the biggest one.";
+  } else if (pct > 85){
+    msg = "Within <b>" + num(Math.abs(100 - pct)) + "%</b> of your real bill. That is a solid model of your home.";
+  } else {
+    msg = "<b>" + money(gap) + "/mo</b> is still unexplained (" + num(100 - capped) + "% of the bill). Common culprits: water heating, standby loads, a second fridge, or fixed supply charges from your utility.";
+  }
+  el.innerHTML =
+    '<div class="recon-bar">' +
+      '<div style="width:' + capped + '%;background:linear-gradient(90deg,#ffc247,#ff9a2e)">' + (capped > 16 ? num(capped) + "%" : "") + '</div>' +
+      '<div style="width:' + (100 - capped) + '%;background:#2b3663;color:#93a0c8">' + (100 - capped > 16 ? num(100 - capped) + "%" : "") + '</div>' +
+    '</div>' +
+    '<div class="legend"><span><span class="dot" style="background:#ffc247"></span>Accounted for — ' + money(mine) + '/mo</span>' +
+    '<span><span class="dot" style="background:#2b3663"></span>Unexplained</span></div>' +
+    '<div class="hint">' + msg + '</div>';
+}
+
+/* ---------------- library sheet ---------------- */
+function renderLib(filter){
+  var f = (filter || "").trim().toLowerCase();
+  var out = "";
+  for (var i = 0; i < LIB.length; i++){
+    var cat = LIB[i];
+    var matches = cat.items.filter(function(x){
+      return !f || x.n.toLowerCase().indexOf(f) >= 0 || cat.c.toLowerCase().indexOf(f) >= 0;
+    });
+    if (!matches.length) continue;
+    out += '<div class="catname">' + esc(cat.c) + '</div><div class="lgrid">';
+    for (var j = 0; j < matches.length; j++){
+      var m = matches[j];
+      out += '<button class="litem" data-add="' + esc(m.n) + '">' +
+               '<div class="ln">' + esc(m.n) + '</div>' +
+               '<div class="lw">' + num(m.w) + ' W · ' + (m.h === 24 ? "always on" : m.h + " h/day") + '</div>' +
+             '</button>';
+    }
+    out += '</div>';
+  }
+  if (!out) out = '<div class="empty">No match. You can add anything and rename it — try "Custom" below.</div>';
+  out += '<div class="catname">Custom</div><div class="lgrid">' +
+         '<button class="litem" data-add="__custom"><div class="ln">Something else</div><div class="lw">blank — set your own watts</div></button></div>';
+  document.getElementById("lib").innerHTML = out;
+}
+function openLib(){
+  document.getElementById("scrim").classList.add("on");
+  document.getElementById("search").value = "";
+  renderLib("");
+  if (window.innerWidth > 700) document.getElementById("search").focus();
+}
+function closeLib(){ document.getElementById("scrim").classList.remove("on"); }
+
+/* ---------------- events ---------------- */
+document.getElementById("addBtn").addEventListener("click", openLib);
+document.getElementById("addBtn2").addEventListener("click", openLib);
+document.getElementById("closeBtn").addEventListener("click", closeLib);
+document.getElementById("scrim").addEventListener("click", function(e){
+  if (e.target === this) closeLib();
+});
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeLib(); });
+document.getElementById("search").addEventListener("input", function(){ renderLib(this.value); });
+
+document.getElementById("lib").addEventListener("click", function(e){
+  var b = e.target.closest ? e.target.closest("[data-add]") : null;
+  if (!b) return;
+  var name = b.getAttribute("data-add");
+  if (name === "__custom") addItem({n:"New appliance", w:100, h:1});
+  else {
+    var def = findDef(name);
+    if (def) addItem(def);
+  }
+  closeLib();
+  render();
+  var rows = document.getElementById("rows");
+  if (rows.lastElementChild && rows.lastElementChild.scrollIntoView){
+    rows.lastElementChild.scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+});
+
+document.getElementById("rows").addEventListener("input", function(e){
+  var inp = e.target;
+  var f = inp.getAttribute("data-f");
+  if (!f) return;
+  var row = inp.closest(".row");
+  if (!row) return;
+  var id = parseInt(row.getAttribute("data-id"), 10);
+  var it = null;
+  for (var i = 0; i < items.length; i++) if (items[i].id === id) it = items[i];
+  if (!it) return;
+
+  if (f === "n"){ it.n = inp.value; }
+  else {
+    var v = parseFloat(inp.value);
+    if (!isFinite(v) || v < 0) v = 0;
+    if (f === "d") v = Math.min(v, 7);
+    if (f === "m") v = Math.min(v, 12);
+    if (f === "h") v = Math.min(v, 24);
+    it[f] = v;
+  }
+  // live-update the numbers without rebuilding the row (keeps focus)
+  var r = rate(), k = kwhOf(it), cost = k * r;
+  var c = row.querySelector(".rcost");
+  if (c) c.innerHTML = money(cost) + '<small>' + num(k) + ' kWh/yr</small>';
+  var chip = row.querySelector(".chip");
+  if (chip) chip.textContent = money(cost/12) + "/mo";
+
+  var totalKwh = 0;
+  for (var j = 0; j < items.length; j++) totalKwh += kwhOf(items[j]);
+  renderSummary(totalKwh, totalKwh * r);
+  renderChart(totalKwh, r);
+  renderUpgrades(r);
+  renderRecon(totalKwh * r);
+});
+
+document.getElementById("rows").addEventListener("click", function(e){
+  if (!e.target.getAttribute || !e.target.getAttribute("data-del")) return;
+  var row = e.target.closest(".row");
+  var id = parseInt(row.getAttribute("data-id"), 10);
+  items = items.filter(function(x){ return x.id !== id; });
+  render();
+});
+
+document.getElementById("rate").addEventListener("input", render);
+document.getElementById("bill").addEventListener("input", render);
+document.getElementById("grid").addEventListener("change", render);
+document.getElementById("cur").addEventListener("change", function(){
+  var opt = this.options[this.selectedIndex];
+  document.getElementById("rate").value = opt.getAttribute("data-r");
+  render();
+});
+
+document.getElementById("sampleBtn").addEventListener("click", function(){
+  items = []; uid = 1;
+  for (var i = 0; i < SAMPLE.length; i++){
+    var def = findDef(SAMPLE[i]);
+    if (def) addItem(def);
+  }
+  // a realistic home has more than one bulb
+  for (var j = 0; j < items.length; j++){
+    if (items[j].n.indexOf("Incandescent") === 0) items[j].qty = 8;
+  }
+  render();
+});
+
+document.getElementById("clearBtn").addEventListener("click", function(){
+  items = []; uid = 1; render();
+});
+
+render();
+</script>
+</body>
+</html>
