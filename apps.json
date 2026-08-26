@@ -208,5 +208,12 @@
     "emoji": "⚡",
     "date": "2026-08-25",
     "blurb": "Add up what every appliance in your home actually costs to run each year — ranked biggest-first, checked against your real bill, with payback math on the swaps worth making."
+  },
+  {
+    "file": "apps/app-2026-08-26-turf.html",
+    "name": "Turf",
+    "emoji": "🗺️",
+    "date": "2026-08-26",
+    "blurb": "A two-minute land grab against three bots: leave your zone to draw a loop, close it to claim everything inside, and cut a rival's line to wipe their territory off the board."
   }
 ]
