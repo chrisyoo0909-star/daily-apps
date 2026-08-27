@@ -215,5 +215,12 @@
     "emoji": "🗺️",
     "date": "2026-08-26",
     "blurb": "A two-minute land grab against three bots: leave your zone to draw a loop, close it to claim everything inside, and cut a rival's line to wipe their territory off the board."
+  },
+  {
+    "file": "apps/app-2026-08-27-billable.html",
+    "name": "Billable",
+    "emoji": "💼",
+    "date": "2026-08-27",
+    "blurb": "Work out the hourly rate a freelancer actually has to charge — self-employment tax, unpaid admin hours, dry spells, insurance and retirement all backed out of the take-home you need, plus the W-2 salary that would match it."
   }
 ]

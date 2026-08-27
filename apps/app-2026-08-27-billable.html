@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Billable — the freelance rate calculator</title>
+<style>
+  :root{
+    --bg:#0e1116;
+    --bg2:#141922;
+    --card:#181e29;
+    --card2:#1e2532;
+    --line:#2a3342;
+    --txt:#e8edf5;
+    --dim:#8b98ad;
+    --dim2:#64708a;
+    --acc:#4ade80;
+    --acc2:#22d3ee;
+    --warn:#fbbf24;
+    --bad:#f87171;
+    --pur:#a78bfa;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, #1b2a3a 0%, transparent 55%),
+      radial-gradient(900px 500px at 95% 0%, #251c36 0%, transparent 50%),
+      var(--bg);
+    color:var(--txt);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:0 0 60px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 18px 0}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:30px;margin:0;letter-spacing:-.5px;font-weight:700}
+  h1 .dot{color:var(--acc)}
+  .tag{color:var(--dim);font-size:14px}
+  .sub{color:var(--dim2);font-size:13px;margin:8px 0 20px;max-width:640px}
+
+  .modes{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin-bottom:20px;flex-wrap:wrap}
+  .modes button{
+    background:transparent;border:0;color:var(--dim);font:inherit;font-weight:600;font-size:13.5px;
+    padding:9px 15px;border-radius:9px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .modes button.on{background:var(--acc);color:#06210f}
+  .modes button:not(.on):hover{color:var(--txt)}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:18px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .card + .card{margin-top:16px}
+  .card h2{font-size:12px;letter-spacing:1.3px;text-transform:uppercase;color:var(--dim2);margin:0 0 14px;font-weight:700}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+  .row:last-child{margin-bottom:0}
+  .row label{font-size:13.5px;color:var(--dim);flex:1;min-width:0}
+  .row label b{color:var(--txt);font-weight:600;display:block;font-size:14px}
+  .row label span{font-size:11.5px;color:var(--dim2);display:block;margin-top:1px}
+
+  .inp{display:flex;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:0 10px;height:38px;flex:0 0 130px;transition:.15s}
+  .inp:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px rgba(74,222,128,.12)}
+  .inp .pre,.inp .suf{color:var(--dim2);font-size:13px;flex:none}
+  .inp input{
+    background:transparent;border:0;outline:0;color:var(--txt);font:inherit;font-weight:600;
+    width:100%;min-width:0;text-align:right;padding:0 4px;font-variant-numeric:tabular-nums;
+  }
+  .inp input::-webkit-outer-spin-button,.inp input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .inp input[type=number]{-moz-appearance:textfield}
+  select.sel{
+    background:var(--bg2);border:1px solid var(--line);border-radius:9px;color:var(--txt);font:inherit;
+    font-weight:600;height:38px;padding:0 8px;flex:0 0 130px;outline:0;cursor:pointer;
+  }
+
+  .hero{
+    background:linear-gradient(150deg,#153026 0%, #14202b 60%, #181e29 100%);
+    border:1px solid #2c4a3b;border-radius:16px;padding:20px;
+  }
+  .hero .lab{font-size:12px;letter-spacing:1.3px;text-transform:uppercase;color:#5fd39a;font-weight:700}
+  .bigrate{display:flex;align-items:baseline;gap:8px;margin:10px 0 2px;flex-wrap:wrap}
+  .bigrate .n{font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums;color:#eafff2}
+  .bigrate .u{font-size:15px;color:#7fdcb0;font-weight:600}
+  .rates{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .rates div{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:10px 11px}
+  .rates .k{font-size:11px;color:#8fc9ae;text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+  .rates .v{font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+
+  .bar{display:flex;height:34px;border-radius:9px;overflow:hidden;margin:4px 0 12px;background:var(--bg2);border:1px solid var(--line)}
+  .bar i{display:block;height:100%;transition:width .3s}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .legend div{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+  .legend i{width:10px;height:10px;border-radius:3px;flex:none}
+  .legend b{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums;font-weight:600}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  td{padding:8px 0;border-bottom:1px solid var(--line);color:var(--dim)}
+  tr:last-child td{border-bottom:0}
+  td.v{text-align:right;color:var(--txt);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.v.neg{color:var(--bad)}
+  tr.tot td{border-top:1px solid var(--line);border-bottom:0;padding-top:11px;color:var(--txt);font-weight:700}
+  tr.tot td.v{color:var(--acc);font-size:16px}
+  .ind{padding-left:14px !important;font-size:12.5px}
+
+  .note{font-size:12.5px;color:var(--dim2);line-height:1.55;margin-top:12px}
+  .note b{color:var(--dim)}
+  .callout{
+    background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--acc2);
+    border-radius:9px;padding:12px 14px;font-size:13.5px;color:var(--dim);margin-top:14px;line-height:1.6;
+  }
+  .callout b{color:var(--txt)}
+  .callout.warn{border-left-color:var(--warn)}
+  .callout .big{font-size:22px;font-weight:800;color:var(--acc2);display:block;margin:3px 0 2px;font-variant-numeric:tabular-nums}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}
+  .chips button{
+    background:var(--bg2);border:1px solid var(--line);color:var(--dim);font:inherit;font-size:12.5px;font-weight:600;
+    padding:7px 12px;border-radius:20px;cursor:pointer;transition:.15s
+  }
+  .chips button:hover{border-color:var(--acc);color:var(--txt)}
+
+  .hours{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .hours .n{font-size:30px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+  .hours .l{font-size:13px;color:var(--dim)}
+  .track{height:9px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);overflow:hidden;display:flex}
+  .track i{display:block;height:100%}
+
+  .proj{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:4px}
+  .proj div{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px}
+  .proj .k{font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+  .proj .v{font-size:18px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+
+  footer{text-align:center;color:var(--dim2);font-size:12px;margin-top:26px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Billable<span class="dot">.</span></h1>
+    <div class="tag">What you actually have to charge.</div>
+  </header>
+  <p class="sub">Freelancers quote the salary they used to earn and quietly lose a third of it to self-employment tax, unpaid time off and hours nobody pays for. Put your real numbers in and find the rate that gets you home.</p>
+
+  <div class="modes" id="modes">
+    <button data-m="rate" class="on">Find my rate</button>
+    <button data-m="take">I charge $X — what do I keep?</button>
+  </div>
+
+  <div class="grid">
+    <!-- ============ INPUTS ============ -->
+    <div>
+      <div class="card">
+        <h2>The goal</h2>
+        <div class="chips" id="presets">
+          <button data-p="starting">Just starting out</button>
+          <button data-p="established">Established solo</button>
+          <button data-p="senior">Senior consultant</button>
+        </div>
+
+        <div class="row" id="rowTarget">
+          <label><b>Take-home you need</b><span>Cash in your pocket after all tax, per year</span></label>
+          <div class="inp"><span class="pre">$</span><input id="target" type="number" min="0" step="1000" value="85000"></div>
+        </div>
+        <div class="row" id="rowRate" style="display:none">
+          <label><b>Your hourly rate</b><span>What you bill clients per hour</span></label>
+          <div class="inp"><span class="pre">$</span><input id="rate" type="number" min="0" step="5" value="125"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Your year</h2>
+        <div class="row">
+          <label><b>Hours in a working week</b><span>Everything you spend on the business</span></label>
+          <div class="inp"><input id="hpw" type="number" min="1" max="100" step="1" value="40"><span class="suf">hrs</span></div>
+        </div>
+        <div class="row">
+          <label><b>Billable share of those hours</b><span>The rest is sales, admin, invoicing, email</span></label>
+          <div class="inp"><input id="bill" type="number" min="5" max="100" step="1" value="65"><span class="suf">%</span></div>
+        </div>
+        <div class="row">
+          <label><b>Weeks off per year</b><span>Vacation + sick + holidays + slow weeks</span></label>
+          <div class="inp"><input id="off" type="number" min="0" max="40" step="0.5" value="6"><span class="suf">wks</span></div>
+        </div>
+        <div class="row">
+          <label><b>Dry spell allowance</b><span>Booked weeks you expect to go unsold anyway</span></label>
+          <div class="inp"><input id="dry" type="number" min="0" max="60" step="1" value="8"><span class="suf">%</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>What comes off the top</h2>
+        <div class="row">
+          <label><b>Business expenses</b><span>Software, hardware, insurance, accountant, travel</span></label>
+          <div class="inp"><span class="pre">$</span><input id="exp" type="number" min="0" step="500" value="9000"></div>
+        </div>
+        <div class="row">
+          <label><b>Health insurance premiums</b><span>What you pay yourself for the year</span></label>
+          <div class="inp"><span class="pre">$</span><input id="health" type="number" min="0" step="500" value="7200"></div>
+        </div>
+        <div class="row">
+          <label><b>Retirement contribution</b><span>Pre-tax, e.g. Solo 401(k) or SEP IRA</span></label>
+          <div class="inp"><span class="pre">$</span><input id="retire" type="number" min="0" step="1000" value="12000"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Tax situation</h2>
+        <div class="row">
+          <label><b>Filing status</b><span>Federal brackets to use</span></label>
+          <select class="sel" id="filing">
+            <option value="single">Single</option>
+            <option value="mfj">Married, joint</option>
+            <option value="hoh">Head of household</option>
+          </select>
+        </div>
+        <div class="row">
+          <label><b>State + local income tax</b><span>Your effective rate — 0 in TX, FL, WA, NV…</span></label>
+          <div class="inp"><input id="state" type="number" min="0" max="15" step="0.1" value="5"><span class="suf">%</span></div>
+        </div>
+        <div class="row">
+          <label><b>Claim the 20% QBI deduction</b><span>Most sole proprietors under the income cap qualify</span></label>
+          <select class="sel" id="qbi">
+            <option value="1">Yes</option>
+            <option value="0">No</option>
+          </select>
+        </div>
+        <p class="note">Federal figures use the 2025 brackets, standard deduction and $176,100 Social Security wage base as the baseline. Close enough to plan a rate around, not a substitute for your accountant.</p>
+      </div>
+    </div>
+
+    <!-- ============ OUTPUTS ============ -->
+    <div>
+      <div class="hero">
+        <div class="lab" id="heroLab">Charge at least</div>
+        <div class="bigrate"><span class="n" id="heroNum">$0</span><span class="u" id="heroUnit">per billable hour</span></div>
+        <div class="rates">
+          <div><div class="k">Day rate</div><div class="v" id="rDay">—</div></div>
+          <div><div class="k">Week</div><div class="v" id="rWeek">—</div></div>
+          <div><div class="k">Revenue / yr</div><div class="v" id="rYear">—</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Where every dollar goes</h2>
+        <div class="bar" id="bar"></div>
+        <div class="legend" id="legend"></div>
+        <table id="tbl"></table>
+      </div>
+
+      <div class="card">
+        <h2>Hours you can actually sell</h2>
+        <div class="hours"><span class="n" id="hNum">—</span><span class="l" id="hLab"></span></div>
+        <div class="track" id="track"></div>
+        <p class="note" id="hNote"></p>
+      </div>
+
+      <div class="card">
+        <h2>The salary that matches this</h2>
+        <div class="callout">
+          A W-2 job would have to pay you
+          <span class="big" id="salary">—</span>
+          <span id="salaryNote"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quote a project</h2>
+        <div class="proj">
+          <div><div class="k">Half day</div><div class="v" id="p4">—</div></div>
+          <div><div class="k">1 week</div><div class="v" id="p1w">—</div></div>
+          <div><div class="k">1 month</div><div class="v" id="p1m">—</div></div>
+          <div><div class="k">3 months</div><div class="v" id="p3m">—</div></div>
+        </div>
+        <p class="note">Based on billable hours only — a "week" of project work is <span id="pw">—</span> billable hours, because the rest of the week is running the business.</p>
+        <div class="callout warn" id="sanity"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Billable · estimates only, not tax advice · everything stays in your browser
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 2025 federal baseline ---------- */
+  var SS_BASE = 176100;
+  var STD = { single:15000, mfj:30000, hoh:22500 };
+  var BRACKETS = {
+    single:[[11925,.10],[48475,.12],[103350,.22],[197300,.24],[250525,.32],[626350,.35],[Infinity,.37]],
+    mfj:   [[23850,.10],[96950,.12],[206700,.22],[394600,.24],[501050,.32],[751600,.35],[Infinity,.37]],
+    hoh:   [[17000,.10],[64850,.12],[103350,.22],[197300,.24],[250500,.32],[626350,.35],[Infinity,.37]]
+  };
+  var ADDL_MEDI = { single:200000, mfj:250000, hoh:200000 };
+
+  function fedTax(taxable, status){
+    var b = BRACKETS[status] || BRACKETS.single;
+    var t = 0, prev = 0;
+    for (var i=0;i<b.length;i++){
+      var cap = b[i][0], rt = b[i][1];
+      if (taxable > prev){
+        t += (Math.min(taxable, cap) - prev) * rt;
+        prev = cap;
+      } else break;
+    }
+    return t;
+  }
+
+  function seTax(netEarnings, status){
+    // Schedule SE: 92.35% of net profit is subject to SE tax
+    var base = Math.max(0, netEarnings * 0.9235);
+    var ss = Math.min(base, SS_BASE) * 0.124;
+    var medi = base * 0.029;
+    var addl = Math.max(0, base - ADDL_MEDI[status]) * 0.009;
+    return ss + medi + addl;
+  }
+
+  /* ---------- core model: revenue -> take-home ---------- */
+  function model(revenue, I){
+    var netProfit = Math.max(0, revenue - I.exp);            // Schedule C profit
+    var se = seTax(netProfit, I.filing);
+    var halfSE = se / 2;
+    var agi = Math.max(0, netProfit - halfSE - I.health - I.retire);
+    var preQBI = Math.max(0, agi - STD[I.filing]);
+    var qbiBase = Math.max(0, netProfit - halfSE - I.retire); // qualified business income
+    var qbi = I.qbi ? Math.min(0.20 * qbiBase, 0.20 * preQBI) : 0;
+    var taxable = Math.max(0, preQBI - qbi);
+    var fed = fedTax(taxable, I.filing);
+    var st = Math.max(0, agi - STD[I.filing]) * I.state;
+    var take = revenue - I.exp - se - fed - st - I.health - I.retire;
+    return {
+      revenue:revenue, expenses:I.exp, netProfit:netProfit, se:se, fed:fed, state:st,
+      health:I.health, retire:I.retire, taxable:taxable, qbi:qbi, take:take,
+      totalTax: se + fed + st
+    };
+  }
+
+  /* ---------- W-2 equivalent: salary -> take-home ---------- */
+  function w2(salary, I){
+    var fica = Math.min(salary, SS_BASE) * 0.062 + salary * 0.0145
+             + Math.max(0, salary - ADDL_MEDI[I.filing]) * 0.009;
+    var agi = Math.max(0, salary - I.retire);
+    var taxable = Math.max(0, agi - STD[I.filing]);
+    var fed = fedTax(taxable, I.filing);
+    var st = taxable * I.state;
+    // employer covers health premiums in this comparison
+    return salary - fica - fed - st - I.retire;
+  }
+
+  /* ---------- bisection solver (both models are monotonic) ---------- */
+  function solve(fn, target, hi){
+    var lo = 0; hi = hi || 5000000;
+    if (fn(hi) < target) return hi;
+    for (var i=0;i<80;i++){
+      var mid = (lo + hi) / 2;
+      if (fn(mid) < target) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /* ---------- formatting ---------- */
+  function money(n){
+    if (!isFinite(n)) return "—";
+    return "$" + Math.round(n).toLocaleString("en-US");
+  }
+  function money2(n){
+    if (!isFinite(n)) return "—";
+    return "$" + (Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0});
+  }
+
+  /* ---------- DOM ---------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var ids = ["target","rate","hpw","bill","off","dry","exp","health","retire","filing","state","qbi"];
+  var mode = "rate";
+
+  function num(id, def){
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : def;
+  }
+
+  function inputs(){
+    return {
+      target: Math.max(0, num("target",0)),
+      rate:   Math.max(0, num("rate",0)),
+      hpw:    Math.min(100, Math.max(1, num("hpw",40))),
+      bill:   Math.min(100, Math.max(5, num("bill",65))) / 100,
+      off:    Math.min(40, Math.max(0, num("off",0))),
+      dry:    Math.min(60, Math.max(0, num("dry",0))) / 100,
+      exp:    Math.max(0, num("exp",0)),
+      health: Math.max(0, num("health",0)),
+      retire: Math.max(0, num("retire",0)),
+      filing: $("filing").value,
+      state:  Math.min(15, Math.max(0, num("state",0))) / 100,
+      qbi:    $("qbi").value === "1"
+    };
+  }
+
+  var COLORS = [
+    ["take",   "var(--acc)",  "#4ade80", "Your take-home"],
+    ["retire", "#818cf8",     "#818cf8", "Retirement savings"],
+    ["se",     "#f87171",     "#f87171", "Self-employment tax"],
+    ["fed",    "#fb923c",     "#fb923c", "Federal income tax"],
+    ["state",  "#fbbf24",     "#fbbf24", "State + local tax"],
+    ["health", "#22d3ee",     "#22d3ee", "Health insurance"],
+    ["expenses","#94a3b8",    "#94a3b8", "Business expenses"]
+  ];
+
+  function render(){
+    var I = inputs();
+
+    // --- sellable hours ---
+    var workWeeks = Math.max(0.5, 52 - I.off);
+    var rawBillable = workWeeks * I.hpw * I.bill;
+    var billableHours = Math.max(1, rawBillable * (1 - I.dry));
+    var totalHours = workWeeks * I.hpw;
+
+    // --- solve either direction ---
+    var revenue, take;
+    if (mode === "rate"){
+      revenue = solve(function(r){ return model(r, I).take; }, I.target);
+      take = I.target;
+    } else {
+      revenue = I.rate * billableHours;
+      take = model(revenue, I).take;
+    }
+    var m = model(revenue, I);
+    var hourly = revenue / billableHours;
+
+    // --- hero ---
+    if (mode === "rate"){
+      $("heroLab").textContent = "Charge at least";
+      $("heroNum").textContent = money(hourly);
+      $("heroUnit").textContent = "per billable hour";
+    } else {
+      $("heroLab").textContent = "You actually keep";
+      $("heroNum").textContent = money(Math.max(0,m.take));
+      $("heroUnit").textContent = "per year, after everything";
+    }
+    $("rDay").textContent  = money(hourly * 8);
+    $("rWeek").textContent = money(hourly * I.hpw * I.bill * (1 - I.dry));
+    $("rYear").textContent = money(revenue);
+
+    // --- breakdown ---
+    var parts = [
+      {k:"take",     v:Math.max(0, m.take)},
+      {k:"retire",   v:m.retire},
+      {k:"se",       v:m.se},
+      {k:"fed",      v:m.fed},
+      {k:"state",    v:m.state},
+      {k:"health",   v:m.health},
+      {k:"expenses", v:m.expenses}
+    ];
+    var sum = parts.reduce(function(a,p){ return a + p.v; }, 0) || 1;
+    var barHTML = "", legHTML = "";
+    COLORS.forEach(function(c){
+      var p = parts.filter(function(x){ return x.k === c[0]; })[0];
+      if (!p || p.v <= 0) return;
+      var pct = p.v / sum * 100;
+      barHTML += '<i style="width:' + pct.toFixed(2) + '%;background:' + c[2] + '"></i>';
+      legHTML += '<div><i style="background:' + c[2] + '"></i>' + c[3] +
+                 '<b>' + money(p.v) + '</b></div>';
+    });
+    $("bar").innerHTML = barHTML;
+    $("legend").innerHTML = legHTML;
+
+    var effRate = m.revenue > 0 ? (m.totalTax / Math.max(1, m.netProfit) * 100) : 0;
+    $("tbl").innerHTML =
+      '<tr><td>Gross revenue billed</td><td class="v">' + money(m.revenue) + '</td></tr>' +
+      '<tr><td class="ind">− Business expenses</td><td class="v neg">−' + money(m.expenses) + '</td></tr>' +
+      '<tr><td>Net business profit</td><td class="v">' + money(m.netProfit) + '</td></tr>' +
+      '<tr><td class="ind">− Self-employment tax (15.3%)</td><td class="v neg">−' + money(m.se) + '</td></tr>' +
+      '<tr><td class="ind">− Federal income tax</td><td class="v neg">−' + money(m.fed) + '</td></tr>' +
+      '<tr><td class="ind">− State + local tax</td><td class="v neg">−' + money(m.state) + '</td></tr>' +
+      '<tr><td class="ind">− Health insurance</td><td class="v neg">−' + money(m.health) + '</td></tr>' +
+      '<tr><td class="ind">− Retirement contribution</td><td class="v neg">−' + money(m.retire) + '</td></tr>' +
+      '<tr class="tot"><td>Take-home cash</td><td class="v">' + money(m.take) + '</td></tr>';
+
+    // --- hours ---
+    $("hNum").textContent = Math.round(billableHours).toLocaleString("en-US") + " hrs";
+    $("hLab").textContent = "billable per year — out of " + Math.round(totalHours).toLocaleString("en-US") + " you'll work";
+    var pctB = billableHours / Math.max(1, totalHours) * 100;
+    var pctAdmin = Math.max(0, (rawBillable - billableHours) / Math.max(1, totalHours) * 100);
+    $("track").innerHTML =
+      '<i style="width:' + pctB.toFixed(2) + '%;background:var(--acc)"></i>' +
+      '<i style="width:' + pctAdmin.toFixed(2) + '%;background:#fbbf24"></i>' +
+      '<i style="width:' + Math.max(0, 100 - pctB - pctAdmin).toFixed(2) + '%;background:#3b4557"></i>';
+    $("hNote").innerHTML =
+      "That's <b>" + Math.round(billableHours / Math.max(1, workWeeks)) + " sellable hours a week</b>, or about " +
+      (billableHours / Math.max(1, workWeeks) / 8).toFixed(1) + " days. " +
+      "Green is what clients pay for, amber is the dry-spell allowance, grey is admin and business development.";
+
+    // --- W-2 equivalent ---
+    var target = Math.max(0, m.take);
+    var sal = solve(function(s){ return w2(s, I); }, target);
+    $("salary").textContent = money(Math.round(sal / 500) * 500);
+    var diff = sal > 0 ? ((revenue - sal) / sal * 100) : 0;
+    $("salaryNote").innerHTML =
+      "to leave you with the same " + money(target) + " in hand — assuming the employer covers your health premiums " +
+      "and pays half your payroll tax. You have to bill <b>" + money(revenue) + "</b> to match it, which is " +
+      (diff >= 0 ? "<b>" + Math.round(diff) + "% more</b> than the salary" : "less than the salary") + ".";
+
+    // --- project quotes ---
+    var wkHours = I.hpw * I.bill * (1 - I.dry);
+    $("p4").textContent  = money(hourly * 4);
+    $("p1w").textContent = money(hourly * wkHours);
+    $("p1m").textContent = money(hourly * wkHours * 4.33);
+    $("p3m").textContent = money(hourly * wkHours * 13);
+    $("pw").textContent  = wkHours.toFixed(1);
+
+    // --- sanity check ---
+    var s = $("sanity"), msg = "", cls = "callout warn";
+    if (mode === "take" && m.take <= 0){
+      msg = "At this rate you finish the year <b>behind</b> — expenses, insurance and tax alone come to " +
+            money(m.expenses + m.health + m.totalTax) + ". Raise the rate or cut the overhead.";
+    } else if (hourly > 0 && I.hpw > 0) {
+      var naive = revenue / (52 * I.hpw);
+      msg = "A quick sanity check: divide the same revenue across every hour you work — including admin and time off — " +
+            "and it's only <b>" + money(naive) + "/hr</b>. That gap is exactly why quoting your old salary ÷ 2080 " +
+            "leaves freelancers short.";
+      cls = "callout";
+    }
+    s.className = cls;
+    s.innerHTML = msg;
+  }
+
+  /* ---------- wiring ---------- */
+  ids.forEach(function(id){
+    var el = $(id);
+    el.addEventListener("input", render);
+    el.addEventListener("change", render);
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("#modes button"), function(b){
+    b.addEventListener("click", function(){
+      Array.prototype.forEach.call(document.querySelectorAll("#modes button"), function(x){ x.classList.remove("on"); });
+      b.classList.add("on");
+      mode = b.getAttribute("data-m");
+      $("rowTarget").style.display = (mode === "rate") ? "" : "none";
+      $("rowRate").style.display   = (mode === "rate") ? "none" : "";
+      render();
+    });
+  });
+
+  var PRESETS = {
+    starting:   {target:55000, rate:65,  hpw:40, bill:55, off:4, dry:15, exp:4000,  health:6000, retire:3000},
+    established:{target:85000, rate:125, hpw:40, bill:65, off:6, dry:8,  exp:9000,  health:7200, retire:12000},
+    senior:     {target:180000,rate:250, hpw:35, bill:70, off:9, dry:6,  exp:18000, health:9600, retire:30000}
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("#presets button"), function(b){
+    b.addEventListener("click", function(){
+      var p = PRESETS[b.getAttribute("data-p")];
+      for (var k in p) if (Object.prototype.hasOwnProperty.call(p,k)) $(k).value = p[k];
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
