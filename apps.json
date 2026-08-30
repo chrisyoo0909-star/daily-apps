@@ -229,5 +229,12 @@
     "emoji": "🌉",
     "date": "2026-08-28",
     "blurb": "A bridge builder with real physics: spend your budget on road, wood and steel, then send a cart across and watch members glow amber and snap where the load actually goes."
+  },
+  {
+    "file": "apps/app-2026-08-30-rackmath.html",
+    "name": "RackMath",
+    "emoji": "🏋️",
+    "date": "2026-08-30",
+    "blurb": "Log one set and it gives you your estimated max, every training percentage, a warm-up ramp — and the exact plates to slide on each side of the bar."
   }
 ]

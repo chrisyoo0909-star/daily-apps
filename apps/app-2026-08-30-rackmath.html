@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RackMath — 1RM, percentages & plate loading</title>
+<style>
+:root{
+  --bg:#0d0f14; --bg2:#141821; --card:#171c27; --line:#232a38;
+  --ink:#eef2f9; --dim:#8b96ab; --dimmer:#5f6a7e;
+  --accent:#ff6b35; --accent2:#ffb03a; --good:#3ddc97; --blue:#4ea8ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:radial-gradient(1100px 620px at 50% -8%,#1e2534 0%,var(--bg) 62%) fixed;
+  color:var(--ink);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  padding:0 0 60px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header{padding:26px 0 14px;text-align:center}
+h1{margin:0;font-size:30px;letter-spacing:-.6px;font-weight:800}
+h1 .b{background:linear-gradient(92deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:13.5px;margin-top:5px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0;
+  box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.card h2{margin:0 0 12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);font-weight:700}
+
+/* unit toggle */
+.seg{display:inline-flex;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{background:none;border:0;color:var(--dim);font:600 13px/1 inherit;padding:8px 16px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#1a0e07}
+.toprow{display:flex;justify-content:center;margin-bottom:2px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:600;letter-spacing:.03em}
+input[type=number],select{
+  width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:11px;color:var(--ink);
+  font:700 22px/1.2 inherit;padding:12px 12px;outline:none;-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input:focus,select:focus{border-color:var(--accent)}
+select{font-size:16px;font-weight:600;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 22px,calc(100% - 13px) 22px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+
+.rpe-row{margin-top:12px}
+.rpe-help{font-size:11.5px;color:var(--dimmer);margin-top:6px}
+
+/* result hero */
+.hero{text-align:center;padding:20px 12px 16px;background:linear-gradient(160deg,#241a12,#171c27 65%);border-color:#3a2a1c}
+.hero .lab{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);font-weight:700}
+.big{font-size:62px;font-weight:800;letter-spacing:-2.5px;line-height:1.02;margin:4px 0 0;
+  background:linear-gradient(92deg,#ffd08a,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.big span{font-size:24px;letter-spacing:0;-webkit-text-fill-color:var(--dim);font-weight:700}
+.range{color:var(--dim);font-size:13px;margin-top:8px}
+.formulas{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+.chip{background:#0f131b;border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:11.5px;color:var(--dim)}
+.chip b{color:var(--ink);font-weight:700}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dimmer);text-align:left;padding:0 6px 8px;font-weight:700}
+td{padding:9px 6px;border-top:1px solid var(--line);font-size:15px}
+tr.hi td{background:rgba(255,107,53,.09)}
+td.w{font-weight:800}
+td.pl{font-size:12px;color:var(--dim);line-height:1.35}
+.pct{color:var(--accent2);font-weight:700}
+.warn{color:var(--dimmer);font-size:11px}
+
+/* plates visual */
+.bar{display:flex;align-items:center;justify-content:center;gap:2px;padding:16px 8px;background:var(--bg2);
+  border:1px solid var(--line);border-radius:12px;overflow-x:auto;min-height:104px}
+.sleeve{height:9px;background:linear-gradient(#c9d2e0,#7d8798);border-radius:2px;flex:none}
+.plate{flex:none;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);border:1px solid rgba(0,0,0,.35);
+  writing-mode:vertical-rl;letter-spacing:-.2px}
+.collar{width:9px;height:26px;background:linear-gradient(#5c6577,#3a4152);border-radius:2px;flex:none}
+.bar-note{text-align:center;font-size:12px;color:var(--dim);margin-top:9px}
+.bar-note b{color:var(--ink)}
+.bar-note .off{color:var(--accent2)}
+
+/* plate picker */
+.plates{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.pchip{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:13px;
+  font-weight:700;color:var(--dimmer);cursor:pointer;user-select:none}
+.pchip.on{border-color:var(--accent);color:var(--ink);background:#241a12}
+.rowline{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.rowline > div{flex:1;min-width:120px}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{flex:1;min-width:96px;background:var(--bg2);border:1px solid var(--line);color:var(--dim);
+  border-radius:10px;padding:9px 6px;font:700 13px/1 inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#1a0e07}
+.hint{font-size:12px;color:var(--dimmer);margin-top:10px;line-height:1.5}
+footer{text-align:center;color:var(--dimmer);font-size:11.5px;margin-top:26px;padding:0 20px;line-height:1.6}
+@media(max-width:430px){ .big{font-size:52px} h1{font-size:26px} td{font-size:14px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Rack<span class="b">Math</span></h1>
+    <div class="sub">One set tells you everything — max, percentages, warm-ups, and exactly which plates to grab.</div>
+  </header>
+
+  <div class="card">
+    <div class="toprow">
+      <div class="seg" id="units">
+        <button data-u="lb" class="on">lb</button>
+        <button data-u="kg">kg</button>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div>
+        <label>Weight lifted</label>
+        <input type="number" id="w" value="185" min="0" step="0.5" inputmode="decimal">
+      </div>
+      <div>
+        <label>Reps completed</label>
+        <input type="number" id="r" value="5" min="1" max="15" step="1" inputmode="numeric">
+      </div>
+    </div>
+    <div class="rpe-row">
+      <label>How hard was it? (RPE)</label>
+      <select id="rpe">
+        <option value="10">RPE 10 — could not do another rep</option>
+        <option value="9.5">RPE 9.5 — maybe 1 more, not sure</option>
+        <option value="9" selected>RPE 9 — 1 rep left in the tank</option>
+        <option value="8.5">RPE 8.5 — 1–2 left</option>
+        <option value="8">RPE 8 — 2 reps left</option>
+        <option value="7">RPE 7 — 3 reps left</option>
+        <option value="6">RPE 6 — 4 reps left</option>
+      </select>
+      <div class="rpe-help">Reps left in reserve are added on, so a hard set and an easy set of the same weight don't give the same max.</div>
+    </div>
+  </div>
+
+  <div class="card hero">
+    <div class="lab">Estimated 1-rep max</div>
+    <div class="big" id="orm">—</div>
+    <div class="range" id="range"></div>
+    <div class="formulas" id="fchips"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your bar &amp; plates</h2>
+    <div class="rowline">
+      <div>
+        <label>Bar weight (<span class="u">lb</span>)</label>
+        <input type="number" id="bar" value="45" min="0" step="0.5" inputmode="decimal">
+      </div>
+      <div style="flex:2">
+        <label>Plates you have (per side)</label>
+        <div class="plates" id="plates"></div>
+      </div>
+    </div>
+    <div class="hint">Tap a plate to include or exclude it. Loading is computed per side and always rounds <b>down</b> to something you can actually build.</div>
+  </div>
+
+  <div class="card">
+    <h2>Load the bar</h2>
+    <div class="tabs" id="tabs">
+      <button data-t="pct" class="on">% of max</button>
+      <button data-t="warm">Warm-up ramp</button>
+      <button data-t="reps">Rep targets</button>
+    </div>
+    <div id="barview"></div>
+    <div style="height:14px"></div>
+    <table id="tbl"></table>
+    <div class="hint" id="tabhint"></div>
+  </div>
+
+  <footer>
+    Estimates average five published 1RM formulas (Epley, Brzycki, Lombardi, O'Conner, Wathan). They get less reliable above about 10 reps.
+    Not medical or coaching advice — warm up, use a spotter, and don't chase a number you haven't earned.
+  </footer>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var unit='lb';
+  var PLATES={lb:[45,35,25,15,10,5,2.5,1.25], kg:[25,20,15,10,5,2.5,1.25,0.5]};
+  var DEFAULT_ON={lb:[45,25,10,5,2.5], kg:[25,20,15,10,5,2.5]};
+  var active={lb:DEFAULT_ON.lb.slice(), kg:DEFAULT_ON.kg.slice()};
+  var tab='pct';
+
+  var PLATE_COLOR={
+    45:'#c8322d',35:'#1f6dc4',25:'#2c8a4b',15:'#c9a227',10:'#5c6577',5:'#7a4fb5',2.5:'#8a6a4a',1.25:'#4c5464',
+    20:'#1f6dc4',0.5:'#4c5464'
+  };
+  // kg colour convention: 25 red, 20 blue, 15 yellow, 10 green, 5 white-ish, 2.5 red-brown
+  var KG_COLOR={25:'#c8322d',20:'#1f6dc4',15:'#c9a227',10:'#2c8a4b',5:'#aeb6c4',2.5:'#8a6a4a',1.25:'#5c6577',0.5:'#4c5464'};
+
+  function num(id,d){var v=parseFloat($(id).value); return (isFinite(v)&&v>=0)?v:d;}
+
+  /* ---------- 1RM math ---------- */
+  function formulas(w,r){
+    if(r<1) r=1;
+    if(r===1) return {Epley:w,Brzycki:w,Lombardi:w,"O'Conner":w,Wathan:w};
+    return {
+      Epley:   w*(1+r/30),
+      Brzycki: w*36/(37-r),
+      Lombardi:w*Math.pow(r,0.10),
+      "O'Conner": w*(1+r/40),
+      Wathan:  100*w/(48.8+53.8*Math.exp(-0.075*r))
+    };
+  }
+  function avg(o){var k=Object.keys(o),s=0;for(var i=0;i<k.length;i++)s+=o[k[i]];return s/k.length;}
+  // weight that can be lifted for n reps, from a 1RM (inverse Epley, blended with chart)
+  function pctForReps(n){
+    // Standard strength chart, interpolated; matches common coaching tables
+    var chart={1:100,2:95,3:92.5,4:90,5:87,6:85,7:82.5,8:80,9:77.5,10:75,11:72.5,12:70,15:65,20:60};
+    if(chart[n]!=null) return chart[n];
+    var keys=Object.keys(chart).map(Number).sort(function(a,b){return a-b});
+    for(var i=0;i<keys.length-1;i++){
+      if(n>keys[i]&&n<keys[i+1]){
+        var t=(n-keys[i])/(keys[i+1]-keys[i]);
+        return chart[keys[i]]+t*(chart[keys[i+1]]-chart[keys[i]]);
+      }
+    }
+    return n<1?100:55;
+  }
+
+  /* ---------- plate loading ---------- */
+  function load(total,bar,list){
+    var perSide=(total-bar)/2;
+    if(perSide<=0) return {plates:[],actual:bar,per:0};
+    var sorted=list.slice().sort(function(a,b){return b-a});
+    var out=[],rem=perSide,EPS=1e-9;
+    for(var i=0;i<sorted.length;i++){
+      var p=sorted[i];
+      var n=Math.floor((rem+EPS)/p);
+      for(var j=0;j<n;j++){out.push(p);rem-=p;}
+      if(rem<EPS) break;
+    }
+    var side=out.reduce(function(a,b){return a+b},0);
+    return {plates:out,actual:bar+side*2,per:side};
+  }
+  function fmt(x){
+    var v=Math.round(x*100)/100;
+    return (Math.abs(v-Math.round(v))<0.005)? String(Math.round(v)) : String(v);
+  }
+  function plateText(res,bar){
+    if(!res.plates.length) return 'bar only';
+    var counts=[],last=null;
+    res.plates.forEach(function(p){
+      if(last&&last.p===p){last.n++;} else {last={p:p,n:1};counts.push(last);}
+    });
+    return counts.map(function(c){return c.n+'×'+fmt(c.p)}).join(' + ')+' /side';
+  }
+
+  /* ---------- bar visual ---------- */
+  function drawBar(total,bar){
+    var res=load(total,bar,active[unit]);
+    var col=(unit==='kg')?KG_COLOR:PLATE_COLOR;
+    var maxP=Math.max.apply(null,active[unit].length?active[unit]:[1]);
+    var h='';
+    h+='<div class="bar">';
+    h+='<div class="sleeve" style="width:26px"></div>';
+    var mirrored=res.plates.slice().reverse();
+    mirrored.forEach(function(p){
+      var ht=Math.max(26,Math.round(30+58*Math.pow(p/maxP,0.55)));
+      var wd=Math.max(6,Math.round(6+12*Math.pow(p/maxP,0.8)));
+      h+='<div class="plate" style="height:'+ht+'px;width:'+wd+'px;background:'+(col[p]||'#5c6577')+'">'+fmt(p)+'</div>';
+    });
+    h+='<div class="collar"></div>';
+    h+='<div class="sleeve" style="width:70px"></div>';
+    h+='<div class="collar"></div>';
+    res.plates.forEach(function(p){
+      var ht=Math.max(26,Math.round(30+58*Math.pow(p/maxP,0.55)));
+      var wd=Math.max(6,Math.round(6+12*Math.pow(p/maxP,0.8)));
+      h+='<div class="plate" style="height:'+ht+'px;width:'+wd+'px;background:'+(col[p]||'#5c6577')+'">'+fmt(p)+'</div>';
+    });
+    h+='<div class="sleeve" style="width:26px"></div>';
+    h+='</div>';
+    var off=Math.abs(res.actual-total)>0.01;
+    h+='<div class="bar-note">Top set: <b>'+fmt(res.actual)+' '+unit+'</b> — '+plateText(res,bar)+
+       (off?' <span class="off">(target '+fmt(total)+', nearest you can build)</span>':'')+'</div>';
+    return h;
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var w=num('#w',0), r=Math.max(1,Math.min(20,Math.round(num('#r',1)))), bar=num('#bar',unit==='lb'?45:20);
+    var rpe=parseFloat($('#rpe').value);
+    var rir=Math.max(0,10-rpe);
+    var eff=r+rir;                     // effective reps if taken to failure
+    var f=formulas(w,eff);
+    var one=avg(f);
+    var vals=Object.keys(f).map(function(k){return f[k]});
+    var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+
+    $('#orm').innerHTML = w>0 ? fmt(Math.round(one*2)/2)+' <span>'+unit+'</span>' : '—';
+    $('#range').textContent = w>0
+      ? 'Formulas range '+fmt(Math.round(lo))+'–'+fmt(Math.round(hi))+' '+unit+
+        (rir>0? '  ·  treated as '+eff+' reps to failure':'  ·  taken to failure')
+      : 'Enter a set above.';
+    $('#fchips').innerHTML = w>0 ? Object.keys(f).map(function(k){
+        return '<div class="chip">'+k+' <b>'+fmt(Math.round(f[k]))+'</b></div>'}).join('') : '';
+
+    if(!(w>0)){ $('#tbl').innerHTML=''; $('#barview').innerHTML=''; return; }
+
+    // top-of-table bar visual = working weight for the first row
+    var rows=[],hint='';
+    if(tab==='pct'){
+      [100,95,90,85,80,75,70,65,60,50].forEach(function(p){
+        rows.push({label:p+'%', target:one*p/100, note:'~'+repsAt(p)+' reps'});
+      });
+      hint='Percentages of your estimated max, with the plate loading for each. Singles live at 90%+, hypertrophy work sits around 65–75%.';
+    } else if(tab==='warm'){
+      var top=w;
+      [[40,5],[55,5],[70,3],[85,2],[100,1]].forEach(function(s){
+        rows.push({label:s[0]+'%', target:top*s[0]/100, note:s[1]+' reps'+(s[0]===100?' → then your working sets':'')});
+      });
+      hint='A ramp up to your working weight of '+fmt(w)+' '+unit+'. Rest 60–90s between the light ones, 2–3 min before the top set.';
+    } else {
+      [1,2,3,5,6,8,10,12,15].forEach(function(n){
+        var p=pctForReps(n);
+        rows.push({label:n+' rep'+(n>1?'s':''), target:one*p/100, note:Math.round(p*10)/10+'% of max'});
+      });
+      hint='The weight you should be able to move for a given number of reps, all the way to the last honest rep.';
+    }
+
+    $('#barview').innerHTML=drawBar(rows[tab==='warm'?rows.length-1:0].target, bar);
+
+    var html='<tr><th>'+(tab==='reps'?'Reps':'Set')+'</th><th>Weight</th><th>Plates per side</th></tr>';
+    rows.forEach(function(row){
+      var res=load(row.target,bar,active[unit]);
+      var off=Math.abs(res.actual-row.target)>0.01;
+      html+='<tr'+(row.label==='100%'&&tab==='warm'?' class="hi"':'')+'>'+
+        '<td><span class="pct">'+row.label+'</span><br><span class="warn">'+row.note+'</span></td>'+
+        '<td class="w">'+fmt(res.actual)+' '+unit+
+          (off?'<br><span class="warn">target '+fmt(Math.round(row.target*10)/10)+'</span>':'')+'</td>'+
+        '<td class="pl">'+plateText(res,bar)+'</td></tr>';
+    });
+    $('#tbl').innerHTML=html;
+    $('#tabhint').textContent=hint;
+  }
+  function repsAt(p){
+    var best=1,bd=1e9;
+    for(var n=1;n<=20;n++){var d=Math.abs(pctForReps(n)-p); if(d<bd){bd=d;best=n;}}
+    return best;
+  }
+
+  /* ---------- plate chips ---------- */
+  function drawPlates(){
+    var col=(unit==='kg')?KG_COLOR:PLATE_COLOR;
+    $('#plates').innerHTML=PLATES[unit].map(function(p){
+      var on=active[unit].indexOf(p)>=0;
+      return '<div class="pchip'+(on?' on':'')+'" data-p="'+p+'">'+
+        '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:'+(col[p]||'#5c6577')+';opacity:'+(on?1:.35)+'"></span>'+
+        fmt(p)+'</div>';
+    }).join('');
+  }
+  $('#plates').addEventListener('click',function(e){
+    var el=e.target.closest('.pchip'); if(!el) return;
+    var p=parseFloat(el.dataset.p), i=active[unit].indexOf(p);
+    if(i>=0) active[unit].splice(i,1); else active[unit].push(p);
+    drawPlates(); render();
+  });
+
+  /* ---------- units ---------- */
+  $('#units').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var u=b.dataset.u; if(u===unit) return;
+    var k=2.2046226;
+    var wv=num('#w',0);
+    $('#w').value = fmt(Math.round((u==='kg'? wv/k : wv*k)*2)/2);
+    unit=u;
+    $('#bar').value = (u==='lb')?45:20;
+    Array.prototype.forEach.call($('#units').children,function(x){x.classList.toggle('on',x.dataset.u===u)});
+    Array.prototype.forEach.call(document.querySelectorAll('.u'),function(x){x.textContent=u});
+    $('#w').step = (u==='kg')?0.5:0.5;
+    drawPlates(); render();
+  });
+
+  $('#tabs').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    tab=b.dataset.t;
+    Array.prototype.forEach.call($('#tabs').children,function(x){x.classList.toggle('on',x.dataset.t===tab)});
+    render();
+  });
+
+  ['#w','#r','#bar'].forEach(function(id){ $(id).addEventListener('input',render); });
+  $('#rpe').addEventListener('change',render);
+
+  drawPlates(); render();
+})();
+</script>
+</body>
+</html>
