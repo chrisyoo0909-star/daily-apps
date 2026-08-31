@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stops — the exposure triangle, solved</title>
+<style>
+  :root{
+    --bg:#0d0f12;
+    --panel:#161a20;
+    --panel2:#1d222a;
+    --line:#2a313c;
+    --ink:#e9edf3;
+    --dim:#8b95a5;
+    --amber:#ffb545;
+    --amber-dim:#7a5520;
+    --cyan:#5ad2e6;
+    --red:#ff6b6b;
+    --green:#6ee7a0;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 50% -12%, #1c222c 0%, rgba(28,34,44,0) 62%),
+      var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:18px 14px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:660px;margin:0 auto}
+
+  header{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  h1{
+    font-size:26px;margin:0;letter-spacing:-.5px;font-weight:750;
+    background:linear-gradient(92deg,#ffd9a0,var(--amber) 55%,#ff8a3d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tag{font-size:12px;color:var(--dim)}
+  .sub{font-size:12.5px;color:var(--dim);margin:2px 0 16px;line-height:1.5}
+
+  /* ---- camera bar ---- */
+  .rig{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:11px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;
+  }
+  .rig .fld{display:flex;flex-direction:column;gap:4px;flex:1 1 130px;min-width:118px}
+  .rig label{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  select,input[type=number],input[type=text]{
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:9px;padding:8px 9px;font-size:14px;font-family:inherit;width:100%;
+    appearance:none;-webkit-appearance:none;
+  }
+  select{background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:28px}
+  select:focus,input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,181,69,.13)}
+
+  /* ---- tabs ---- */
+  nav{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{
+    flex:1 0 auto;white-space:nowrap;background:var(--panel);border:1px solid var(--line);
+    color:var(--dim);font-family:inherit;font-size:13px;font-weight:600;padding:9px 13px;
+    border-radius:11px;cursor:pointer;transition:.16s;
+  }
+  nav button.on{background:linear-gradient(180deg,#2c2113,#211a11);border-color:var(--amber);color:var(--amber)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:13px}
+  .card h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 11px;font-weight:700}
+  .panel{display:none;animation:fade .22s ease}
+  .panel.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  /* ---- exposure dials ---- */
+  .dials{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .dial{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center;position:relative;transition:.16s}
+  .dial.auto{border-color:var(--amber);background:linear-gradient(180deg,#2a2114,#1d1811)}
+  .dial .nm{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+  .dial .val{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;margin:3px 0 1px}
+  .dial.auto .val{color:var(--amber)}
+  .dial .unit{font-size:10.5px;color:var(--dim);min-height:13px}
+  .dial .btns{display:flex;gap:6px;margin-top:8px}
+  .dial .btns button{
+    flex:1;background:#0f1318;border:1px solid var(--line);color:var(--ink);
+    font-size:16px;line-height:1;padding:7px 0;border-radius:8px;cursor:pointer;font-family:inherit;transition:.12s;
+  }
+  .dial .btns button:active{background:var(--amber);color:#171208;border-color:var(--amber)}
+  .dial .btns button:disabled{opacity:.28;cursor:default}
+  .lockrow{display:flex;gap:6px;margin-top:10px;align-items:center;font-size:11.5px;color:var(--dim);flex-wrap:wrap}
+  .chip{
+    background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:20px;
+    padding:5px 11px;font-size:11.5px;cursor:pointer;font-family:inherit;transition:.14s;font-weight:600;
+  }
+  .chip.on{background:var(--amber);color:#1a1206;border-color:var(--amber)}
+
+  .evbar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim);gap:8px;flex-wrap:wrap}
+  .evbar b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .warn{color:var(--red);font-size:12px;margin-top:8px;display:none}
+  .warn.on{display:block}
+
+  /* ---- preview scene ---- */
+  .scene{position:relative;width:100%;aspect-ratio:16/9;border-radius:11px;overflow:hidden;background:#0a0c10;border:1px solid var(--line)}
+  .scene svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .grain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;opacity:0}
+  .scenelbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:7px;gap:8px;flex-wrap:wrap}
+
+  /* ---- readouts ---- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:9px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .stat .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+  .stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+  .stat .v small{font-size:12px;color:var(--dim);font-weight:600}
+  .stat.hero{background:linear-gradient(160deg,#2b2114,#1a1610);border-color:var(--amber-dim)}
+  .stat.hero .v{color:var(--amber);font-size:26px}
+
+  /* ---- DOF ruler ---- */
+  .ruler{position:relative;height:56px;margin-top:13px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .ruler .zone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,rgba(255,181,69,.34),rgba(255,181,69,.14));border-left:1.5px solid var(--amber);border-right:1.5px solid var(--amber)}
+  .ruler .subj{position:absolute;top:0;bottom:0;width:2px;background:var(--cyan);box-shadow:0 0 9px var(--cyan)}
+  .ruler .tick{position:absolute;bottom:3px;font-size:9.5px;color:var(--dim);transform:translateX(-50%);white-space:nowrap}
+  .ruler .tickline{position:absolute;top:0;height:9px;width:1px;background:var(--line)}
+
+  .row{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap;margin-bottom:11px}
+  .row .fld{flex:1 1 110px;display:flex;flex-direction:column;gap:4px}
+  .row label{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+
+  .btn{
+    background:linear-gradient(180deg,var(--amber),#f09a2a);border:none;color:#1a1206;font-weight:750;
+    font-size:14px;padding:11px 18px;border-radius:11px;cursor:pointer;font-family:inherit;transition:.14s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-weight:600}
+
+  .ndgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:7px}
+  .nd{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 6px;text-align:center;cursor:pointer;transition:.14s}
+  .nd.on{background:linear-gradient(180deg,#2c2113,#1e1811);border-color:var(--amber)}
+  .nd .a{font-size:13.5px;font-weight:700}
+  .nd.on .a{color:var(--amber)}
+  .nd .b{font-size:10px;color:var(--dim);margin-top:2px}
+
+  .timer{display:flex;align-items:center;gap:13px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+  .ring{width:64px;height:64px;flex:0 0 auto}
+  .ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+  .ring .bgc{stroke:var(--line)}
+  .ring .fg{stroke:var(--amber);transition:stroke-dashoffset .25s linear}
+  .tnum{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tlab{font-size:11px;color:var(--dim)}
+
+  .note{font-size:11.5px;color:var(--dim);line-height:1.55;margin-top:11px}
+  .note b{color:#b9c3d1;font-weight:600}
+  footer{text-align:center;font-size:11px;color:#59616e;margin-top:22px;line-height:1.6}
+  @media(max-width:430px){
+    .dial .val{font-size:20px}
+    h1{font-size:23px}
+    .stat .v{font-size:18px}
+    .stat.hero .v{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Stops</h1><span class="tag">exposure, solved</span></header>
+  <p class="sub">Set your camera once. Move any dial and the rest follow — with a live preview of what actually changes in the frame.</p>
+
+  <div class="rig">
+    <div class="fld">
+      <label for="sensor">Sensor</label>
+      <select id="sensor"></select>
+    </div>
+    <div class="fld">
+      <label for="focal">Focal length (mm)</label>
+      <input id="focal" type="number" min="4" max="1200" step="1" value="50" inputmode="numeric">
+    </div>
+    <div class="fld">
+      <label for="mp">Megapixels</label>
+      <input id="mp" type="number" min="4" max="150" step="1" value="24" inputmode="numeric">
+    </div>
+    <div class="fld">
+      <label for="units">Units</label>
+      <select id="units"><option value="m">Meters</option><option value="ft">Feet</option></select>
+    </div>
+  </div>
+
+  <nav>
+    <button class="on" data-t="exp">Exposure</button>
+    <button data-t="dof">Depth of field</button>
+    <button data-t="nd">ND filter</button>
+    <button data-t="sky">Night sky</button>
+  </nav>
+
+  <!-- ============ EXPOSURE ============ -->
+  <section class="panel on" id="p-exp">
+    <div class="card">
+      <h2>The triangle</h2>
+      <div class="dials" id="dials"></div>
+      <div class="lockrow">
+        <span>Auto-balance:</span>
+        <button class="chip" data-auto="ap">Aperture</button>
+        <button class="chip on" data-auto="sh">Shutter</button>
+        <button class="chip" data-auto="is">ISO</button>
+      </div>
+      <div class="evbar">
+        <span>Light value <b id="ev">—</b> EV<small style="color:var(--dim)">₁₀₀</small></span>
+        <span id="evScene" style="text-align:right"></span>
+      </div>
+      <div class="warn" id="expWarn"></div>
+    </div>
+
+    <div class="card">
+      <h2>What the frame sees</h2>
+      <div class="scene">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2a3d5c"/><stop offset="55%" stop-color="#5b7ba3"/><stop offset="100%" stop-color="#c39a72"/>
+            </linearGradient>
+            <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3c4f52"/><stop offset="100%" stop-color="#232f34"/>
+            </linearGradient>
+            <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2c3a30"/><stop offset="100%" stop-color="#151d19"/>
+            </linearGradient>
+            <filter id="bokeh" x="-25%" y="-25%" width="150%" height="150%">
+              <feGaussianBlur id="bokehBlur" stdDeviation="0"/>
+            </filter>
+            <filter id="smear" x="-60%" y="-30%" width="220%" height="160%">
+              <feGaussianBlur id="smearBlur" stdDeviation="0 0"/>
+            </filter>
+          </defs>
+
+          <g filter="url(#bokeh)">
+            <rect x="-20" y="-20" width="360" height="130" fill="url(#sky)"/>
+            <circle cx="252" cy="40" r="15" fill="#ffd9a0" opacity=".85"/>
+            <path d="M-20 108 L40 66 L92 108 Z" fill="url(#hill)"/>
+            <path d="M60 108 L124 58 L188 108 Z" fill="url(#hill)" opacity=".92"/>
+            <path d="M150 108 L214 72 L280 108 Z" fill="url(#hill)" opacity=".8"/>
+            <circle cx="30" cy="86" r="7" fill="#f6d38a" opacity=".5"/>
+            <circle cx="196" cy="80" r="6" fill="#ffe1a8" opacity=".45"/>
+            <circle cx="288" cy="92" r="9" fill="#ffcf90" opacity=".4"/>
+          </g>
+
+          <rect x="-20" y="106" width="360" height="94" fill="url(#ground)"/>
+
+          <!-- sharp foreground subject -->
+          <g>
+            <ellipse cx="96" cy="164" rx="30" ry="6" fill="#0b0f0c" opacity=".55"/>
+            <path d="M96 96 C82 96 76 108 76 122 L76 152 L86 152 L88 128 L104 128 L106 152 L116 152 L116 122 C116 108 110 96 96 96 Z" fill="#d8dfe8"/>
+            <circle cx="96" cy="86" r="11" fill="#e8eef6"/>
+            <rect x="86" y="118" width="20" height="13" rx="3" fill="#3a4453"/>
+            <circle cx="96" cy="124" r="4" fill="#111820"/>
+          </g>
+
+          <!-- moving element -->
+          <g filter="url(#smear)" id="mover">
+            <ellipse cx="226" cy="132" rx="21" ry="9" fill="#ff8a54"/>
+            <circle cx="212" cy="139" r="5" fill="#2a2f38"/>
+            <circle cx="240" cy="139" r="5" fill="#2a2f38"/>
+            <rect x="218" y="120" width="17" height="9" rx="3" fill="#ffb07a"/>
+          </g>
+        </svg>
+        <svg class="grain" id="grain" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter>
+          <rect width="100" height="100" filter="url(#noise)"/>
+        </svg>
+      </div>
+      <div class="scenelbl">
+        <span id="lblBokeh">background blur</span>
+        <span id="lblMotion">motion</span>
+        <span id="lblNoise">noise</span>
+      </div>
+      <p class="note">All three settings above give the <b>same brightness</b> — that's the point. What changes is how much is in focus, whether movement freezes, and how clean the file is.</p>
+    </div>
+  </section>
+
+  <!-- ============ DOF ============ -->
+  <section class="panel" id="p-dof">
+    <div class="card">
+      <h2>Focus distance</h2>
+      <div class="row">
+        <div class="fld">
+          <label for="dist">Distance to subject (<span class="uu">m</span>)</label>
+          <input id="dist" type="number" min="0.05" step="0.1" value="3" inputmode="decimal">
+        </div>
+        <div class="fld">
+          <label for="dofAp">Aperture</label>
+          <select id="dofAp"></select>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="stat hero"><div class="k">Depth of field</div><div class="v" id="dofTotal">—</div></div>
+        <div class="stat"><div class="k">Near limit</div><div class="v" id="dofNear">—</div></div>
+        <div class="stat"><div class="k">Far limit</div><div class="v" id="dofFar">—</div></div>
+      </div>
+      <div class="ruler" id="ruler"></div>
+      <div class="grid2" style="margin-top:11px">
+        <div class="stat"><div class="k">Hyperfocal distance</div><div class="v" id="hyper">—</div></div>
+        <div class="stat"><div class="k">Circle of confusion</div><div class="v" id="coc">—</div></div>
+      </div>
+      <p class="note">Focus at the <b>hyperfocal distance</b> and everything from half that distance to infinity is acceptably sharp — the landscape photographer's cheat code. The ruler is log-scaled; cyan is where you focused.</p>
+    </div>
+  </section>
+
+  <!-- ============ ND ============ -->
+  <section class="panel" id="p-nd">
+    <div class="card">
+      <h2>Pick your filter</h2>
+      <div class="ndgrid" id="ndGrid"></div>
+      <div class="row" style="margin:13px 0 0">
+        <div class="fld">
+          <label for="ndBase">Metered shutter (no filter)</label>
+          <select id="ndBase"></select>
+        </div>
+        <div class="fld" style="flex:0 0 auto">
+          <label for="ndStack">Stack</label>
+          <select id="ndStack"><option value="1">×1</option><option value="2">×2 filters</option></select>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <div class="stat hero"><div class="k">New shutter speed</div><div class="v" id="ndOut">—</div></div>
+        <div class="stat"><div class="k">Light held back</div><div class="v" id="ndStops">—</div></div>
+      </div>
+      <div class="timer">
+        <svg class="ring" viewBox="0 0 64 64">
+          <circle class="bgc" cx="32" cy="32" r="27"/>
+          <circle class="fg" id="ringFg" cx="32" cy="32" r="27" transform="rotate(-90 32 32)" stroke-dasharray="169.6" stroke-dashoffset="0"/>
+        </svg>
+        <div style="flex:1">
+          <div class="tnum" id="tNum">—</div>
+          <div class="tlab" id="tLab">bulb timer</div>
+        </div>
+        <button class="btn" id="tBtn">Start</button>
+      </div>
+      <p class="note">Longer than 30s means <b>bulb mode</b> — hold the shutter open and use the timer. Very dark filters can also shift colour, so shoot raw.</p>
+    </div>
+  </section>
+
+  <!-- ============ SKY ============ -->
+  <section class="panel" id="p-sky">
+    <div class="card">
+      <h2>How long before stars trail</h2>
+      <div class="grid2">
+        <div class="stat hero"><div class="k">NPF rule (recommended)</div><div class="v" id="npf">—</div></div>
+        <div class="stat"><div class="k">500 rule (rough)</div><div class="v" id="r500">—</div></div>
+      </div>
+      <div class="grid3" style="margin-top:9px">
+        <div class="stat"><div class="k">Pixel pitch</div><div class="v" id="pitch">—</div></div>
+        <div class="stat"><div class="k">Full-frame equiv.</div><div class="v" id="efl">—</div></div>
+        <div class="stat"><div class="k">Suggested ISO</div><div class="v" id="skyIso">—</div></div>
+      </div>
+      <div class="row" style="margin:13px 0 0">
+        <div class="fld">
+          <label for="skyAp">Aperture</label>
+          <select id="skyAp"></select>
+        </div>
+        <div class="fld">
+          <label for="skyBright">Sky darkness</label>
+          <select id="skyBright">
+            <option value="0">City / bright suburbs</option>
+            <option value="1" selected>Rural, some glow</option>
+            <option value="2">Truly dark sky</option>
+          </select>
+        </div>
+      </div>
+      <p class="note">The <b>500 rule</b> is a napkin estimate from the film days. The <b>NPF rule</b> accounts for your aperture and pixel pitch, so it's much stricter on modern high-resolution sensors — trust it if you plan to view at 100%.</p>
+    </div>
+  </section>
+
+  <footer>Stops · all math runs in your browser · nothing is saved</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- scales (1/3-stop increments) ---------------- */
+  var APS = [1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
+  var ISOS = [50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,102400];
+  // shutter values in seconds, fast -> slow
+  var SHUT = [];
+  (function(){
+    var fracs = [8000,6400,5000,4000,3200,2500,2000,1600,1250,1000,800,640,500,400,320,250,200,160,125,100,80,60,50,40,30,25,20,15,13,10,8,6,5,4,3];
+    for(var i=0;i<fracs.length;i++) SHUT.push({v:1/fracs[i], l:"1/"+fracs[i]});
+    var longs = [[0.4,'0.4"'],[0.5,'1/2'],[0.6,'0.6"'],[0.8,'0.8"'],[1,'1"'],[1.3,'1.3"'],[1.6,'1.6"'],[2,'2"'],[2.5,'2.5"'],[3.2,'3.2"'],[4,'4"'],[5,'5"'],[6,'6"'],[8,'8"'],[10,'10"'],[13,'13"'],[15,'15"'],[20,'20"'],[25,'25"'],[30,'30"']];
+    for(var j=0;j<longs.length;j++) SHUT.push({v:longs[j][0], l:longs[j][1]});
+  })();
+
+  var SENSORS = [
+    {n:"Full frame (35mm)",   w:36,   crop:1,    coc:0.029},
+    {n:"APS-C (Nikon/Sony)",  w:23.6, crop:1.52, coc:0.019},
+    {n:"APS-C (Canon)",       w:22.3, crop:1.61, coc:0.018},
+    {n:"Micro Four Thirds",   w:17.3, crop:2,    coc:0.015},
+    {n:"1-inch",              w:13.2, crop:2.72, coc:0.011},
+    {n:"Medium format (44×33)",w:43.8,crop:0.82, coc:0.035}
+  ];
+
+  var NDS = [
+    {n:"None",      s:0},
+    {n:"ND2",       s:1},
+    {n:"ND4",       s:2},
+    {n:"ND8",       s:3},
+    {n:"ND16",      s:4},
+    {n:"ND64",      s:6},
+    {n:"ND400",     s:8.64},
+    {n:"ND1000",    s:10},
+    {n:"ND100000",  s:16.6}
+  ];
+
+  /* ---------------- state ---------------- */
+  var S = {
+    ap: APS.indexOf(5.6),
+    sh: 0,
+    is: ISOS.indexOf(100),
+    auto: "sh",
+    sensor: 0,
+    nd: 3,
+    ndStack: 1,
+    ndBase: 0,
+    timerId: null,
+    timerLeft: 0,
+    timerTotal: 0
+  };
+  S.sh = idxOfShutter(1/125);
+  S.ndBase = idxOfShutter(1/60);
+
+  function idxOfShutter(v){
+    var best=0, bd=Infinity;
+    for(var i=0;i<SHUT.length;i++){ var d=Math.abs(Math.log(SHUT[i].v/v)); if(d<bd){bd=d;best=i;} }
+    return best;
+  }
+  function $(id){ return document.getElementById(id); }
+  function clamp(x,a,b){ return x<a?a:(x>b?b:x); }
+
+  /* ---------------- exposure math ----------------
+     Exposure stays constant when  N^2 / (t * ISO)  is constant.
+     EV at ISO100 = log2(N^2/t) - log2(ISO/100)
+  ------------------------------------------------ */
+  function apV(){ return APS[S.ap]; }
+  function shV(){ return SHUT[S.sh].v; }
+  function isV(){ return ISOS[S.is]; }
+  function ev100(){
+    return Math.log2(apV()*apV()/shV()) - Math.log2(isV()/100);
+  }
+
+  /* ---------------- build UI ---------------- */
+  var selSensor = $("sensor");
+  SENSORS.forEach(function(s,i){
+    var o=document.createElement("option"); o.value=i; o.textContent=s.n; selSensor.appendChild(o);
+  });
+
+  function fillAp(sel){
+    sel.innerHTML="";
+    APS.forEach(function(a,i){
+      var o=document.createElement("option"); o.value=i; o.textContent="f/"+a; sel.appendChild(o);
+    });
+  }
+  function fillSh(sel){
+    sel.innerHTML="";
+    SHUT.forEach(function(s,i){
+      var o=document.createElement("option"); o.value=i; o.textContent=s.l+(s.v>=1?" sec":""); sel.appendChild(o);
+    });
+  }
+  fillAp($("dofAp")); fillAp($("skyAp")); fillSh($("ndBase"));
+
+  var DIALS = [
+    {k:"ap", nm:"Aperture", pre:"f/"},
+    {k:"sh", nm:"Shutter",  pre:""},
+    {k:"is", nm:"ISO",      pre:""}
+  ];
+  var dialsEl = $("dials");
+  DIALS.forEach(function(d){
+    var el=document.createElement("div");
+    el.className="dial"; el.dataset.k=d.k;
+    el.innerHTML='<div class="nm">'+d.nm+'</div><div class="val"></div><div class="unit"></div>'+
+      '<div class="btns"><button data-d="-1" aria-label="down">−</button><button data-d="1" aria-label="up">+</button></div>';
+    dialsEl.appendChild(el);
+  });
+
+  var ndGrid = $("ndGrid");
+  NDS.forEach(function(n,i){
+    var el=document.createElement("div");
+    el.className="nd"+(i===S.nd?" on":"");
+    el.dataset.i=i;
+    el.innerHTML='<div class="a">'+n.n+'</div><div class="b">'+(n.s===0?"—":(Math.round(n.s*10)/10)+" stops")+'</div>';
+    ndGrid.appendChild(el);
+  });
+
+  /* ---------------- exposure interaction ---------------- */
+  // Change a dial; keep exposure constant by shifting the "auto" dial by the
+  // opposite number of thirds. Aperture & shutter & ISO scales are all 1/3-stop
+  // per index, but the direction of compensation differs:
+  //   +1 index on aperture (smaller hole)  -> -1/3 stop of light
+  //   +1 index on shutter  (longer)        -> +1/3 stop of light
+  //   +1 index on ISO      (higher)        -> +1/3 stop of light
+  var SIGN = { ap:-1, sh:+1, is:+1 };
+  var LEN  = { ap:APS.length, sh:SHUT.length, is:ISOS.length };
+
+  function step(k, dir){
+    if(k===S.auto) return;
+    var ni = S[k] + dir;
+    if(ni<0 || ni>=LEN[k]) return;
+    var lightDelta = SIGN[k]*dir;                 // thirds of a stop gained
+    var a = S.auto;
+    var need = -lightDelta / SIGN[a];             // index change on auto dial
+    var na = S[a] + need;
+    if(na<0 || na>=LEN[a]){
+      flash(a+" is maxed out — switch which dial auto-balances.");
+      return;
+    }
+    S[k]=ni; S[a]=na;
+    render();
+  }
+  var warnT=null;
+  function flash(msg){
+    var w=$("expWarn"); w.textContent=msg; w.classList.add("on");
+    clearTimeout(warnT); warnT=setTimeout(function(){ w.classList.remove("on"); },2600);
+  }
+
+  dialsEl.addEventListener("click", function(e){
+    var b=e.target.closest("button[data-d]"); if(!b) return;
+    var k=b.closest(".dial").dataset.k;
+    step(k, parseInt(b.dataset.d,10));
+  });
+  document.querySelectorAll("[data-auto]").forEach(function(c){
+    c.addEventListener("click", function(){
+      S.auto=c.dataset.auto;
+      document.querySelectorAll("[data-auto]").forEach(function(x){ x.classList.toggle("on", x===c); });
+      render();
+    });
+  });
+
+  /* ---------------- units ---------------- */
+  function isFeet(){ return $("units").value==="ft"; }
+  function fmtDist(mm){
+    if(!isFinite(mm)) return "∞";
+    if(isFeet()){
+      var ft = mm/304.8;
+      if(ft<1) return (ft*12).toFixed(1)+'<small> in</small>';
+      if(ft<100) return ft.toFixed(ft<10?2:1)+'<small> ft</small>';
+      return Math.round(ft).toLocaleString()+'<small> ft</small>';
+    }
+    var m = mm/1000;
+    if(m<1) return Math.round(m*100)+'<small> cm</small>';
+    if(m<100) return m.toFixed(m<10?2:1)+'<small> m</small>';
+    return Math.round(m).toLocaleString()+'<small> m</small>';
+  }
+  function distToMM(v){ return isFeet() ? v*304.8 : v*1000; }
+
+  /* ---------------- DOF ---------------- */
+  function dofCalc(f, N, sMM, c){
+    var H = (f*f)/(N*c) + f;                       // hyperfocal, mm
+    var near = sMM*(H-f)/(H + sMM - 2*f);
+    var far  = (sMM < H) ? sMM*(H-f)/(H - sMM) : Infinity;
+    return {H:H, near:near, far:far};
+  }
+
+  function renderDOF(){
+    var sen = SENSORS[S.sensor];
+    var f = clamp(parseFloat($("focal").value)||50, 1, 2000);
+    var N = APS[parseInt($("dofAp").value,10)];
+    var sMM = clamp(distToMM(parseFloat($("dist").value)||1), 20, 2e7);
+    var d = dofCalc(f, N, sMM, sen.coc);
+
+    $("dofNear").innerHTML = fmtDist(d.near);
+    $("dofFar").innerHTML  = fmtDist(d.far);
+    $("dofTotal").innerHTML = isFinite(d.far) ? fmtDist(d.far-d.near) : "∞";
+    $("hyper").innerHTML = fmtDist(d.H);
+    $("coc").innerHTML = sen.coc.toFixed(3)+'<small> mm</small>';
+
+    // log ruler from 0.3x near .. 3x far (bounded)
+    var lo = Math.max(d.near*0.35, 50);
+    var hi = isFinite(d.far) ? d.far*2.2 : Math.max(d.H*3, sMM*3);
+    if(hi<=lo) hi=lo*10;
+    var L=Math.log(lo), Hh=Math.log(hi), span=Hh-L;
+    function pos(mm){ return clamp((Math.log(Math.max(mm,lo))-L)/span,0,1)*100; }
+
+    var r=$("ruler"); r.innerHTML="";
+    var z=document.createElement("div"); z.className="zone";
+    var a=pos(d.near), b=isFinite(d.far)?pos(d.far):100;
+    z.style.left=a+"%"; z.style.width=Math.max(b-a,1.2)+"%"; r.appendChild(z);
+    var sj=document.createElement("div"); sj.className="subj"; sj.style.left=pos(sMM)+"%"; r.appendChild(sj);
+
+    // ticks at nice round distances
+    var unitDiv = isFeet()?304.8:1000;
+    var cand=[0.1,0.2,0.3,0.5,0.75,1,1.5,2,3,5,7.5,10,15,20,30,50,75,100,150,200,300,500,1000];
+    var placed=[];
+    cand.forEach(function(u){
+      var mm=u*unitDiv;
+      if(mm<lo||mm>hi) return;
+      var p=pos(mm);
+      for(var i=0;i<placed.length;i++){ if(Math.abs(placed[i]-p)<11) return; }
+      placed.push(p);
+      var tl=document.createElement("div"); tl.className="tickline"; tl.style.left=p+"%"; r.appendChild(tl);
+      var t=document.createElement("div"); t.className="tick"; t.style.left=p+"%";
+      t.textContent=(u<1?u:u.toLocaleString())+(isFeet()?"ft":"m"); r.appendChild(t);
+    });
+    document.querySelectorAll(".uu").forEach(function(e){ e.textContent=isFeet()?"ft":"m"; });
+  }
+
+  /* ---------------- ND ---------------- */
+  function fmtSeconds(t){
+    if(t < 1) {
+      // snap to a familiar fraction
+      var den = Math.round(1/t);
+      var nice=[8000,6400,5000,4000,3200,2500,2000,1600,1250,1000,800,640,500,400,320,250,200,160,125,100,80,60,50,40,30,25,20,15,13,10,8,6,5,4,3,2];
+      var best=nice[0], bd=Infinity;
+      nice.forEach(function(n){ var d=Math.abs(Math.log(n/den)); if(d<bd){bd=d;best=n;} });
+      return "1/"+best+'<small> sec</small>';
+    }
+    if(t<60) return (t<10?t.toFixed(1):Math.round(t))+'<small> sec</small>';
+    var m=Math.floor(t/60), s=Math.round(t%60);
+    if(s===60){m++;s=0;}
+    if(m<60) return m+'<small>m </small>'+s+'<small>s</small>';
+    var h=Math.floor(m/60); m=m%60;
+    return h+'<small>h </small>'+m+'<small>m</small>';
+  }
+  function ndSeconds(){
+    var stops = NDS[S.nd].s * (parseInt($("ndStack").value,10)||1);
+    var base = SHUT[parseInt($("ndBase").value,10)].v;
+    return {t: base*Math.pow(2,stops), stops:stops};
+  }
+  function renderND(){
+    var r=ndSeconds();
+    $("ndOut").innerHTML = fmtSeconds(r.t);
+    $("ndStops").innerHTML = (Math.round(r.stops*10)/10)+'<small> stops</small>';
+    document.querySelectorAll(".nd").forEach(function(el){
+      el.classList.toggle("on", parseInt(el.dataset.i,10)===S.nd);
+    });
+    if(!S.timerId){
+      $("tNum").textContent = r.t>=1 ? fmtPlain(r.t) : "—";
+      $("tLab").textContent = r.t>30 ? "bulb timer — hold shutter open" : (r.t>=1?"timer ready":"faster than 1 sec, no timer needed");
+      $("tBtn").disabled = r.t<1;
+      $("tBtn").style.opacity = r.t<1 ? .4 : 1;
+      setRing(1);
+    }
+  }
+  function fmtPlain(t){
+    if(t<60) return (t<10?t.toFixed(1):Math.round(t))+"s";
+    var m=Math.floor(t/60), s=Math.round(t%60); if(s===60){m++;s=0;}
+    if(m<60) return m+"m "+(s<10?"0":"")+s+"s";
+    var h=Math.floor(m/60); return h+"h "+(m%60)+"m";
+  }
+  function setRing(frac){
+    var C=2*Math.PI*27;
+    $("ringFg").setAttribute("stroke-dashoffset", String(C*(1-clamp(frac,0,1))));
+  }
+  $("tBtn").addEventListener("click", function(){
+    if(S.timerId){
+      clearInterval(S.timerId); S.timerId=null; $("tBtn").textContent="Start"; renderND(); return;
+    }
+    var t=ndSeconds().t;
+    if(t<1) return;
+    if(t>36000) t=36000;
+    S.timerTotal=t; S.timerLeft=t;
+    $("tBtn").textContent="Stop";
+    $("tLab").textContent="counting down";
+    var start=Date.now();
+    S.timerId=setInterval(function(){
+      S.timerLeft = S.timerTotal - (Date.now()-start)/1000;
+      if(S.timerLeft<=0){
+        clearInterval(S.timerId); S.timerId=null;
+        $("tNum").textContent="Close it ✓"; $("tLab").textContent="exposure complete";
+        $("tBtn").textContent="Start"; setRing(0);
+        return;
+      }
+      $("tNum").textContent=fmtPlain(S.timerLeft);
+      setRing(S.timerLeft/S.timerTotal);
+    },100);
+  });
+
+  /* ---------------- night sky ---------------- */
+  function pixelPitch(){
+    var sen=SENSORS[S.sensor];
+    var mp=clamp(parseFloat($("mp").value)||24, 1, 400)*1e6;
+    // assume 3:2 for most, 4:3 for MFT/1-inch
+    var ar = (S.sensor===3||S.sensor===4) ? 4/3 : 3/2;
+    var wpx = Math.sqrt(mp*ar);
+    return sen.w*1000/wpx;   // microns
+  }
+  function renderSky(){
+    var sen=SENSORS[S.sensor];
+    var f=clamp(parseFloat($("focal").value)||50,1,2000);
+    var N=APS[parseInt($("skyAp").value,10)];
+    var p=pixelPitch();
+    var t500 = 500/(f*sen.crop);
+    var tnpf = (35*N + 30*p)/f;
+    $("r500").innerHTML = (t500<10?t500.toFixed(1):Math.round(t500))+'<small> sec</small>';
+    $("npf").innerHTML  = (tnpf<10?tnpf.toFixed(1):Math.round(tnpf))+'<small> sec</small>';
+    $("pitch").innerHTML = p.toFixed(2)+'<small> µm</small>';
+    $("efl").innerHTML = Math.round(f*sen.crop)+'<small> mm</small>';
+
+    // Suggested ISO: aim for a target EV of roughly -6 (rural) using t=NPF, given N.
+    // EV100 = log2(N^2/t) - log2(ISO/100)  ->  ISO = 100 * 2^(log2(N^2/t) - EVtarget)
+    var b=parseInt($("skyBright").value,10);
+    var evTarget = [-4.0,-5.5,-6.5][b];
+    var iso = 100*Math.pow(2, Math.log2(N*N/tnpf) - evTarget);
+    // snap to nearest standard ISO
+    var best=ISOS[0], bd=Infinity;
+    ISOS.forEach(function(v){ var d=Math.abs(Math.log(v/iso)); if(d<bd){bd=d;best=v;} });
+    $("skyIso").innerHTML = "ISO "+best.toLocaleString();
+  }
+
+  /* ---------------- preview scene ---------------- */
+  function renderScene(){
+    var f=clamp(parseFloat($("focal").value)||50,1,2000);
+    var N=apV(), t=shV(), iso=isV();
+    // background blur: wider aperture + longer lens = more separation
+    var blur = clamp((f/50)*(26/N), 0, 22);
+    $("bokehBlur").setAttribute("stdDeviation", blur.toFixed(2));
+    // motion smear: proportional to shutter time
+    var sm = clamp(t*260, 0, 34);
+    $("smearBlur").setAttribute("stdDeviation", sm.toFixed(2)+" "+(sm*0.12).toFixed(2));
+    // noise
+    var nz = clamp(Math.log2(iso/100)/10, 0, 1)*0.62;
+    $("grain").style.opacity = nz.toFixed(3);
+
+    $("lblBokeh").textContent = blur<1.2 ? "everything sharp" : (blur<5 ? "gentle separation" : (blur<12 ? "creamy background" : "background melted"));
+    $("lblMotion").textContent = t<=1/500 ? "action frozen" : (t<=1/125 ? "motion frozen" : (t<=1/30 ? "slight blur" : (t<1 ? "streaking" : "long trails")));
+    $("lblNoise").textContent = iso<=400 ? "clean file" : (iso<=3200 ? "a little grain" : (iso<=12800 ? "visible noise" : "very noisy"));
+  }
+
+  /* ---------------- master render ---------------- */
+  function render(){
+    DIALS.forEach(function(d){
+      var el=dialsEl.querySelector('.dial[data-k="'+d.k+'"]');
+      el.classList.toggle("auto", S.auto===d.k);
+      var val, unit;
+      if(d.k==="ap"){ val="f/"+APS[S.ap]; unit = APS[S.ap]<=2.8?"lots of light":(APS[S.ap]>=11?"deep focus":"balanced"); }
+      else if(d.k==="sh"){ val=SHUT[S.sh].l; unit = SHUT[S.sh].v>=1?"seconds":"second"; }
+      else { val=ISOS[S.is].toLocaleString(); unit = ISOS[S.is]<=400?"clean":(ISOS[S.is]<=3200?"usable":"noisy"); }
+      el.querySelector(".val").textContent=val;
+      el.querySelector(".unit").textContent=unit;
+      var btns=el.querySelectorAll("button");
+      btns[0].disabled = (S.auto===d.k) || S[d.k]<=0;
+      btns[1].disabled = (S.auto===d.k) || S[d.k]>=LEN[d.k]-1;
+    });
+
+    var ev=ev100();
+    $("ev").textContent = (ev>=0?"+":"")+ev.toFixed(1);
+    var scene = ev>=15?"bright sun on snow/sand" : ev>=14?"bright sunlight" : ev>=12?"hazy sun" : ev>=10?"overcast day"
+      : ev>=8?"open shade / sunset" : ev>=6?"bright indoors" : ev>=3?"dim indoors" : ev>=0?"night, city lights"
+      : ev>=-4?"deep dusk" : "starlight";
+    $("evScene").textContent = scene;
+
+    renderScene(); renderDOF(); renderND(); renderSky();
+  }
+
+  /* ---------------- events ---------------- */
+  document.querySelectorAll("nav button").forEach(function(b){
+    b.addEventListener("click", function(){
+      document.querySelectorAll("nav button").forEach(function(x){ x.classList.toggle("on", x===b); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("on", p.id==="p-"+b.dataset.t); });
+    });
+  });
+  selSensor.addEventListener("change", function(){ S.sensor=parseInt(selSensor.value,10); render(); });
+  ["focal","mp","dist","units"].forEach(function(id){
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  });
+  $("dofAp").addEventListener("change", render);
+  $("skyAp").addEventListener("change", render);
+  $("skyBright").addEventListener("change", render);
+  $("ndBase").addEventListener("change", render);
+  $("ndStack").addEventListener("change", render);
+  ndGrid.addEventListener("click", function(e){
+    var el=e.target.closest(".nd"); if(!el) return;
+    S.nd=parseInt(el.dataset.i,10);
+    if(S.timerId){ clearInterval(S.timerId); S.timerId=null; $("tBtn").textContent="Start"; }
+    render();
+  });
+
+  // keyboard: arrows nudge the first non-auto dial
+  document.addEventListener("keydown", function(e){
+    if(!$("p-exp").classList.contains("on")) return;
+    if(["INPUT","SELECT","TEXTAREA"].indexOf(e.target.tagName)>=0) return;
+    var k = S.auto==="ap" ? "sh" : "ap";
+    if(e.key==="ArrowRight"){ step(k,1); e.preventDefault(); }
+    if(e.key==="ArrowLeft"){ step(k,-1); e.preventDefault(); }
+  });
+
+  // sensible defaults for the secondary aperture selectors
+  $("dofAp").value = String(APS.indexOf(2.8));
+  $("skyAp").value = String(APS.indexOf(2.8));
+  $("ndBase").value = String(S.ndBase);
+  render();
+})();
+</script>
+</body>
+</html>

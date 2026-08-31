@@ -236,5 +236,12 @@
     "emoji": "🏋️",
     "date": "2026-08-30",
     "blurb": "Log one set and it gives you your estimated max, every training percentage, a warm-up ramp — and the exact plates to slide on each side of the bar."
+  },
+  {
+    "file": "apps/app-2026-08-31-stops.html",
+    "name": "Stops",
+    "emoji": "📷",
+    "date": "2026-08-31",
+    "blurb": "Move any one of aperture, shutter or ISO and the other two rebalance to hold the exposure — with a live preview of the blur, motion and grain you just traded for, plus depth-of-field, ND filter and star-trail math."
   }
 ]
