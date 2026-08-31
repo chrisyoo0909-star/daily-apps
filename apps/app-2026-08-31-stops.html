@@ -507,7 +507,8 @@
     var need = -lightDelta / SIGN[a];             // index change on auto dial
     var na = S[a] + need;
     if(na<0 || na>=LEN[a]){
-      flash(a+" is maxed out — switch which dial auto-balances.");
+      var NAMES={ap:"Aperture", sh:"Shutter", is:"ISO"};
+      flash(NAMES[a]+" has run out of range — pick a different dial to auto-balance.");
       return;
     }
     S[k]=ni; S[a]=na;
@@ -537,12 +538,15 @@
   function fmtDist(mm){
     if(!isFinite(mm)) return "∞";
     if(isFeet()){
+      var inch = mm/25.4;
+      if(inch<1) return inch.toFixed(2)+'<small> in</small>';
       var ft = mm/304.8;
       if(ft<1) return (ft*12).toFixed(1)+'<small> in</small>';
       if(ft<100) return ft.toFixed(ft<10?2:1)+'<small> ft</small>';
       return Math.round(ft).toLocaleString()+'<small> ft</small>';
     }
     var m = mm/1000;
+    if(m<0.1) return (m<0.01 ? mm.toFixed(1) : mm.toFixed(0))+'<small> mm</small>';
     if(m<1) return Math.round(m*100)+'<small> cm</small>';
     if(m<100) return m.toFixed(m<10?2:1)+'<small> m</small>';
     return Math.round(m).toLocaleString()+'<small> m</small>';
@@ -561,12 +565,13 @@
     var sen = SENSORS[S.sensor];
     var f = clamp(parseFloat($("focal").value)||50, 1, 2000);
     var N = APS[parseInt($("dofAp").value,10)];
-    var sMM = clamp(distToMM(parseFloat($("dist").value)||1), 20, 2e7);
+    // a subject can't be closer than roughly twice the focal length (1:1 macro limit)
+    var sMM = clamp(distToMM(parseFloat($("dist").value)||1), f*2, 2e7);
     var d = dofCalc(f, N, sMM, sen.coc);
 
     $("dofNear").innerHTML = fmtDist(d.near);
     $("dofFar").innerHTML  = fmtDist(d.far);
-    $("dofTotal").innerHTML = isFinite(d.far) ? fmtDist(d.far-d.near) : "∞";
+    $("dofTotal").innerHTML = isFinite(d.far) ? fmtDist(Math.max(d.far-d.near,0)) : "∞";
     $("hyper").innerHTML = fmtDist(d.H);
     $("coc").innerHTML = sen.coc.toFixed(3)+'<small> mm</small>';
 
