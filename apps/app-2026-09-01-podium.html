@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Podium — will your talk fit the clock?</title>
+<style>
+  :root{
+    --bg:#0e1116;
+    --panel:#161b23;
+    --panel2:#1c2230;
+    --line:#2a3242;
+    --text:#e8edf6;
+    --dim:#8b97ab;
+    --accent:#ffb454;
+    --accent2:#7ee0c0;
+    --over:#ff6b6b;
+    --under:#5fb0ff;
+    --ok:#7ee0c0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, #1d2536 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #241d2e 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 18px 60px}
+  header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:30px;margin:0;letter-spacing:-.02em}
+  h1 .dot{color:var(--accent)}
+  .tag{color:var(--dim);font-size:14px}
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-top:20px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);font-weight:600}
+  textarea{
+    width:100%;min-height:300px;resize:vertical;background:#0d1017;color:var(--text);
+    border:1px solid var(--line);border-radius:10px;padding:14px;font:15px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    outline:none;
+  }
+  textarea:focus{border-color:#3d4a63}
+  .hint{color:var(--dim);font-size:12.5px;margin-top:8px}
+  .hint code{background:#0d1017;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--accent2)}
+  .ctrls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  @media (max-width:520px){.ctrls{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{
+    background:#0d1017;border:1px solid var(--line);color:var(--dim);border-radius:999px;
+    padding:6px 11px;font-size:13px;cursor:pointer;transition:.15s;
+  }
+  .chip:hover{border-color:#44526d;color:var(--text)}
+  .chip.on{background:rgba(255,180,84,.14);border-color:var(--accent);color:var(--accent)}
+  .num{display:flex;align-items:center;gap:8px}
+  .num input{
+    width:76px;background:#0d1017;border:1px solid var(--line);color:var(--text);border-radius:8px;
+    padding:8px 10px;font:600 16px ui-sans-serif,system-ui;text-align:center;outline:none;
+  }
+  .num input:focus{border-color:#3d4a63}
+  .num span{color:var(--dim);font-size:13px}
+  input[type=range]{width:100%;accent-color:var(--accent);margin-top:4px}
+  .rangerow{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-top:2px}
+
+  .bigtime{font:700 54px/1 ui-sans-serif,system-ui;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .verdict{margin-top:10px;font-size:15px;font-weight:600}
+  .verdict small{display:block;font-weight:400;color:var(--dim);font-size:13px;margin-top:4px}
+  .bar{height:12px;border-radius:99px;background:#0d1017;border:1px solid var(--line);margin:16px 0 6px;overflow:hidden;position:relative}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .25s}
+  .barlbl{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .stat{background:#0d1017;border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+  .stat b{display:block;font:700 19px ui-sans-serif,system-ui;font-variant-numeric:tabular-nums}
+  .stat span{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:600;padding:0 8px 8px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(42,50,66,.55);font-variant-numeric:tabular-nums}
+  td.name{font-variant-numeric:normal}
+  tr:last-child td{border-bottom:none}
+  .mini{width:54px;height:6px;background:#0d1017;border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle}
+  .mini i{display:block;height:100%;background:var(--accent)}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);
+    background:#0d1017;color:var(--text);border-radius:10px;padding:11px 16px;font:600 15px ui-sans-serif,system-ui;
+    cursor:pointer;transition:.15s;
+  }
+  .btn:hover{border-color:#44526d}
+  .btn.primary{background:linear-gradient(180deg,#ffc06d,#f39c2a);color:#241703;border-color:transparent}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.wide{width:100%;margin-top:14px;padding:13px}
+
+  /* teleprompter */
+  .tp{position:fixed;inset:0;background:#07090d;z-index:50;display:none;flex-direction:column}
+  .tp.show{display:flex}
+  .tpbar{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .clock{font:700 26px ui-sans-serif,system-ui;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .pace{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;background:#0d1017;border:1px solid var(--line)}
+  .tpbar .spacer{flex:1}
+  .tpbar .btn{padding:8px 13px;font-size:14px}
+  .track{height:4px;background:#141a24}
+  .track i{display:block;height:100%;background:var(--accent);width:0}
+  .stage{flex:1;overflow-y:auto;position:relative;padding:8vh 6vw 60vh}
+  .stage h3{color:var(--accent);font-size:15px;letter-spacing:.14em;text-transform:uppercase;margin:34px 0 12px}
+  .stage p{font:400 clamp(21px,3.4vw,34px)/1.6 ui-sans-serif,system-ui;margin:0 0 18px;color:#3f4a5c}
+  .stage w{transition:color .1s}
+  .stage w.said{color:#7e8ba0}
+  .stage w.cur{color:#fff;background:rgba(255,180,84,.2);border-radius:4px;box-shadow:0 0 0 3px rgba(255,180,84,.2)}
+  .report{position:absolute;inset:0;background:#07090d;overflow-y:auto;padding:24px;display:none}
+  .report.show{display:block}
+  .report .inner{max-width:640px;margin:0 auto}
+  .report h2{font-size:22px;margin:0 0 4px}
+  .report p.sub{color:var(--dim);margin:0 0 20px;font-size:14px}
+  .over{color:var(--over)}.under{color:var(--under)}.ok{color:var(--ok)}
+  footer{margin-top:26px;color:#5c6779;font-size:12.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Podium<span class="dot">.</span></h1>
+    <div class="tag">Paste your talk. Find out if it fits the clock — then rehearse against a pacing cursor.</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="card">
+      <h2>Your script</h2>
+      <textarea id="script" spellcheck="false"></textarea>
+      <div class="hint">Start a line with <code># Heading</code> to break the talk into sections — each one gets its own timing.</div>
+
+      <div class="ctrls">
+        <div class="field">
+          <label>Target length</label>
+          <div class="num">
+            <input id="tmin" type="number" min="0" max="600" step="1" value="1">
+            <span>min</span>
+            <input id="tsec" type="number" min="0" max="59" step="5" value="30">
+            <span>sec</span>
+          </div>
+          <div class="chips" style="margin-top:9px">
+            <button class="chip" data-target="3">3 min</button>
+            <button class="chip" data-target="5">5 min</button>
+            <button class="chip" data-target="10">10 min</button>
+            <button class="chip" data-target="20">20 min</button>
+            <button class="chip" data-target="45">45 min</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Speaking pace — <b id="wpmLbl">130</b> wpm</label>
+          <input id="wpm" type="range" min="90" max="190" step="5" value="130">
+          <div class="rangerow"><span>90 · deliberate</span><span>190 · fast</span></div>
+          <div class="chips" style="margin-top:9px">
+            <button class="chip" data-wpm="110">Slow &amp; clear</button>
+            <button class="chip on" data-wpm="130">Natural</button>
+            <button class="chip" data-wpm="155">Brisk</button>
+          </div>
+        </div>
+
+        <div class="field" style="grid-column:1/-1">
+          <label>Pauses, breaths &amp; slide changes — <b id="pauseLbl">10</b>% on top</label>
+          <input id="pause" type="range" min="0" max="35" step="1" value="10">
+          <div class="rangerow"><span>no pauses</span><span>lots of room to breathe</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="card">
+        <h2>Estimated runtime</h2>
+        <div class="bigtime" id="est">0:00</div>
+        <div class="verdict" id="verdict">&nbsp;<small>&nbsp;</small></div>
+
+        <div class="bar"><i id="fill" style="width:0%"></i></div>
+        <div class="barlbl"><span>0:00</span><span id="targetLbl">target 5:00</span></div>
+
+        <div class="stats">
+          <div class="stat"><b id="sWords">0</b><span>words</span></div>
+          <div class="stat"><b id="sSecs">0</b><span>sections</span></div>
+          <div class="stat"><b id="sSpm">0</b><span>sec / 100 words</span></div>
+        </div>
+
+        <button class="btn primary wide" id="go">▶ Rehearse with pacing cursor</button>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Section timing</h2>
+        <table>
+          <thead><tr><th style="width:44%">Section</th><th>Words</th><th>Length</th><th>Starts</th></tr></thead>
+          <tbody id="secBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>Estimates only — the clock in the room is the one that counts. Nothing you type leaves this page.</footer>
+</div>
+
+<!-- TELEPROMPTER -->
+<div class="tp" id="tp">
+  <div class="tpbar">
+    <div class="clock" id="clock">0:00</div>
+    <div class="pace" id="pace">ready</div>
+    <div class="spacer"></div>
+    <button class="btn" id="playBtn">▶ Start</button>
+    <button class="btn" id="lapBtn">Section done ▸</button>
+    <button class="btn" id="resetBtn">Restart</button>
+    <button class="btn" id="exitBtn">Exit</button>
+  </div>
+  <div class="track"><i id="track"></i></div>
+  <div class="stage" id="stage"></div>
+  <div class="report" id="report"><div class="inner" id="reportInner"></div></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SAMPLE = [
+    "# Hook",
+    "Last spring I watched a very smart engineer give a very good talk to an empty room, because she ran fourteen minutes long and the room had a hard stop. The content was never the problem. The clock was.",
+    "",
+    "# The problem",
+    "Nobody rehearses out loud. We read the deck in our head at four hundred words a minute, decide it feels about right, and then discover on stage that we speak at a hundred and thirty.",
+    "Reading silently and speaking aloud are not the same activity, and the gap between them is where talks go to die.",
+    "",
+    "# What to do instead",
+    "Write the script. Count the words. Divide by your real speaking pace, then add ten percent back for the breaths and the slide changes and the one joke that always lands.",
+    "If the number is bigger than the slot you were given, cut words now, on a quiet afternoon, instead of improvising cuts in front of two hundred people.",
+    "",
+    "# Close",
+    "A talk that fits is a talk that finishes on its own terms. Give yourself the ending you actually wrote."
+  ].join("\n");
+
+  var $ = function(id){ return document.getElementById(id); };
+  var scriptEl=$("script"), tminEl=$("tmin"), tsecEl=$("tsec"), wpmEl=$("wpm"), pauseEl=$("pause");
+  var model = { sections:[], words:0, totalSec:0, targetSec:300 };
+
+  /* ---------- parsing ---------- */
+  function tokenize(line){
+    var t = line.replace(/[*_`>#]/g," ").trim();
+    if(!t) return [];
+    return t.split(/\s+/).filter(function(w){ return /[A-Za-z0-9À-ɏ]/.test(w) || w.length>0; });
+  }
+
+  function parse(text){
+    var lines = text.split(/\r?\n/);
+    var secs = [], cur = null, auto = 0;
+    function push(title){
+      cur = { title:title, paras:[], words:0 };
+      secs.push(cur);
+    }
+    push("Opening");
+    for(var i=0;i<lines.length;i++){
+      var line = lines[i];
+      var h = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+      var rule = /^\s*(-{3,}|\*{3,}|={3,})\s*$/.test(line);
+      if(h){ if(cur.words===0 && cur.paras.length===0){ cur.title = h[1]; } else { push(h[1]); } continue; }
+      if(rule){ auto++; if(cur.words>0) push("Section "+(secs.length+1)); continue; }
+      var w = tokenize(line);
+      if(w.length){ cur.paras.push(w); cur.words += w.length; }
+    }
+    secs = secs.filter(function(s){ return s.words>0; });
+    return secs;
+  }
+
+  /* ---------- math ---------- */
+  function fmt(s){
+    s = Math.max(0, Math.round(s));
+    var m = Math.floor(s/60), r = s%60;
+    return m + ":" + (r<10?"0":"") + r;
+  }
+  function fmtLong(s){
+    s = Math.max(0, Math.round(s));
+    if(s<60) return s + "s";
+    var m = Math.floor(s/60), r = s%60;
+    return m + "m " + (r<10?"0":"") + r + "s";
+  }
+
+  function compute(){
+    var wpm = +wpmEl.value;
+    var factor = 1 + (+pauseEl.value)/100;
+    var secs = parse(scriptEl.value);
+    var total = 0, words = 0;
+    for(var i=0;i<secs.length;i++){
+      secs[i].sec = secs[i].words / wpm * 60 * factor;
+      secs[i].start = total;
+      total += secs[i].sec;
+      words += secs[i].words;
+    }
+    model.sections = secs;
+    model.words = words;
+    model.totalSec = total;
+    model.targetSec = (+tminEl.value||0)*60 + (+tsecEl.value||0);
+    model.wpm = wpm;
+    model.factor = factor;
+    render();
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var t = model.totalSec, target = model.targetSec;
+    $("est").textContent = fmt(t);
+    $("sWords").textContent = model.words.toLocaleString();
+    $("sSecs").textContent = model.sections.length;
+    $("sSpm").textContent = model.words ? Math.round(100/model.wpm*60*model.factor) : 0;
+    $("targetLbl").textContent = "target " + fmt(target);
+
+    var pct = target>0 ? Math.min(100, t/target*100) : 0;
+    var fill = $("fill");
+    fill.style.width = pct.toFixed(1) + "%";
+    fill.style.background = t > target*1.02
+      ? "linear-gradient(90deg,#ff9a6b,#ff6b6b)"
+      : "linear-gradient(90deg,#7ee0c0,#ffb454)";
+
+    var v = $("verdict"), d = t - target;
+    var wordsPer = model.wpm/60/model.factor; // spoken words per second of runtime
+    if(!model.words){
+      v.innerHTML = "<span style='color:var(--dim)'>Paste a script to see the numbers.</span><small>&nbsp;</small>";
+    } else if(target<=0){
+      v.innerHTML = "Set a target length to compare.<small>&nbsp;</small>";
+    } else if(Math.abs(d) <= Math.max(8, target*0.03)){
+      v.innerHTML = "<span class='ok'>✓ Fits the slot.</span><small>Within " + fmtLong(Math.abs(d)) + " of your target — comfortable.</small>";
+    } else if(d > 0){
+      v.innerHTML = "<span class='over'>" + fmtLong(d) + " over</span>" +
+        "<small>Cut roughly <b>" + Math.round(d*wordsPer).toLocaleString() + " words</b> " +
+        "(" + Math.round(d/t*100) + "% of the script) to land on time.</small>";
+    } else {
+      v.innerHTML = "<span class='under'>" + fmtLong(-d) + " under</span>" +
+        "<small>Room for about <b>" + Math.round(-d*wordsPer).toLocaleString() + " more words</b> — or keep it as breathing space for questions.</small>";
+    }
+
+    var body = $("secBody");
+    body.innerHTML = "";
+    if(!model.sections.length){
+      body.innerHTML = "<tr><td colspan='4' style='color:var(--dim)'>No sections yet.</td></tr>";
+    }
+    var max = 0;
+    model.sections.forEach(function(s){ if(s.sec>max) max=s.sec; });
+    model.sections.forEach(function(s){
+      var tr = document.createElement("tr");
+      var pctBar = max ? (s.sec/max*100) : 0;
+      tr.innerHTML =
+        "<td class='name'>" + esc(s.title) + " <span class='mini'><i style='width:" + pctBar.toFixed(0) + "%'></i></span></td>" +
+        "<td>" + s.words + "</td>" +
+        "<td>" + fmt(s.sec) + "</td>" +
+        "<td style='color:var(--dim)'>" + fmt(s.start) + "</td>";
+      body.appendChild(tr);
+    });
+    $("go").disabled = model.words === 0;
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  /* ---------- teleprompter ---------- */
+  var spans = [], secStartIdx = [], running=false, elapsed=0, lastTick=0, raf=null, laps=[], curSec=0;
+  var stage=$("stage"), tp=$("tp");
+
+  function buildStage(){
+    stage.innerHTML = "";
+    spans = []; secStartIdx = [];
+    model.sections.forEach(function(s){
+      secStartIdx.push(spans.length);
+      var h = document.createElement("h3");
+      h.textContent = s.title;
+      stage.appendChild(h);
+      s.paras.forEach(function(words){
+        var p = document.createElement("p");
+        words.forEach(function(w){
+          var el = document.createElement("w");
+          el.textContent = w;
+          p.appendChild(el);
+          p.appendChild(document.createTextNode(" "));
+          spans.push(el);
+        });
+        stage.appendChild(p);
+      });
+    });
+  }
+
+  function openTP(){
+    compute();
+    if(!model.words) return;
+    buildStage();
+    resetRun();
+    tp.classList.add("show");
+    $("report").classList.remove("show");
+    document.body.style.overflow = "hidden";
+  }
+  function closeTP(){
+    pause();
+    tp.classList.remove("show");
+    document.body.style.overflow = "";
+  }
+  function resetRun(){
+    pause();
+    elapsed = 0; laps = []; curSec = 0;
+    for(var i=0;i<spans.length;i++) spans[i].className = "";
+    stage.scrollTop = 0;
+    $("report").classList.remove("show");
+    paint(true);
+  }
+  function play(){
+    if(running || !spans.length) return;
+    running = true; lastTick = performance.now();
+    $("playBtn").textContent = "❚❚ Pause";
+    raf = requestAnimationFrame(tick);
+  }
+  function pause(){
+    running = false;
+    if(raf) cancelAnimationFrame(raf);
+    raf = null;
+    $("playBtn").textContent = "▶ Start";
+  }
+  function toggle(){ running ? pause() : play(); }
+
+  function tick(now){
+    if(!running) return;
+    elapsed += (now - lastTick)/1000;
+    lastTick = now;
+    paint(false);
+    raf = requestAnimationFrame(tick);
+  }
+
+  var lastIdx = -1;
+  function paint(force){
+    var total = model.totalSec || 1;
+    var prog = Math.min(1, elapsed/total);
+    var idx = Math.min(spans.length-1, Math.floor(prog*spans.length));
+    $("clock").textContent = fmt(elapsed) + " / " + fmt(total);
+    $("track").style.width = (prog*100).toFixed(2) + "%";
+
+    var p = $("pace");
+    if(!running && elapsed===0){ p.textContent = "ready — press start, then read aloud"; p.style.color="var(--dim)"; }
+    else {
+      var left = total - elapsed;
+      p.textContent = left > 0 ? fmt(left) + " left · keep up with the highlight" : "over time by " + fmt(-left);
+      p.style.color = left > 0 ? "var(--accent2)" : "var(--over)";
+    }
+
+    if(idx !== lastIdx || force){
+      var from = Math.min(lastIdx<0?0:lastIdx, idx), to = Math.max(lastIdx<0?0:lastIdx, idx);
+      for(var i=Math.max(0,from-1); i<=Math.min(spans.length-1,to+1); i++){
+        spans[i].className = i < idx ? "said" : (i === idx ? "cur" : "");
+      }
+      if(force){ for(var j=0;j<spans.length;j++) spans[j].className = j<idx?"said":(j===idx?"cur":""); }
+      lastIdx = idx;
+    }
+
+    var cur = spans[idx];
+    if(cur){
+      var want = Math.max(0, cur.offsetTop - stage.clientHeight*0.38);
+      var diff = want - stage.scrollTop;
+      if(force || Math.abs(diff) > 400) stage.scrollTop = want;
+      else if(Math.abs(diff) > 1) stage.scrollTop += diff * 0.09;
+    }
+  }
+
+  function lap(){
+    if(curSec >= model.sections.length) return;
+    var prev = laps.length ? laps[laps.length-1].at : 0;
+    laps.push({ name: model.sections[curSec].title, at: elapsed, actual: elapsed - prev, planned: model.sections[curSec].sec });
+    curSec++;
+    if(curSec >= model.sections.length){ pause(); showReport(); }
+    else { $("lapBtn").textContent = "Section done ▸ (" + (model.sections.length-curSec) + " left)"; }
+  }
+
+  function showReport(){
+    var rows = "", totalP = 0, totalA = 0;
+    laps.forEach(function(l){
+      var d = l.actual - l.planned;
+      totalP += l.planned; totalA += l.actual;
+      var cls = Math.abs(d) <= Math.max(4, l.planned*0.1) ? "ok" : (d>0 ? "over" : "under");
+      rows += "<tr><td class='name'>" + esc(l.name) + "</td><td>" + fmt(l.planned) + "</td><td>" + fmt(l.actual) +
+              "</td><td class='" + cls + "'>" + (d>=0?"+":"−") + fmt(Math.abs(d)) + "</td></tr>";
+    });
+    var dt = totalA - totalP;
+    var cls = Math.abs(dt) <= Math.max(6, totalP*0.05) ? "ok" : (dt>0?"over":"under");
+    $("reportInner").innerHTML =
+      "<h2>Rehearsal " + (curSec>=model.sections.length ? "complete" : "stopped early") + "</h2>" +
+      "<p class='sub'>You spoke for " + fmt(totalA) + " against a plan of " + fmt(totalP) + ".</p>" +
+      "<table><thead><tr><th style='width:40%'>Section</th><th>Planned</th><th>You</th><th>Diff</th></tr></thead><tbody>" +
+      rows +
+      "<tr><td class='name'><b>Total</b></td><td><b>" + fmt(totalP) + "</b></td><td><b>" + fmt(totalA) +
+      "</b></td><td class='" + cls + "'><b>" + (dt>=0?"+":"−") + fmt(Math.abs(dt)) + "</b></td></tr>" +
+      "</tbody></table>" +
+      "<p class='sub' style='margin-top:18px'>" +
+        (Math.abs(dt) <= Math.max(6,totalP*0.05)
+          ? "Your real pace matches the estimate — the runtime on the main screen is trustworthy."
+          : (dt>0
+              ? "You speak slower than " + model.wpm + " wpm. Drop the pace slider to about " +
+                Math.max(60, Math.round(model.wpm * totalP / (totalA||1))) + " wpm for a truer estimate."
+              : "You speak faster than " + model.wpm + " wpm. Raise the pace slider to about " +
+                Math.round(model.wpm * totalP / (totalA||1)) + " wpm for a truer estimate.")) +
+      "</p>" +
+      "<div style='display:flex;gap:10px;margin-top:20px;flex-wrap:wrap'>" +
+        "<button class='btn primary' id='againBtn'>Rehearse again</button>" +
+        "<button class='btn' id='backBtn'>Back to script</button>" +
+      "</div>";
+    $("report").classList.add("show");
+    $("againBtn").onclick = function(){ resetRun(); $("lapBtn").textContent = "Section done ▸"; };
+    $("backBtn").onclick = closeTP;
+  }
+
+  /* ---------- wiring ---------- */
+  ["input","change"].forEach(function(ev){
+    scriptEl.addEventListener(ev, compute);
+    tminEl.addEventListener(ev, compute);
+    tsecEl.addEventListener(ev, compute);
+    wpmEl.addEventListener(ev, function(){ $("wpmLbl").textContent = wpmEl.value; syncWpmChips(); compute(); });
+    pauseEl.addEventListener(ev, function(){ $("pauseLbl").textContent = pauseEl.value; compute(); });
+  });
+
+  function syncWpmChips(){
+    document.querySelectorAll("[data-wpm]").forEach(function(b){
+      b.classList.toggle("on", +b.dataset.wpm === +wpmEl.value);
+    });
+  }
+  document.querySelectorAll("[data-wpm]").forEach(function(b){
+    b.addEventListener("click", function(){
+      wpmEl.value = b.dataset.wpm; $("wpmLbl").textContent = b.dataset.wpm; syncWpmChips(); compute();
+    });
+  });
+  document.querySelectorAll("[data-target]").forEach(function(b){
+    b.addEventListener("click", function(){
+      tminEl.value = b.dataset.target; tsecEl.value = 0;
+      document.querySelectorAll("[data-target]").forEach(function(x){ x.classList.remove("on"); });
+      b.classList.add("on");
+      compute();
+    });
+  });
+
+  $("go").addEventListener("click", openTP);
+  $("playBtn").addEventListener("click", toggle);
+  $("lapBtn").addEventListener("click", lap);
+  $("resetBtn").addEventListener("click", function(){ resetRun(); $("lapBtn").textContent = "Section done ▸"; });
+  $("exitBtn").addEventListener("click", function(){
+    if(laps.length){ pause(); showReport(); } else { closeTP(); }
+  });
+  document.addEventListener("keydown", function(e){
+    if(!tp.classList.contains("show")) return;
+    if(e.code === "Space"){ e.preventDefault(); toggle(); }
+    if(e.code === "Escape"){ closeTP(); }
+    if(e.code === "Enter"){ e.preventDefault(); lap(); }
+  });
+
+  scriptEl.value = SAMPLE;
+  compute();
+})();
+</script>
+</body>
+</html>

@@ -243,5 +243,12 @@
     "emoji": "📷",
     "date": "2026-08-31",
     "blurb": "Move any one of aperture, shutter or ISO and the other two rebalance to hold the exposure — with a live preview of the blur, motion and grain you just traded for, plus depth-of-field, ND filter and star-trail math."
+  },
+  {
+    "file": "apps/app-2026-09-01-podium.html",
+    "name": "Podium",
+    "emoji": "🎤",
+    "date": "2026-09-01",
+    "blurb": "Paste a talk and find out if it fits the slot — word-accurate runtime, per-section timing, and a rehearsal teleprompter with a pacing cursor that tells you where you should be."
   }
 ]
