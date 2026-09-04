@@ -508,8 +508,9 @@ function updateReadout(){
   if(jam){ elNow.textContent='jammed'; elNow.className='val now bad'; return; }
   if(!t || t.w===null){ elNow.textContent='stopped'; elNow.className='val now'; return; }
   var okDir = Math.sign(t.w)===level.dir;
+  var okAll = okDir && Math.abs(Math.abs(t.w) - goalMult()) < 1e-6;
   elNow.textContent = arrowFor(Math.sign(t.w)) + ' ' + fmtRatio(t.w) + '×';
-  elNow.className = 'val now ' + (okDir ? 'ok' : 'bad');
+  elNow.className = 'val now ' + (okAll ? 'ok' : (okDir ? '' : 'bad'));
 }
 
 function chipCanvas(size){
