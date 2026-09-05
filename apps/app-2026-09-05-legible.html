@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legible — contrast checker</title>
+<style>
+  :root{
+    --bg:#0e1015;
+    --panel:#171a21;
+    --panel2:#1e222b;
+    --line:#2b3140;
+    --ink:#e9ecf3;
+    --dim:#98a1b3;
+    --good:#3ddc97;
+    --warn:#ffc857;
+    --bad:#ff6b6b;
+    --accent:#7aa2ff;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, #1c2333 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #221c33 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:22px 16px 60px;
+  }
+  .wrap{max-width:940px;margin:0 auto}
+  header{text-align:center;margin-bottom:22px}
+  h1{
+    margin:0;font-size:30px;letter-spacing:-.5px;font-weight:800;
+    background:linear-gradient(92deg,#8ab4ff,#c39bff 55%,#5ee7c0);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{margin:6px 0 0;color:var(--dim);font-size:14px}
+
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)) , var(--panel);
+    border:1px solid var(--line);border-radius:var(--r);
+    padding:16px;margin-bottom:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.28);
+  }
+  .card h2{
+    margin:0 0 12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);font-weight:700;
+  }
+
+  /* ---- color pickers ---- */
+  .pickers{display:grid;grid-template-columns:1fr 44px 1fr;gap:10px;align-items:end}
+  .field label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:600}
+  .chipwrap{display:flex;gap:8px;align-items:center;
+    background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:7px}
+  .swatch{width:38px;height:38px;border-radius:8px;border:1px solid rgba(255,255,255,.22);
+    flex:0 0 auto;position:relative;overflow:hidden;cursor:pointer}
+  .swatch input{position:absolute;inset:-8px;width:200%;height:200%;opacity:0;cursor:pointer;border:0;padding:0}
+  .hex{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);
+    font:600 16px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    text-transform:uppercase;letter-spacing:.5px;outline:none;padding:4px 2px;width:100%}
+  .swapbtn{
+    height:52px;width:44px;border-radius:11px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);font-size:18px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .swapbtn:active{transform:scale(.94)}
+  .toolrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .btn:hover{border-color:#3c455a}
+  .btn:active{transform:translateY(1px)}
+
+  /* ---- score ---- */
+  .score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .ratio{
+    font:800 46px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    letter-spacing:-1px;min-width:150px;
+  }
+  .ratio span{font-size:20px;color:var(--dim);font-weight:600}
+  .verdict{font-size:14px;color:var(--dim);flex:1;min-width:180px}
+  .verdict b{display:block;font-size:17px;margin-bottom:2px}
+  .badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px;margin-top:14px}
+  .badge{
+    display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:10px;
+    background:var(--panel2);border:1px solid var(--line);font-size:13px;
+  }
+  .badge .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .badge .nm{flex:1;min-width:0}
+  .badge .nm small{display:block;color:var(--dim);font-size:11px}
+  .badge .st{font-weight:800;font-size:12px;letter-spacing:.06em}
+  .pass .dot{background:var(--good)} .pass .st{color:var(--good)}
+  .fail .dot{background:var(--bad)}  .fail .st{color:var(--bad)}
+
+  /* ---- preview ---- */
+  .preview{border-radius:12px;padding:22px 20px;border:1px solid var(--line);transition:background .18s}
+  .preview .pv-h{font-size:26px;font-weight:800;margin:0 0 10px;line-height:1.22}
+  .preview .pv-b{font-size:16px;margin:0 0 12px;max-width:60ch}
+  .preview .pv-s{font-size:12.5px;margin:0 0 16px;opacity:.95}
+  .preview .pv-ui{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pv-btn{border-radius:9px;padding:9px 15px;font-weight:700;font-size:14px;border:2px solid}
+  .pv-out{border-radius:9px;padding:9px 15px;font-weight:700;font-size:14px;border:2px solid;background:transparent}
+  .simrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .pill{
+    padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);
+    font-size:12.5px;color:var(--dim);cursor:pointer;font-weight:600;
+  }
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#08101f}
+
+  /* ---- fixes ---- */
+  .targets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .fixes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .fix{
+    background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;
+    display:flex;gap:10px;align-items:center;cursor:pointer;text-align:left;
+  }
+  .fix:hover{border-color:var(--accent)}
+  .fix .sw{width:36px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,.22);flex:0 0 auto}
+  .fix .txt{min-width:0;flex:1}
+  .fix .txt b{display:block;font-size:12px;color:var(--dim);font-weight:700;letter-spacing:.03em}
+  .fix .txt code{font:700 14px ui-monospace,Menlo,Consolas,monospace;color:var(--ink)}
+  .fix .txt em{font-style:normal;color:var(--good);font-size:12px;font-weight:700;margin-left:6px}
+  .none{color:var(--dim);font-size:13.5px;padding:6px 2px}
+
+  /* ---- palette matrix ---- */
+  .palrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .pchip{position:relative;width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,255,255,.22);cursor:pointer}
+  .pchip .x{
+    position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+    background:#2b3140;color:#fff;font-size:11px;line-height:18px;text-align:center;
+    border:1px solid #444d61;
+  }
+  .addchip{
+    width:40px;height:40px;border-radius:9px;border:1px dashed #49526a;background:transparent;
+    color:var(--dim);font-size:20px;cursor:pointer;position:relative;overflow:hidden;
+  }
+  .addchip input{position:absolute;inset:-8px;width:200%;height:200%;opacity:0;cursor:pointer}
+  .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+  table.matrix{border-collapse:separate;border-spacing:4px;font-size:12px}
+  table.matrix th{padding:0}
+  table.matrix th div{width:38px;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,.2)}
+  table.matrix th.rowh div{width:26px;height:38px}
+  table.matrix td{
+    width:52px;height:38px;text-align:center;border-radius:7px;font-weight:700;
+    font-family:ui-monospace,Menlo,Consolas,monospace;cursor:pointer;color:#0c1017;
+  }
+  td.g{background:var(--good)} td.a{background:var(--warn)} td.b{background:#3a2530;color:#ff8f8f}
+  td.self{background:var(--panel2);color:#4a5266;cursor:default}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--dim)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  footer{text-align:center;color:#5d6577;font-size:12px;margin-top:26px;line-height:1.7}
+  @media(max-width:560px){
+    .pickers{grid-template-columns:1fr;gap:8px}
+    .swapbtn{width:100%;height:40px}
+    .ratio{font-size:38px;min-width:120px}
+    h1{font-size:25px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Legible</h1>
+    <p>Check any two colours against the WCAG contrast rules — and get the nearest shade that passes.</p>
+  </header>
+
+  <!-- PICKERS -->
+  <div class="card">
+    <div class="pickers">
+      <div class="field">
+        <label for="fgHex">Text colour</label>
+        <div class="chipwrap">
+          <div class="swatch" id="fgSw"><input type="color" id="fgPick" aria-label="Pick text colour"></div>
+          <input class="hex" id="fgHex" value="#5B6B8C" spellcheck="false" aria-label="Text colour hex">
+        </div>
+      </div>
+      <button class="swapbtn" id="swap" title="Swap colours" aria-label="Swap colours">⇄</button>
+      <div class="field">
+        <label for="bgHex">Background</label>
+        <div class="chipwrap">
+          <div class="swatch" id="bgSw"><input type="color" id="bgPick" aria-label="Pick background colour"></div>
+          <input class="hex" id="bgHex" value="#FFFFFF" spellcheck="false" aria-label="Background hex">
+        </div>
+      </div>
+    </div>
+    <div class="toolrow">
+      <button class="btn" id="rand">🎲 Random pair</button>
+      <button class="btn" id="dropFg" hidden>💧 Pick text from screen</button>
+      <button class="btn" id="dropBg" hidden>💧 Pick background</button>
+    </div>
+  </div>
+
+  <!-- SCORE -->
+  <div class="card">
+    <h2>Contrast ratio</h2>
+    <div class="score">
+      <div class="ratio" id="ratio">—<span>:1</span></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+    <div class="badges" id="badges"></div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="card">
+    <h2>Live preview</h2>
+    <div class="preview" id="preview">
+      <p class="pv-h" id="pvH">Large text looks like this</p>
+      <p class="pv-b" id="pvB">Body copy at 16px is what most of a page is made of. If you have to lean in to read this sentence, the ratio above is telling you the truth.</p>
+      <p class="pv-s" id="pvS">Small print — captions, footnotes, disclaimers, the fine bits people still need.</p>
+      <div class="pv-ui">
+        <span class="pv-btn" id="pvBtn">Solid button</span>
+        <span class="pv-out" id="pvOut">Outlined</span>
+      </div>
+    </div>
+    <div class="simrow" id="simRow"></div>
+  </div>
+
+  <!-- FIXES -->
+  <div class="card">
+    <h2>Nearest passing colours</h2>
+    <div class="targets" id="targets"></div>
+    <div class="fixes" id="fixes"></div>
+  </div>
+
+  <!-- PALETTE -->
+  <div class="card">
+    <h2>Palette grid</h2>
+    <div class="palrow" id="palRow"></div>
+    <div class="scroller"><table class="matrix" id="matrix"></table></div>
+    <div class="legend">
+      <span><i style="background:var(--good)"></i>4.5+ — body text</span>
+      <span><i style="background:var(--warn)"></i>3.0+ — large text &amp; UI only</span>
+      <span><i style="background:#3a2530"></i>under 3.0 — decorative only</span>
+      <span>Tap a cell to load that pair above.</span>
+    </div>
+  </div>
+
+  <footer>
+    Ratios follow WCAG 2.1 relative-luminance maths. Large text = 24px, or 18.7px bold.<br>
+    Colour-vision simulations are approximations of dichromatic vision, useful for spotting problems — not a diagnosis.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- colour maths ---------------- */
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+  function parseHex(str){
+    if(typeof str!=="string") return null;
+    var s=str.trim().replace(/^#/,"");
+    if(/^[0-9a-fA-F]{3}$/.test(s)) s=s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
+    if(!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+    return [parseInt(s.slice(0,2),16),parseInt(s.slice(2,4),16),parseInt(s.slice(4,6),16)];
+  }
+  function toHex(rgb){
+    return "#"+rgb.map(function(v){
+      var h=Math.round(clamp(v,0,255)).toString(16);
+      return h.length<2?"0"+h:h;
+    }).join("").toUpperCase();
+  }
+  function lin(c){ c=c/255; return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+  function luminance(rgb){ return 0.2126*lin(rgb[0])+0.7152*lin(rgb[1])+0.0722*lin(rgb[2]); }
+  function contrast(a,b){
+    var la=luminance(a), lb=luminance(b);
+    var hi=Math.max(la,lb), lo=Math.min(la,lb);
+    return (hi+0.05)/(lo+0.05);
+  }
+  // display without rounding *up* past a threshold
+  function fmt(r){ return (Math.floor(r*100)/100).toFixed(2); }
+
+  function rgbToHsl(rgb){
+    var r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255;
+    var mx=Math.max(r,g,b), mn=Math.min(r,g,b), h=0, s=0, l=(mx+mn)/2, d=mx-mn;
+    if(d){
+      s = l>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+      if(mx===r) h=((g-b)/d+(g<b?6:0));
+      else if(mx===g) h=((b-r)/d+2);
+      else h=((r-g)/d+4);
+      h/=6;
+    }
+    return [h,s,l];
+  }
+  function hue2rgb(p,q,t){
+    if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  }
+  function hslToRgb(hsl){
+    var h=hsl[0],s=hsl[1],l=hsl[2];
+    if(s===0){ var v=Math.round(l*255); return [v,v,v]; }
+    var q = l<0.5 ? l*(1+s) : l+s-l*s;
+    var p = 2*l-q;
+    return [Math.round(hue2rgb(p,q,h+1/3)*255),
+            Math.round(hue2rgb(p,q,h)*255),
+            Math.round(hue2rgb(p,q,h-1/3)*255)];
+  }
+
+  /* colour-vision simulation (linear-RGB matrices) */
+  var CVD = {
+    normal:null,
+    prot:[[0.152286,1.052583,-0.204868],[0.114503,0.786281,0.099216],[-0.003882,-0.048116,1.051998]],
+    deut:[[0.367322,0.860646,-0.227968],[0.280085,0.672501,0.047413],[-0.011820,0.042940,0.968881]],
+    trit:[[1.255528,-0.076749,-0.178779],[-0.078411,0.930809,0.147602],[0.004733,0.691367,0.303634]]
+  };
+  function unlin(c){
+    c = clamp(c,0,1);
+    return 255*(c<=0.00304 ? c*12.92 : 1.055*Math.pow(c,1/2.4)-0.055);
+  }
+  function simulate(rgb,mode){
+    if(mode==="normal") return rgb.slice();
+    if(mode==="mono"){
+      var y=unlin(luminance(rgb));
+      return [Math.round(y),Math.round(y),Math.round(y)];
+    }
+    var m=CVD[mode]; if(!m) return rgb.slice();
+    var L=[lin(rgb[0]),lin(rgb[1]),lin(rgb[2])];
+    var out=[0,1,2].map(function(i){
+      return unlin(m[i][0]*L[0]+m[i][1]*L[1]+m[i][2]*L[2]);
+    });
+    return out.map(function(v){ return Math.round(clamp(v,0,255)); });
+  }
+
+  /* ---------------- state ---------------- */
+  var state = {
+    fg:[0x5B,0x6B,0x8C],
+    bg:[0xFF,0xFF,0xFF],
+    sim:"normal",
+    target:4.5,
+    palette:["#0F172A","#2563EB","#16A34A","#F59E0B","#E11D48","#F8FAFC"].map(parseHex)
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var fgHex=$("fgHex"), bgHex=$("bgHex"), fgPick=$("fgPick"), bgPick=$("bgPick");
+
+  /* ---------------- score panel ---------------- */
+  var LEVELS = [
+    {k:"AA",     n:"Body text",   d:"AA · under 24px",        t:4.5},
+    {k:"AA",     n:"Large text",  d:"AA · 24px or 18.7px bold", t:3},
+    {k:"AAA",    n:"Body text",   d:"AAA · under 24px",       t:7},
+    {k:"AAA",    n:"Large text",  d:"AAA · 24px+",            t:4.5},
+    {k:"UI",     n:"UI & icons",  d:"Buttons, borders, charts", t:3}
+  ];
+
+  function renderScore(r){
+    $("ratio").innerHTML = fmt(r)+'<span>:1</span>';
+    var v=$("verdict"), title, note;
+    if(r>=7){ title="Excellent — passes everything"; note="Safe at any text size, including AAA body copy."; }
+    else if(r>=4.5){ title="Good — passes AA body text"; note="Fine for normal text. Needs 7:1 to reach AAA."; }
+    else if(r>=3){ title="Large text and UI only"; note="Usable for headings 24px+, icons and borders — not body copy."; }
+    else { title="Fails — decorative use only"; note="Don't put readable text on this pairing."; }
+    v.innerHTML = "<b>"+title+"</b>"+note;
+
+    var html="";
+    LEVELS.forEach(function(L){
+      var ok = r>=L.t;
+      html += '<div class="badge '+(ok?"pass":"fail")+'"><span class="dot"></span>'+
+              '<span class="nm">'+L.n+'<small>'+L.d+' · '+L.t.toFixed(1)+':1</small></span>'+
+              '<span class="st">'+(ok?"PASS":"FAIL")+'</span></div>';
+    });
+    $("badges").innerHTML = html;
+  }
+
+  /* ---------------- preview ---------------- */
+  var SIMS=[["normal","Normal vision"],["deut","Deuteranopia"],["prot","Protanopia"],["trit","Tritanopia"],["mono","Monochromacy"]];
+  function renderSimRow(){
+    $("simRow").innerHTML = SIMS.map(function(s){
+      return '<button class="pill'+(state.sim===s[0]?" on":"")+'" data-sim="'+s[0]+'">'+s[1]+'</button>';
+    }).join("");
+  }
+  function renderPreview(){
+    var f=simulate(state.fg,state.sim), b=simulate(state.bg,state.sim);
+    var fc=toHex(f), bc=toHex(b);
+    var p=$("preview");
+    p.style.background=bc;
+    ["pvH","pvB","pvS"].forEach(function(id){ $(id).style.color=fc; });
+    var btn=$("pvBtn");
+    btn.style.background=fc; btn.style.color=bc; btn.style.borderColor=fc;
+    var out=$("pvOut");
+    out.style.color=fc; out.style.borderColor=fc;
+  }
+
+  /* ---------------- suggestions ---------------- */
+  var TARGETS=[[3,"3:1 — large text & UI"],[4.5,"4.5:1 — AA body"],[7,"7:1 — AAA body"]];
+  function renderTargets(){
+    $("targets").innerHTML = TARGETS.map(function(t){
+      return '<button class="pill'+(state.target===t[0]?" on":"")+'" data-target="'+t[0]+'">'+t[1]+'</button>';
+    }).join("");
+  }
+  // walk lightness in one direction until the pair clears `need`
+  function nudge(rgb, other, need, dir){
+    var hsl=rgbToHsl(rgb), best=null;
+    for(var i=1;i<=200;i++){
+      var l = hsl[2] + dir*i*0.005;
+      if(l<0||l>1) break;
+      var cand=hslToRgb([hsl[0],hsl[1],l]);
+      if(contrast(cand,other)>=need){ best=cand; break; }
+    }
+    if(!best){
+      var edge = hslToRgb([hsl[0],hsl[1], dir<0?0:1]);
+      if(contrast(edge,other)>=need) best=edge;
+    }
+    return best;
+  }
+  function renderFixes(){
+    var need=state.target, cur=contrast(state.fg,state.bg), box=$("fixes");
+    if(cur>=need){
+      box.innerHTML='<div class="none">✅ This pairing already clears '+need+':1 ('+fmt(cur)+':1). '+
+        'Pick a stricter target to see stronger options.</div>';
+      return;
+    }
+    var opts=[
+      {lab:"Darken the text",  rgb:nudge(state.fg,state.bg,need,-1), apply:"fg"},
+      {lab:"Lighten the text", rgb:nudge(state.fg,state.bg,need, 1), apply:"fg"},
+      {lab:"Darken the background",  rgb:nudge(state.bg,state.fg,need,-1), apply:"bg"},
+      {lab:"Lighten the background", rgb:nudge(state.bg,state.fg,need, 1), apply:"bg"}
+    ].filter(function(o){ return o.rgb; });
+
+    if(!opts.length){ box.innerHTML='<div class="none">No same-hue shade reaches '+need+':1. Try a different hue, or black / white.</div>'; return; }
+
+    box.innerHTML = opts.map(function(o,i){
+      var other = o.apply==="fg" ? state.bg : state.fg;
+      var r = contrast(o.rgb, other);
+      return '<button class="fix" data-fix="'+i+'">'+
+             '<span class="sw" style="background:'+toHex(o.rgb)+'"></span>'+
+             '<span class="txt"><b>'+o.lab.toUpperCase()+'</b>'+
+             '<code>'+toHex(o.rgb)+'</code><em>'+fmt(r)+':1</em></span></button>';
+    }).join("");
+    box.__opts=opts;
+  }
+
+  /* ---------------- palette ---------------- */
+  function renderPalette(){
+    var row=$("palRow"), h="";
+    state.palette.forEach(function(c,i){
+      h += '<div class="pchip" style="background:'+toHex(c)+'" data-pi="'+i+'" title="'+toHex(c)+'">'+
+           (state.palette.length>2?'<span class="x" data-del="'+i+'">×</span>':'')+'</div>';
+    });
+    if(state.palette.length<8){
+      h += '<button class="addchip">+<input type="color" id="addPick" value="#8B5CF6" aria-label="Add colour"></button>';
+    }
+    row.innerHTML=h;
+    var ap=document.getElementById("addPick");
+    if(ap) ap.addEventListener("change",function(e){
+      var c=parseHex(e.target.value); if(c && state.palette.length<8){ state.palette.push(c); renderPalette(); }
+    });
+
+    var t=$("matrix"), out="<tr><th></th>";
+    state.palette.forEach(function(c){ out+='<th><div style="background:'+toHex(c)+'"></div></th>'; });
+    out+="</tr>";
+    state.palette.forEach(function(a,i){
+      out+='<tr><th class="rowh"><div style="background:'+toHex(a)+'"></div></th>';
+      state.palette.forEach(function(b,j){
+        if(i===j){ out+='<td class="self">—</td>'; return; }
+        var r=contrast(a,b), cls = r>=4.5?"g":(r>=3?"a":"b");
+        out+='<td class="'+cls+'" data-i="'+i+'" data-j="'+j+'" title="'+toHex(a)+' on '+toHex(b)+'">'+fmt(r)+'</td>';
+      });
+      out+="</tr>";
+    });
+    t.innerHTML=out;
+  }
+
+  /* ---------------- glue ---------------- */
+  function syncInputs(){
+    fgHex.value=toHex(state.fg); bgHex.value=toHex(state.bg);
+    fgPick.value=toHex(state.fg).toLowerCase();
+    bgPick.value=toHex(state.bg).toLowerCase();
+    document.getElementById("fgSw").style.background=toHex(state.fg);
+    document.getElementById("bgSw").style.background=toHex(state.bg);
+  }
+  function render(fromTyping){
+    if(!fromTyping) syncInputs();
+    else {
+      document.getElementById("fgSw").style.background=toHex(state.fg);
+      document.getElementById("bgSw").style.background=toHex(state.bg);
+      fgPick.value=toHex(state.fg).toLowerCase();
+      bgPick.value=toHex(state.bg).toLowerCase();
+    }
+    renderScore(contrast(state.fg,state.bg));
+    renderPreview();
+    renderTargets();
+    renderFixes();
+  }
+
+  fgHex.addEventListener("input",function(){ var c=parseHex(fgHex.value); if(c){ state.fg=c; render(true);} });
+  bgHex.addEventListener("input",function(){ var c=parseHex(bgHex.value); if(c){ state.bg=c; render(true);} });
+  fgHex.addEventListener("blur",syncInputs);
+  bgHex.addEventListener("blur",syncInputs);
+  fgPick.addEventListener("input",function(){ state.fg=parseHex(fgPick.value)||state.fg; render(); });
+  bgPick.addEventListener("input",function(){ state.bg=parseHex(bgPick.value)||state.bg; render(); });
+
+  $("swap").addEventListener("click",function(){ var t=state.fg; state.fg=state.bg; state.bg=t; render(); });
+
+  $("rand").addEventListener("click",function(){
+    var h1=Math.random(), h2=Math.random()<0.5 ? h1 : Math.random();
+    var dark = Math.random()<0.5;
+    var a=hslToRgb([h1,0.25+Math.random()*0.55, dark?0.12+Math.random()*0.25:0.62+Math.random()*0.3]);
+    var b=hslToRgb([h2,0.08+Math.random()*0.3, dark?0.85+Math.random()*0.14:0.10+Math.random()*0.2]);
+    state.fg=a; state.bg=b; render();
+  });
+
+  if(window.EyeDropper){
+    [["dropFg","fg"],["dropBg","bg"]].forEach(function(p){
+      var b=$(p[0]); b.hidden=false;
+      b.addEventListener("click",function(){
+        new window.EyeDropper().open().then(function(res){
+          var c=parseHex(res.sRGBHex); if(c){ state[p[1]]=c; render(); }
+        }).catch(function(){});
+      });
+    });
+  }
+
+  $("simRow").addEventListener("click",function(e){
+    var b=e.target.closest("[data-sim]"); if(!b) return;
+    state.sim=b.getAttribute("data-sim"); renderSimRow(); renderPreview();
+  });
+  $("targets").addEventListener("click",function(e){
+    var b=e.target.closest("[data-target]"); if(!b) return;
+    state.target=parseFloat(b.getAttribute("data-target")); renderTargets(); renderFixes();
+  });
+  $("fixes").addEventListener("click",function(e){
+    var b=e.target.closest("[data-fix]"); if(!b) return;
+    var opts=$("fixes").__opts||[], o=opts[parseInt(b.getAttribute("data-fix"),10)];
+    if(!o) return;
+    state[o.apply]=o.rgb; render();
+  });
+  $("palRow").addEventListener("click",function(e){
+    var del=e.target.closest("[data-del]");
+    if(del){ state.palette.splice(parseInt(del.getAttribute("data-del"),10),1); renderPalette(); return; }
+    var chip=e.target.closest("[data-pi]");
+    if(chip){ state.fg=state.palette[parseInt(chip.getAttribute("data-pi"),10)].slice(); render(); }
+  });
+  $("matrix").addEventListener("click",function(e){
+    var td=e.target.closest("td[data-i]"); if(!td) return;
+    state.fg=state.palette[parseInt(td.getAttribute("data-i"),10)].slice();
+    state.bg=state.palette[parseInt(td.getAttribute("data-j"),10)].slice();
+    render();
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+
+  renderSimRow();
+  renderPalette();
+  render();
+})();
+</script>
+</body>
+</html>
