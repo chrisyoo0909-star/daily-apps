@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Shepherd — herd the flock</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:#151a14;
+    color:#e8f0e2;
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:none;
+  }
+  header{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:14px;
+    padding:10px 16px;
+    background:linear-gradient(180deg,#232b20,#1a2018);
+    border-bottom:1px solid #0e120d;
+    box-shadow:0 2px 12px rgba(0,0,0,.45);
+    flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:9px;margin-right:auto}
+  .brand h1{font-size:19px;letter-spacing:.5px;font-weight:700;color:#f2f7ec}
+  .brand span{font-size:11.5px;color:#8ba17e;letter-spacing:.6px;text-transform:uppercase}
+  .stat{
+    display:flex;flex-direction:column;align-items:center;
+    min-width:56px;padding:3px 9px;border-radius:8px;background:#1e251b;
+    border:1px solid #2e3a29;
+  }
+  .stat b{font-size:16px;font-variant-numeric:tabular-nums;color:#f5e7b8;line-height:1.15}
+  .stat i{font-style:normal;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#7d9370}
+  button{
+    font:inherit;font-size:13px;font-weight:600;
+    padding:7px 14px;border-radius:9px;cursor:pointer;
+    border:1px solid #3d4d36;background:#26301f;color:#dcebd2;
+    transition:background .14s,transform .08s;
+  }
+  button:hover{background:#31402a}
+  button:active{transform:translateY(1px)}
+  button.primary{background:#6ba14a;border-color:#7cb857;color:#0f1a0b}
+  button.primary:hover{background:#7ab455}
+  #stage{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,11,.82);backdrop-filter:blur(3px);
+    padding:20px;text-align:center;z-index:5;
+  }
+  .overlay.hidden{display:none}
+  .card{
+    max-width:400px;width:100%;
+    background:linear-gradient(180deg,#242d1f,#1b2217);
+    border:1px solid #3a4a33;border-radius:16px;
+    padding:26px 24px;box-shadow:0 18px 50px rgba(0,0,0,.6);
+  }
+  .card h2{font-size:26px;margin-bottom:6px;color:#f6fbf0;letter-spacing:.3px}
+  .card .sub{font-size:13.5px;color:#9db191;line-height:1.55;margin-bottom:16px}
+  .card .stars{font-size:32px;letter-spacing:6px;margin:6px 0 12px;color:#f3d979}
+  .card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+  .howto{text-align:left;font-size:13px;color:#a9bd9d;line-height:1.7;margin:14px 0 18px;
+    background:#1a2116;border:1px solid #2c3826;border-radius:10px;padding:12px 14px}
+  .howto b{color:#e5f2da}
+  .hint{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    background:rgba(16,22,14,.78);border:1px solid #35432e;border-radius:20px;
+    padding:7px 16px;font-size:12.5px;color:#b6c9aa;pointer-events:none;
+    transition:opacity .5s;white-space:nowrap;z-index:4;
+  }
+  .hint.gone{opacity:0}
+  @media (max-width:520px){
+    .brand h1{font-size:16px}.brand span{display:none}
+    header{gap:8px;padding:8px 10px}
+    .stat{min-width:46px;padding:2px 6px}
+    button{padding:6px 10px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><h1>Shepherd</h1><span>herd the flock</span></div>
+  <div class="stat"><b id="hudLevel">1</b><i>Field</i></div>
+  <div class="stat"><b id="hudPenned">0/6</b><i>Penned</i></div>
+  <div class="stat"><b id="hudTime">0.0</b><i>Time</i></div>
+  <button id="btnRestart">Restart</button>
+</header>
+
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div class="hint" id="hint">Move your pointer (or drag) — the dog follows. Sheep run from the dog.</div>
+  <div class="overlay" id="ov">
+    <div class="card">
+      <h2 id="ovTitle">Shepherd</h2>
+      <div class="sub" id="ovSub">Five fields. One dog. A lot of very anxious sheep.</div>
+      <div class="stars" id="ovStars"></div>
+      <div class="howto" id="ovHow">
+        <b>Move</b> the dog with your mouse, or drag on touch. Arrow keys / WASD work too.<br>
+        <b>Sheep flee</b> from the dog and stick together — push the flock from behind, don't charge into it.<br>
+        <b>Goal:</b> get every sheep through the gate into the pen. Beat the par time for three stars.
+      </div>
+      <div class="row" id="ovRow">
+        <button class="primary" id="ovGo">Start herding</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- world constants ---------- */
+var W = 960, H = 640;
+var FLEE_R      = 118;   // how close the dog gets before sheep bolt
+var NEIGH_R     = 78;    // flock awareness radius
+var SEP_R       = 26;    // personal space
+var SHEEP_R     = 9;
+var DOG_R       = 11;
+var DOG_SPEED   = 4.55;
+var CALM_SPEED  = 0.62;
+var PANIC_SPEED = 3.05;  // deliberately slower than the dog
+
+/* ---------- levels ---------- */
+var LEVELS = [
+  { name:"Home Paddock", sheep:6,  par:26,
+    pen:{x:718,y:212,w:196,h:196,gate:"left",gw:120},
+    spawn:{x:120,y:200,w:280,h:280}, rocks:[], walls:[] },
+
+  { name:"Stony Rise", sheep:9,  par:42,
+    pen:{x:730,y:70,w:186,h:186,gate:"left",gw:112},
+    spawn:{x:90,y:300,w:300,h:270},
+    rocks:[{x:470,y:250,r:44},{x:552,y:352,r:33},{x:404,y:392,r:28}],
+    walls:[] },
+
+  { name:"The Narrows", sheep:12, par:58,
+    pen:{x:742,y:222,w:180,h:180,gate:"left",gw:100},
+    spawn:{x:80,y:170,w:260,h:300},
+    rocks:[{x:430,y:120,r:30},{x:430,y:520,r:30}],
+    walls:[ {x1:520,y1:0,x2:520,y2:236}, {x1:520,y1:404,x2:520,y2:640} ] },
+
+  { name:"Split Meadow", sheep:13, par:78,
+    pen:{x:392,y:436,w:190,h:176,gate:"top",gw:122},
+    spawn:{x:80,y:60,w:300,h:220},
+    rocks:[{x:660,y:170,r:46},{x:230,y:430,r:36},{x:790,y:440,r:32},{x:470,y:240,r:26}],
+    walls:[ {x1:0,y1:330,x2:290,y2:330}, {x1:640,y1:330,x2:960,y2:330} ] },
+
+  { name:"Highland Fold", sheep:16, par:104,
+    pen:{x:756,y:404,w:180,h:190,gate:"top",gw:118},
+    spawn:{x:70,y:70,w:300,h:250},
+    rocks:[{x:520,y:110,r:34},{x:600,y:210,r:28},{x:300,y:430,r:42},
+           {x:440,y:540,r:30},{x:670,y:480,r:26},{x:180,y:300,r:24}],
+    walls:[ {x1:660,y1:0,x2:660,y2:140}, {x1:660,y1:290,x2:660,y2:346} ] }
+];
+
+/* ---------- state ---------- */
+var canvas, ctx, dpr = 1, scale = 1, offX = 0, offY = 0;
+var levelIndex = 0, sheep = [], walls = [], rocks = [], pen = null;
+var dog = {x:80,y:560,vx:0,vy:0,ang:0,step:0};
+var target = {x:80,y:560};
+var keys = {};
+var running = false, startTime = 0, elapsed = 0, pennedCount = 0;
+var stars = [];          // per-level best stars
+var lastFrame = 0;
+var puffs = [];          // dust particles
+var gateGlow = 0;
+
+var el = {
+  level:  document.getElementById("hudLevel"),
+  penned: document.getElementById("hudPenned"),
+  time:   document.getElementById("hudTime"),
+  ov:     document.getElementById("ov"),
+  ovTitle:document.getElementById("ovTitle"),
+  ovSub:  document.getElementById("ovSub"),
+  ovStars:document.getElementById("ovStars"),
+  ovHow:  document.getElementById("ovHow"),
+  ovRow:  document.getElementById("ovRow"),
+  ovGo:   document.getElementById("ovGo"),
+  hint:   document.getElementById("hint")
+};
+
+/* ---------- geometry helpers ---------- */
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function rand(a,b){ return a + Math.random()*(b-a); }
+
+// closest point on segment to (px,py)
+function closestOnSeg(px,py,s){
+  var dx = s.x2-s.x1, dy = s.y2-s.y1;
+  var len2 = dx*dx + dy*dy;
+  if(len2 < 1e-9) return {x:s.x1,y:s.y1};
+  var t = ((px-s.x1)*dx + (py-s.y1)*dy) / len2;
+  t = clamp(t,0,1);
+  return {x:s.x1 + t*dx, y:s.y1 + t*dy};
+}
+
+function penWalls(p){
+  var out = [], g = p.gw, a, b;
+  var L=p.x, R=p.x+p.w, T=p.y, B=p.y+p.h;
+  function seg(x1,y1,x2,y2){ out.push({x1:x1,y1:y1,x2:x2,y2:y2,pen:true}); }
+  if(p.gate === "left"){
+    a = T + (p.h-g)/2; b = a + g;
+    seg(L,T,L,a); seg(L,b,L,B);
+    seg(L,T,R,T); seg(R,T,R,B); seg(L,B,R,B);
+  } else if(p.gate === "right"){
+    a = T + (p.h-g)/2; b = a + g;
+    seg(R,T,R,a); seg(R,b,R,B);
+    seg(L,T,R,T); seg(L,T,L,B); seg(L,B,R,B);
+  } else if(p.gate === "top"){
+    a = L + (p.w-g)/2; b = a + g;
+    seg(L,T,a,T); seg(b,T,R,T);
+    seg(L,T,L,B); seg(R,T,R,B); seg(L,B,R,B);
+  } else { // bottom
+    a = L + (p.w-g)/2; b = a + g;
+    seg(L,B,a,B); seg(b,B,R,B);
+    seg(L,T,R,T); seg(L,T,L,B); seg(R,T,R,B);
+  }
+  return out;
+}
+
+function gateCenter(p){
+  if(p.gate==="left")  return {x:p.x,        y:p.y+p.h/2};
+  if(p.gate==="right") return {x:p.x+p.w,    y:p.y+p.h/2};
+  if(p.gate==="top")   return {x:p.x+p.w/2,  y:p.y};
+  return {x:p.x+p.w/2, y:p.y+p.h};
+}
+
+function insidePen(x,y,pad){
+  pad = pad || 0;
+  return x > pen.x+pad && x < pen.x+pen.w-pad && y > pen.y+pad && y < pen.y+pen.h-pad;
+}
+
+/* ---------- level setup ---------- */
+function loadLevel(i){
+  levelIndex = i;
+  var L = LEVELS[i];
+  pen   = L.pen;
+  rocks = L.rocks.map(function(r){ return {x:r.x,y:r.y,r:r.r}; });
+  walls = penWalls(pen).concat(L.walls.map(function(w){
+    return {x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2,pen:false};
+  }));
+
+  sheep = [];
+  var sp = L.spawn, guard = 0;
+  while(sheep.length < L.sheep && guard < 4000){
+    guard++;
+    var x = rand(sp.x, sp.x+sp.w), y = rand(sp.y, sp.y+sp.h);
+    if(insidePen(x,y,-30)) continue;
+    if(nearWall(x,y,26) || nearRock(x,y,20)) continue;
+    sheep.push({
+      x:x, y:y, vx:0, vy:0, ang:rand(0,6.28),
+      wander: rand(0,6.28), panic:0, penned:false,
+      settle:null, bob: rand(0,6.28), size: rand(0.9,1.12)
+    });
+  }
+
+  // dog starts opposite the pen
+  var gc = gateCenter(pen);
+  dog.x = clamp(W - gc.x, 60, W-60);
+  dog.y = clamp(H - gc.y, 60, H-60);
+  if(Math.abs(dog.x-gc.x) < 200 && Math.abs(dog.y-gc.y) < 200){ dog.x = 70; dog.y = H-70; }
+  dog.vx = dog.vy = 0;
+  target.x = dog.x; target.y = dog.y;
+
+  puffs = [];
+  pennedCount = 0;
+  elapsed = 0;
+  startTime = 0;
+  running = true;
+  updateHUD();
+}
+
+function nearWall(x,y,d){
+  for(var i=0;i<walls.length;i++){
+    var c = closestOnSeg(x,y,walls[i]);
+    var dx = x-c.x, dy = y-c.y;
+    if(dx*dx+dy*dy < d*d) return true;
+  }
+  return false;
+}
+function nearRock(x,y,d){
+  for(var i=0;i<rocks.length;i++){
+    var dx = x-rocks[i].x, dy = y-rocks[i].y;
+    var rr = rocks[i].r + d;
+    if(dx*dx+dy*dy < rr*rr) return true;
+  }
+  return false;
+}
+
+/* ---------- collision resolution ---------- */
+// Cancel any velocity heading into a surface we're already touching, so both
+// dog and sheep glide along fences and rocks instead of sticking to them.
+var _sv = [0,0];
+function slideVelocity(x, y, vx, vy, radius){
+  var i, c, dx, dy, d, nx, ny, dot;
+  var pad = radius + 2.5;
+  for(i=0;i<walls.length;i++){
+    c = closestOnSeg(x,y,walls[i]);
+    dx = x-c.x; dy = y-c.y;
+    d = Math.sqrt(dx*dx+dy*dy);
+    if(d < pad && d > 0.001){
+      nx = dx/d; ny = dy/d;
+      dot = vx*nx + vy*ny;
+      if(dot < 0){ vx -= dot*nx; vy -= dot*ny; }
+    }
+  }
+  for(i=0;i<rocks.length;i++){
+    dx = x-rocks[i].x; dy = y-rocks[i].y;
+    d = Math.sqrt(dx*dx+dy*dy);
+    if(d < rocks[i].r + pad && d > 0.001){
+      nx = dx/d; ny = dy/d;
+      dot = vx*nx + vy*ny;
+      if(dot < 0){ vx -= dot*nx; vy -= dot*ny; }
+    }
+  }
+  if(x < pad && vx < 0) vx = 0;
+  if(x > W-pad && vx > 0) vx = 0;
+  if(y < pad && vy < 0) vy = 0;
+  if(y > H-pad && vy > 0) vy = 0;
+  _sv[0] = vx; _sv[1] = vy;
+  return _sv;
+}
+
+function resolveObstacles(e, radius, bounce){
+  var i, c, dx, dy, d, push;
+  for(i=0;i<walls.length;i++){
+    c = closestOnSeg(e.x,e.y,walls[i]);
+    dx = e.x-c.x; dy = e.y-c.y;
+    d = Math.sqrt(dx*dx+dy*dy);
+    if(d < radius){
+      if(d < 0.001){ dx = 0; dy = -1; d = 1; }
+      push = (radius-d)/d;
+      e.x += dx*push; e.y += dy*push;
+      var nx = dx/d, ny = dy/d;
+      var dot = e.vx*nx + e.vy*ny;
+      if(dot < 0){ e.vx -= (1+bounce)*dot*nx; e.vy -= (1+bounce)*dot*ny; }
+    }
+  }
+  for(i=0;i<rocks.length;i++){
+    dx = e.x-rocks[i].x; dy = e.y-rocks[i].y;
+    var rr = rocks[i].r + radius;
+    d = Math.sqrt(dx*dx+dy*dy);
+    if(d < rr){
+      if(d < 0.001){ dx = 1; dy = 0; d = 1; }
+      push = (rr-d)/d;
+      e.x += dx*push; e.y += dy*push;
+      var nx2 = dx/d, ny2 = dy/d;
+      var dot2 = e.vx*nx2 + e.vy*ny2;
+      if(dot2 < 0){ e.vx -= (1+bounce)*dot2*nx2; e.vy -= (1+bounce)*dot2*ny2; }
+    }
+  }
+  if(e.x < radius){ e.x = radius; if(e.vx<0) e.vx *= -bounce; }
+  if(e.x > W-radius){ e.x = W-radius; if(e.vx>0) e.vx *= -bounce; }
+  if(e.y < radius){ e.y = radius; if(e.vy<0) e.vy *= -bounce; }
+  if(e.y > H-radius){ e.y = H-radius; if(e.vy>0) e.vy *= -bounce; }
+}
+
+/* ---------- simulation ---------- */
+function step(dt){
+  // --- dog ---
+  var kx = 0, ky = 0;
+  if(keys.left) kx -= 1;
+  if(keys.right) kx += 1;
+  if(keys.up) ky -= 1;
+  if(keys.down) ky += 1;
+
+  if(kx || ky){
+    var kl = Math.sqrt(kx*kx+ky*ky);
+    dog.vx = (kx/kl)*DOG_SPEED;
+    dog.vy = (ky/kl)*DOG_SPEED;
+    target.x = dog.x; target.y = dog.y;
+  } else {
+    var tx = target.x - dog.x, ty = target.y - dog.y;
+    var td = Math.sqrt(tx*tx+ty*ty);
+    if(td > 2.5){
+      var sp = Math.min(DOG_SPEED, td*0.22);
+      dog.vx += ((tx/td)*sp - dog.vx) * 0.45;
+      dog.vy += ((ty/td)*sp - dog.vy) * 0.45;
+    } else {
+      dog.vx *= 0.6; dog.vy *= 0.6;
+    }
+  }
+  var dsv = slideVelocity(dog.x, dog.y, dog.vx, dog.vy, DOG_R);
+  dog.vx = dsv[0]; dog.vy = dsv[1];
+  dog.x += dog.vx * dt;
+  dog.y += dog.vy * dt;
+  resolveObstacles(dog, DOG_R, 0);
+  var dsp = Math.sqrt(dog.vx*dog.vx + dog.vy*dog.vy);
+  if(dsp > 0.4){
+    dog.ang = Math.atan2(dog.vy, dog.vx);
+    dog.step += dsp * 0.09 * dt;
+    if(Math.random() < dsp*0.02) {
+      puffs.push({x:dog.x-Math.cos(dog.ang)*10, y:dog.y-Math.sin(dog.ang)*10,
+                  r:rand(2,5), life:1, vx:rand(-.3,.3), vy:rand(-.3,.3)});
+    }
+  }
+
+  // --- sheep ---
+  var n = sheep.length, i, j, s, o;
+
+  // centre of the loose flock, so an isolated sheep knows where home is
+  var fcx = 0, fcy = 0, fcn = 0;
+  for(i=0;i<n;i++){ if(!sheep[i].penned){ fcx += sheep[i].x; fcy += sheep[i].y; fcn++; } }
+  if(fcn){ fcx /= fcn; fcy /= fcn; }
+
+  for(i=0;i<n;i++){
+    s = sheep[i];
+
+    if(s.penned){
+      if(s.settle){
+        var sx = s.settle.x - s.x, sy = s.settle.y - s.y;
+        var sd = Math.sqrt(sx*sx+sy*sy);
+        if(sd > 3){ s.vx += (sx/sd)*0.09*dt; s.vy += (sy/sd)*0.09*dt; }
+      }
+      s.vx *= 0.88; s.vy *= 0.88;
+      s.x += s.vx*dt; s.y += s.vy*dt;
+      // keep them politely inside the fence
+      s.x = clamp(s.x, pen.x+SHEEP_R+2, pen.x+pen.w-SHEEP_R-2);
+      s.y = clamp(s.y, pen.y+SHEEP_R+2, pen.y+pen.h-SHEEP_R-2);
+      s.bob += 0.03*dt;
+      continue;
+    }
+
+    var ax = 0, ay = 0;
+
+    // flee the dog
+    var dx = s.x - dog.x, dy = s.y - dog.y;
+    var d = Math.sqrt(dx*dx+dy*dy);
+    if(d < FLEE_R){
+      if(d < 0.001){ dx = rand(-1,1); dy = rand(-1,1); d = 1; }
+      var f = (FLEE_R - d) / FLEE_R;         // 0..1
+      var strength = 0.30 + f*0.95;
+      ax += (dx/d) * strength;
+      ay += (dy/d) * strength;
+      s.panic = Math.min(1, Math.max(s.panic, f*1.6));
+    }
+    s.panic *= 0.965;
+
+    // flocking
+    var cx=0, cy=0, alx=0, aly=0, cnt=0, spx=0, spy=0, pcx=0, pcy=0, pcnt=0;
+    for(j=0;j<n;j++){
+      if(j===i) continue;
+      o = sheep[j];
+      var ox = o.x - s.x, oy = o.y - s.y;
+      var od2 = ox*ox + oy*oy;
+      if(od2 > NEIGH_R*NEIGH_R) continue;
+      var od = Math.sqrt(od2) || 0.001;
+      if(!o.penned){
+        cnt++; cx += o.x; cy += o.y; alx += o.vx; aly += o.vy;
+      } else {
+        // sheep follow sheep — a settled flock draws in the stragglers
+        pcnt++; pcx += o.x; pcy += o.y;
+      }
+      if(od < SEP_R){
+        var rep = (SEP_R - od)/SEP_R;
+        spx -= (ox/od) * rep;
+        spy -= (oy/od) * rep;
+      }
+    }
+    if(cnt > 0){
+      cx /= cnt; cy /= cnt;
+      var gx = cx - s.x, gy = cy - s.y;
+      var gd = Math.sqrt(gx*gx+gy*gy) || 0.001;
+      var cohesion = 0.020 + s.panic*0.055;   // panicked sheep bunch up hard
+      ax += (gx/gd) * cohesion * Math.min(gd/NEIGH_R, 1) * 2.2;
+      ay += (gy/gd) * cohesion * Math.min(gd/NEIGH_R, 1) * 2.2;
+      alx /= cnt; aly /= cnt;
+      ax += alx * 0.035; ay += aly * 0.035;
+    }
+    if(pcnt > 0){
+      pcx /= pcnt; pcy /= pcnt;
+      var fx = pcx - s.x, fy = pcy - s.y;
+      var fd = Math.sqrt(fx*fx+fy*fy) || 0.001;
+      ax += (fx/fd) * 0.048; ay += (fy/fd) * 0.048;
+    }
+    ax += spx * 0.30; ay += spy * 0.30;
+
+    // a sheep on its own gets nervous and trots back to the flock
+    var lonely = (cnt === 0 && pcnt === 0 && fcn > 1);
+    if(lonely){
+      var lx = fcx - s.x, ly = fcy - s.y;
+      var ld = Math.sqrt(lx*lx+ly*ly) || 0.001;
+      ax += (lx/ld) * 0.085; ay += (ly/ld) * 0.085;
+    }
+
+    // gate funnel: an open gate right in front of a spooked sheep is an escape route
+    var gcp = gateCenter(pen), depth = -1, ix = 0, iy = 0, lat = 0;
+    if(pen.gate === "left"  && s.x < pen.x){        depth = pen.x - s.x;        ix =  1; lat = s.y - gcp.y; }
+    else if(pen.gate === "right" && s.x > pen.x+pen.w){ depth = s.x - (pen.x+pen.w); ix = -1; lat = s.y - gcp.y; }
+    else if(pen.gate === "top"   && s.y < pen.y){    depth = pen.y - s.y;        iy =  1; lat = s.x - gcp.x; }
+    else if(pen.gate === "bottom"&& s.y > pen.y+pen.h){ depth = s.y - (pen.y+pen.h); iy = -1; lat = s.x - gcp.x; }
+    if(depth >= 0 && depth < 140 && Math.abs(lat) < pen.gw/2 + 52){
+      var pull = (1 - depth/140) * (0.16 + s.panic*0.30);
+      ax += ix * pull; ay += iy * pull;
+      // and slide toward the middle of the opening
+      var centre = -Math.sign(lat) * Math.min(Math.abs(lat)/60, 1) * pull * 0.8;
+      if(ix !== 0) ay += centre; else ax += centre;
+    }
+    // already through the gate but not yet clear of it — walk on in
+    if(insidePen(s.x, s.y, 0)){
+      var qx = pen.x + pen.w/2 - s.x, qy = pen.y + pen.h/2 - s.y;
+      var qd = Math.sqrt(qx*qx+qy*qy) || 0.001;
+      ax += (qx/qd) * 0.24; ay += (qy/qd) * 0.24;
+    }
+
+    // gentle grazing wander
+    s.wander += rand(-0.35,0.35);
+    var wamp = 0.016 * (1 - s.panic);
+    ax += Math.cos(s.wander) * wamp;
+    ay += Math.sin(s.wander) * wamp;
+
+    // steer away from walls/rocks before hitting them (sheep aren't suicidal)
+    var normals = [];
+    for(j=0;j<walls.length;j++){
+      var c = closestOnSeg(s.x, s.y, walls[j]);
+      var wx = s.x-c.x, wy = s.y-c.y;
+      var wd = Math.sqrt(wx*wx+wy*wy);
+      if(wd < 34 && wd > 0.001){
+        var wf = (34-wd)/34;
+        ax += (wx/wd) * wf * 0.30;
+        ay += (wy/wd) * wf * 0.30;
+        if(wd < 24) normals.push([wx/wd, wy/wd]);
+      }
+    }
+    for(j=0;j<rocks.length;j++){
+      var rx = s.x-rocks[j].x, ry = s.y-rocks[j].y;
+      var rd = Math.sqrt(rx*rx+ry*ry);
+      var lim = rocks[j].r + 30;
+      if(rd < lim && rd > 0.001){
+        var rf = (lim-rd)/lim;
+        ax += (rx/rd) * rf * 0.40;
+        ay += (ry/rd) * rf * 0.40;
+        if(rd < rocks[j].r + 20) normals.push([rx/rd, ry/rd]);
+      }
+    }
+    // field edges
+    var EDGE = 30;
+    if(s.x < EDGE){ ax += (EDGE-s.x)/EDGE * 0.30; if(s.x < 22) normals.push([1,0]); }
+    if(s.x > W-EDGE){ ax -= (EDGE-(W-s.x))/EDGE * 0.30; if(s.x > W-22) normals.push([-1,0]); }
+    if(s.y < EDGE){ ay += (EDGE-s.y)/EDGE * 0.30; if(s.y < 22) normals.push([0,1]); }
+    if(s.y > H-EDGE){ ay -= (EDGE-(H-s.y))/EDGE * 0.30; if(s.y > H-22) normals.push([0,-1]); }
+
+    // A cornered sheep runs ALONG the barrier rather than grinding into it:
+    // strip out any part of the steering that points into a surface it's touching.
+    for(j=0;j<normals.length;j++){
+      var nx3 = normals[j][0], ny3 = normals[j][1];
+      var into = ax*nx3 + ay*ny3;
+      if(into < 0){
+        ax -= into*nx3; ay -= into*ny3;
+        // nudge sideways so a head-on shove still breaks the stalemate
+        var tgx = -ny3, tgy = nx3;
+        var side = (s.vx*tgx + s.vy*tgy) >= 0 ? 1 : -1;
+        if(Math.abs(s.vx*tgx + s.vy*tgy) < 0.12) side = (i % 2 === 0) ? 1 : -1;
+        ax += tgx * side * (-into) * 0.85;
+        ay += tgy * side * (-into) * 0.85;
+      }
+    }
+
+    s.vx += ax * dt;
+    s.vy += ay * dt;
+
+    var damp = 0.90 + s.panic*0.055;
+    var fr = Math.pow(damp, dt);
+    s.vx *= fr; s.vy *= fr;
+
+    var maxS = CALM_SPEED + (PANIC_SPEED - CALM_SPEED) * s.panic;
+    if(lonely) maxS = Math.max(maxS, 1.5);
+    var v = Math.sqrt(s.vx*s.vx + s.vy*s.vy);
+    if(v > maxS){ s.vx = s.vx/v*maxS; s.vy = s.vy/v*maxS; }
+
+    var ssv = slideVelocity(s.x, s.y, s.vx, s.vy, SHEEP_R);
+    s.vx = ssv[0]; s.vy = ssv[1];
+
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    resolveObstacles(s, SHEEP_R, 0.15);
+
+    if(v > 0.25) s.ang = Math.atan2(s.vy, s.vx);
+    s.bob += (0.06 + v*0.10) * dt;
+
+    // penned?
+    if(insidePen(s.x, s.y, SHEEP_R + 4)){
+      s.penned = true;
+      s.panic = 0;
+      s.settle = {
+        x: rand(pen.x+22, pen.x+pen.w-22),
+        y: rand(pen.y+22, pen.y+pen.h-22)
+      };
+      pennedCount++;
+      gateGlow = 1;
+      for(var p=0;p<10;p++){
+        puffs.push({x:s.x,y:s.y,r:rand(2,5),life:1,vx:rand(-1,1),vy:rand(-1,1),gold:true});
+      }
+      updateHUD();
+      if(pennedCount === sheep.length) finishLevel();
+    }
+  }
+
+  // puffs
+  for(i=puffs.length-1;i>=0;i--){
+    var pu = puffs[i];
+    pu.x += pu.vx*dt; pu.y += pu.vy*dt;
+    pu.r += 0.13*dt;
+    pu.life -= 0.028*dt;
+    if(pu.life <= 0) puffs.splice(i,1);
+  }
+  if(gateGlow > 0) gateGlow = Math.max(0, gateGlow - 0.018*dt);
+}
+
+/* ---------- drawing ---------- */
+function resize(){
+  var stage = document.getElementById("stage");
+  var cw = stage.clientWidth, ch = stage.clientHeight;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = Math.round(cw*dpr);
+  canvas.height = Math.round(ch*dpr);
+  scale = Math.min(cw/W, ch/H);
+  offX = (cw - W*scale)/2;
+  offY = (ch - H*scale)/2;
+}
+
+function toWorld(clientX, clientY){
+  var r = canvas.getBoundingClientRect();
+  return {
+    x: clamp((clientX - r.left - offX)/scale, 0, W),
+    y: clamp((clientY - r.top  - offY)/scale, 0, H)
+  };
+}
+
+var grassPatches = [];
+for(var gp=0; gp<90; gp++){
+  grassPatches.push({x:Math.random()*W, y:Math.random()*H, r:8+Math.random()*30, a:0.02+Math.random()*0.05});
+}
+
+function draw(){
+  var cw = canvas.width/dpr, chh = canvas.height/dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle = "#0f130e";
+  ctx.fillRect(0,0,cw,chh);
+  ctx.save();
+  ctx.translate(offX, offY);
+  ctx.scale(scale, scale);
+
+  // field
+  var g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#4f7238");
+  g.addColorStop(0.55,"#456a30");
+  g.addColorStop(1,"#38592a");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  for(var i=0;i<grassPatches.length;i++){
+    var p = grassPatches[i];
+    ctx.fillStyle = "rgba(255,255,255,"+p.a+")";
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*0.55,0,0,6.2832); ctx.fill();
+  }
+
+  // pen floor
+  ctx.fillStyle = "rgba(140,112,72,0.30)";
+  ctx.fillRect(pen.x,pen.y,pen.w,pen.h);
+  ctx.strokeStyle = "rgba(255,240,190,"+(0.12+gateGlow*0.4)+")";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pen.x+3,pen.y+3,pen.w-6,pen.h-6);
+
+  // gate marker
+  var gc = gateCenter(pen);
+  var pulse = 0.35 + 0.25*Math.sin(performance.now()/420);
+  var gg = ctx.createRadialGradient(gc.x,gc.y,2,gc.x,gc.y,58);
+  gg.addColorStop(0,"rgba(255,235,150,"+(0.30*pulse+gateGlow*0.35)+")");
+  gg.addColorStop(1,"rgba(255,235,150,0)");
+  ctx.fillStyle = gg;
+  ctx.beginPath(); ctx.arc(gc.x,gc.y,58,0,6.2832); ctx.fill();
+
+  // rocks
+  for(i=0;i<rocks.length;i++){
+    var r = rocks[i];
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath(); ctx.ellipse(r.x, r.y+r.r*0.42, r.r*0.98, r.r*0.42, 0, 0, 6.2832); ctx.fill();
+    var rg = ctx.createRadialGradient(r.x-r.r*0.35, r.y-r.r*0.4, r.r*0.15, r.x, r.y, r.r);
+    rg.addColorStop(0,"#9aa094");
+    rg.addColorStop(1,"#5d6459");
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,6.2832); ctx.fill();
+    ctx.strokeStyle = "rgba(30,36,28,0.5)"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  // fences
+  for(i=0;i<walls.length;i++) drawFence(walls[i]);
+
+  // puffs
+  for(i=0;i<puffs.length;i++){
+    var pu = puffs[i];
+    ctx.fillStyle = pu.gold
+      ? "rgba(250,225,140,"+(pu.life*0.55)+")"
+      : "rgba(220,215,190,"+(pu.life*0.28)+")";
+    ctx.beginPath(); ctx.arc(pu.x,pu.y,pu.r,0,6.2832); ctx.fill();
+  }
+
+  // dog influence ring
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5,7]);
+  ctx.beginPath(); ctx.arc(dog.x,dog.y,FLEE_R,0,6.2832); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // sheep
+  for(i=0;i<sheep.length;i++) drawSheep(sheep[i]);
+
+  drawDog();
+
+  ctx.restore();
+}
+
+function drawFence(s){
+  var dx = s.x2-s.x1, dy = s.y2-s.y1;
+  var len = Math.sqrt(dx*dx+dy*dy);
+  if(len < 1) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(0,0,0,0.28)";
+  ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(s.x1,s.y1+3); ctx.lineTo(s.x2,s.y2+3); ctx.stroke();
+  ctx.strokeStyle = s.pen ? "#8a6238" : "#6f5a3d";
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,225,180,0.22)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(s.x1,s.y1-1.4); ctx.lineTo(s.x2,s.y2-1.4); ctx.stroke();
+  // posts
+  var posts = Math.max(2, Math.round(len/34));
+  for(var i=0;i<=posts;i++){
+    var t = i/posts;
+    var px = s.x1 + dx*t, py = s.y1 + dy*t;
+    ctx.fillStyle = "#5c4327";
+    ctx.fillRect(px-2.6, py-6, 5.2, 12);
+  }
+  ctx.restore();
+}
+
+function drawSheep(s){
+  var bounce = s.penned ? Math.sin(s.bob)*0.6 : Math.sin(s.bob*2)*1.1;
+  var sz = s.size;
+  ctx.save();
+  ctx.translate(s.x, s.y);
+
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.24)";
+  ctx.beginPath(); ctx.ellipse(0, 7*sz, 11*sz, 4.6*sz, 0, 0, 6.2832); ctx.fill();
+
+  ctx.rotate(s.ang);
+  ctx.translate(0, bounce*0.4);
+
+  // legs
+  ctx.strokeStyle = "#3a3128"; ctx.lineWidth = 2.1; ctx.lineCap = "round";
+  var swing = Math.sin(s.bob*2)*2.2;
+  ctx.beginPath();
+  ctx.moveTo(-4, 3); ctx.lineTo(-4-swing*0.5, 8.5);
+  ctx.moveTo( 3, 3); ctx.lineTo( 3+swing*0.5, 8.5);
+  ctx.stroke();
+
+  // fleece
+  var body = s.penned ? "#f2f0e6" : "#eeece1";
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(-3.4*sz, 0, 6.4*sz, 0, 6.2832);
+  ctx.arc( 1.4*sz,-2.4*sz, 5.4*sz, 0, 6.2832);
+  ctx.arc( 1.8*sz, 2.4*sz, 5.2*sz, 0, 6.2832);
+  ctx.arc(-7.4*sz, 1.4*sz, 4.6*sz, 0, 6.2832);
+  ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,0.06)";
+  ctx.beginPath(); ctx.arc(-3.4*sz, 2.6*sz, 5.4*sz, 0, 6.2832); ctx.fill();
+
+  // head
+  ctx.fillStyle = s.panic > 0.35 ? "#4a3a3a" : "#3d3630";
+  ctx.beginPath(); ctx.ellipse(7.4*sz, 0.4*sz, 4.1*sz, 3.3*sz, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = "#2b2622";
+  ctx.beginPath(); ctx.ellipse(6.2*sz,-3.0*sz, 2.0*sz, 1.3*sz, -0.5, 0, 6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6.2*sz, 3.8*sz, 2.0*sz, 1.3*sz,  0.5, 0, 6.2832); ctx.fill();
+  // eye
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(9.0*sz,-1.0*sz, 0.95*sz, 0, 6.2832); ctx.fill();
+  ctx.beginPath(); ctx.arc(9.0*sz, 1.8*sz, 0.95*sz, 0, 6.2832); ctx.fill();
+
+  ctx.restore();
+
+  // alarm mark
+  if(s.panic > 0.55 && !s.penned){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1,(s.panic-0.55)/0.35);
+    ctx.fillStyle = "#ffd76a";
+    ctx.font = "bold 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("!", s.x, s.y - 15 + Math.sin(s.bob*3)*1.5);
+    ctx.restore();
+  }
+}
+
+function drawDog(){
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath(); ctx.ellipse(dog.x, dog.y+8, 12, 5, 0, 0, 6.2832); ctx.fill();
+
+  ctx.translate(dog.x, dog.y);
+  ctx.rotate(dog.ang);
+  var wag = Math.sin(dog.step*2)*0.5;
+
+  // tail
+  ctx.strokeStyle = "#f0f0ea"; ctx.lineWidth = 3.4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-9,0);
+  ctx.quadraticCurveTo(-15, wag*4, -19, wag*7 - 2);
+  ctx.stroke();
+
+  // legs
+  ctx.strokeStyle = "#241f1b"; ctx.lineWidth = 2.4;
+  var sw = Math.sin(dog.step*2)*3;
+  ctx.beginPath();
+  ctx.moveTo(-4,-4); ctx.lineTo(-4-sw,-9);
+  ctx.moveTo(-4, 4); ctx.lineTo(-4+sw, 9);
+  ctx.moveTo( 4,-4); ctx.lineTo( 4+sw,-9);
+  ctx.moveTo( 4, 4); ctx.lineTo( 4-sw, 9);
+  ctx.stroke();
+
+  // body
+  ctx.fillStyle = "#241f1b";
+  ctx.beginPath(); ctx.ellipse(-1, 0, 10.5, 6.6, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = "#f2f2ec";
+  ctx.beginPath(); ctx.ellipse(-2.5, 0, 5.2, 4.6, 0, 0, 6.2832); ctx.fill();
+
+  // head
+  ctx.fillStyle = "#241f1b";
+  ctx.beginPath(); ctx.ellipse(9.5, 0, 5.6, 4.6, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = "#f2f2ec";
+  ctx.beginPath(); ctx.ellipse(12.5, 0, 3.4, 2.4, 0, 0, 6.2832); ctx.fill();
+  // ears
+  ctx.fillStyle = "#1a1613";
+  ctx.beginPath(); ctx.ellipse(7.4,-4.2, 2.6, 1.9, -0.7, 0, 6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7.4, 4.2, 2.6, 1.9,  0.7, 0, 6.2832); ctx.fill();
+  // nose
+  ctx.fillStyle = "#0e0c0a";
+  ctx.beginPath(); ctx.arc(15.4, 0, 1.5, 0, 6.2832); ctx.fill();
+  // eyes
+  ctx.fillStyle = "#ffd98a";
+  ctx.beginPath(); ctx.arc(10.6,-2.4, 1.05, 0, 6.2832); ctx.fill();
+  ctx.beginPath(); ctx.arc(10.6, 2.4, 1.05, 0, 6.2832); ctx.fill();
+
+  ctx.restore();
+}
+
+/* ---------- flow ---------- */
+function updateHUD(){
+  el.level.textContent  = (levelIndex+1);
+  el.penned.textContent = pennedCount + "/" + sheep.length;
+  el.time.textContent   = elapsed.toFixed(1);
+}
+
+function starsFor(time, par){
+  if(time <= par) return 3;
+  if(time <= par*1.55) return 2;
+  return 1;
+}
+function starStr(k){
+  return "★★★".slice(0,k) + "☆☆☆".slice(0, 3-k);
+}
+
+function showOverlay(title, sub, starText, buttons, showHow){
+  el.ovTitle.textContent = title;
+  el.ovSub.innerHTML = sub;
+  el.ovStars.textContent = starText || "";
+  el.ovHow.style.display = showHow ? "block" : "none";
+  el.ovRow.innerHTML = "";
+  buttons.forEach(function(b){
+    var btn = document.createElement("button");
+    btn.textContent = b.label;
+    if(b.primary) btn.className = "primary";
+    btn.addEventListener("click", b.fn);
+    el.ovRow.appendChild(btn);
+  });
+  el.ov.classList.remove("hidden");
+}
+function hideOverlay(){ el.ov.classList.add("hidden"); }
+
+function startLevel(i){
+  hideOverlay();
+  loadLevel(i);
+  startTime = performance.now();
+  el.hint.classList.remove("gone");
+  setTimeout(function(){ el.hint.classList.add("gone"); }, 6000);
+}
+
+function finishLevel(){
+  running = false;
+  var L = LEVELS[levelIndex];
+  var k = starsFor(elapsed, L.par);
+  stars[levelIndex] = Math.max(stars[levelIndex] || 0, k);
+  var last = levelIndex === LEVELS.length - 1;
+  var sub = "<b>" + L.name + "</b> cleared in <b>" + elapsed.toFixed(1) + "s</b>"
+          + " &nbsp;·&nbsp; par " + L.par + "s";
+  var btns = [];
+  if(!last){
+    btns.push({label:"Next field →", primary:true, fn:function(){ startLevel(levelIndex+1); }});
+    btns.push({label:"Retry", fn:function(){ startLevel(levelIndex); }});
+    setTimeout(function(){ showOverlay("Flock's in!", sub, starStr(k), btns, false); }, 550);
+  } else {
+    var total = stars.reduce(function(a,b){ return a + (b||0); }, 0);
+    var sub2 = sub + "<br><br>All five fields shepherded. Total: <b>" + total + " / 15 stars</b>.";
+    btns.push({label:"Herd again", primary:true, fn:function(){ stars = []; startLevel(0); }});
+    btns.push({label:"Replay field", fn:function(){ startLevel(levelIndex); }});
+    setTimeout(function(){ showOverlay("Good dog.", sub2, starStr(k), btns, false); }, 550);
+  }
+}
+
+/* ---------- loop ---------- */
+function frame(now){
+  if(!lastFrame) lastFrame = now;
+  var dt = (now - lastFrame) / 16.6667;
+  lastFrame = now;
+  if(dt > 3) dt = 3;
+
+  if(running){
+    elapsed = (now - startTime)/1000;
+    var sub = Math.ceil(dt/1.0), sdt = dt/sub;
+    for(var q=0;q<sub;q++) step(sdt);
+    el.time.textContent = elapsed.toFixed(1);
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- input ---------- */
+function bind(){
+  canvas.addEventListener("pointerdown", function(e){
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+    var w = toWorld(e.clientX, e.clientY);
+    target.x = w.x; target.y = w.y;
+    e.preventDefault();
+  });
+  canvas.addEventListener("pointermove", function(e){
+    if(e.pointerType === "mouse" || e.buttons > 0 || e.pressure > 0){
+      var w = toWorld(e.clientX, e.clientY);
+      target.x = w.x; target.y = w.y;
+    }
+    e.preventDefault();
+  });
+  canvas.addEventListener("pointerup", function(e){ e.preventDefault(); });
+  canvas.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+
+  window.addEventListener("keydown", function(e){
+    var k = e.key.toLowerCase();
+    if(k==="arrowleft"||k==="a") keys.left = true;
+    else if(k==="arrowright"||k==="d") keys.right = true;
+    else if(k==="arrowup"||k==="w") keys.up = true;
+    else if(k==="arrowdown"||k==="s") keys.down = true;
+    else if(k==="r"){ startLevel(levelIndex); }
+    else return;
+    e.preventDefault();
+  });
+  window.addEventListener("keyup", function(e){
+    var k = e.key.toLowerCase();
+    if(k==="arrowleft"||k==="a") keys.left = false;
+    else if(k==="arrowright"||k==="d") keys.right = false;
+    else if(k==="arrowup"||k==="w") keys.up = false;
+    else if(k==="arrowdown"||k==="s") keys.down = false;
+  });
+
+  document.getElementById("btnRestart").addEventListener("click", function(){
+    startLevel(levelIndex);
+  });
+  window.addEventListener("resize", resize);
+}
+
+/* ---------- boot ---------- */
+canvas = document.getElementById("cv");
+ctx = canvas.getContext("2d");
+resize();
+bind();
+loadLevel(0);
+running = false;
+el.ovGo.addEventListener("click", function(){ startLevel(0); });
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

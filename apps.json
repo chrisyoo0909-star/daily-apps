@@ -264,5 +264,12 @@
     "emoji": "👁️",
     "date": "2026-09-05",
     "blurb": "Check any two colours against the WCAG contrast rules — with a live text preview, colour-blindness simulation, and the nearest shade of the same hue that actually passes."
+  },
+  {
+    "file": "apps/app-2026-09-06-shepherd.html",
+    "name": "Shepherd",
+    "emoji": "🐕",
+    "date": "2026-09-06",
+    "blurb": "Herd a flock of real flocking-simulation sheep into the pen — they bunch up, bolt, follow each other through the gate, and a lone straggler trots back to the group."
   }
 ]
