@@ -830,7 +830,7 @@ addEventListener('keyup', e => {
 const active = new Map();
 cv.addEventListener('pointerdown', e => {
   if (!running) return;
-  cv.setPointerCapture(e.pointerId);
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   const rect = cv.getBoundingClientRect();
   const side = (e.clientX - rect.left) < rect.width / 2 ? 'L' : 'R';
   active.set(e.pointerId, side);
@@ -846,7 +846,7 @@ cv.addEventListener('pointercancel', endPointer);
 
 function bindHold(id, down, up){
   const el = document.getElementById(id);
-  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); down(); });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) {} down(); });
   el.addEventListener('pointerup', e => { e.preventDefault(); up && up(); });
   el.addEventListener('pointercancel', () => { up && up(); });
 }
