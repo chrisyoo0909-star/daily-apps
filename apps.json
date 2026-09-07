@@ -271,5 +271,12 @@
     "emoji": "🐕",
     "date": "2026-09-06",
     "blurb": "Herd a flock of real flocking-simulation sheep into the pen — they bunch up, bolt, follow each other through the gate, and a lone straggler trots back to the group."
+  },
+  {
+    "file": "apps/app-2026-09-07-tilt.html",
+    "name": "Tilt",
+    "emoji": "🕹️",
+    "date": "2026-09-07",
+    "blurb": "A neon pinball table with real physics — flippers that transfer spin, pop bumpers, a drop-target bank and a three-ball multiball, plus a nudge that will tilt you if you get greedy."
   }
 ]
