@@ -278,5 +278,12 @@
     "emoji": "🕹️",
     "date": "2026-09-07",
     "blurb": "A neon pinball table with real physics — flippers that transfer spin, pop bumpers, a drop-target bank and a three-ball multiball, plus a nudge that will tilt you if you get greedy."
+  },
+  {
+    "file": "apps/app-2026-09-08-coverage.html",
+    "name": "Coverage",
+    "emoji": "🎨",
+    "date": "2026-09-08",
+    "blurb": "Measure your rooms and it works out the exact cans of paint to buy — openings subtracted, trim estimated, and the cheapest bucket-and-quart combination costed out."
   }
 ]

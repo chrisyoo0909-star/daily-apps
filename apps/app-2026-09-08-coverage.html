@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coverage — how much paint to buy</title>
+<style>
+  :root{
+    --bg:#12100f; --bg2:#1b1817; --card:#211d1c; --line:#332d2b;
+    --ink:#f4efe9; --dim:#a89e97; --dim2:#786e68;
+    --accent:#e8b84b; --good:#6fcf8b; --warn:#e8825a;
+    --swatch:#5b7f9e;
+    --r:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #2a2320 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #1e2a30 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh; padding:0 0 60px;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 16px}
+  header{padding:26px 0 14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .logo{
+    width:44px;height:44px;border-radius:12px;flex:none;
+    background:linear-gradient(150deg,var(--swatch),color-mix(in srgb,var(--swatch) 55%, #000));
+    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.25);
+    position:relative; transition:background .25s;
+  }
+  .logo::after{content:""; position:absolute; inset:8px 8px auto 8px; height:5px; border-radius:3px; background:rgba(255,255,255,.28)}
+  h1{font-size:25px; margin:0; letter-spacing:-.4px; font-weight:700}
+  .sub{color:var(--dim); font-size:13.5px; margin-top:2px}
+  .spacer{flex:1}
+  .seg{display:flex; background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:3px}
+  .seg button{
+    border:0; background:transparent; color:var(--dim); font:inherit; font-size:13px; font-weight:600;
+    padding:7px 14px; border-radius:999px; cursor:pointer;
+  }
+  .seg button.on{background:var(--accent); color:#1a1512}
+  .grid{display:grid; grid-template-columns:1fr 380px; gap:16px; align-items:start}
+  @media(max-width:880px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:15px}
+  .card h2{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--dim); margin:0 0 12px}
+
+  .room{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin-bottom:12px}
+  .room-head{display:flex; align-items:center; gap:10px; margin-bottom:12px}
+  .room-head input.name{
+    flex:1; background:transparent; border:0; border-bottom:1px dashed transparent; color:var(--ink);
+    font:inherit; font-weight:700; font-size:16.5px; padding:2px 0; min-width:0;
+  }
+  .room-head input.name:focus{outline:none; border-bottom-color:var(--dim2)}
+  .x{border:1px solid var(--line); background:var(--bg2); color:var(--dim); border-radius:9px; width:30px;height:30px; cursor:pointer; font-size:16px; line-height:1; flex:none}
+  .x:hover{color:var(--warn); border-color:var(--warn)}
+
+  .fields{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  .f label{display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim2); margin-bottom:4px}
+  .f input{
+    width:100%; background:var(--bg2); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); font:inherit; padding:9px 10px; text-align:right;
+  }
+  .f input:focus{outline:none; border-color:var(--accent)}
+  .f .unit{color:var(--dim2); font-size:11px; text-transform:none; letter-spacing:0}
+  .surfaces{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .chip{
+    display:flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px;
+    border:1px solid var(--line); background:var(--bg2); color:var(--dim); font-size:13px; cursor:pointer; user-select:none;
+  }
+  .chip.on{border-color:var(--accent); color:var(--ink); background:color-mix(in srgb,var(--accent) 14%, var(--bg2))}
+  .chip .dot{width:9px;height:9px;border-radius:50%; background:var(--dim2)}
+  .chip.on .dot{background:var(--accent)}
+  .roomarea{font-size:12.5px; color:var(--dim2); margin-top:10px}
+
+  .addbtn{
+    width:100%; padding:12px; border-radius:var(--r); border:1px dashed var(--line);
+    background:transparent; color:var(--dim); font:inherit; font-weight:600; cursor:pointer;
+  }
+  .addbtn:hover{border-color:var(--accent); color:var(--accent)}
+
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
+  .row label{font-size:13.5px; color:var(--dim)}
+  .row input[type=number]{
+    width:88px; background:var(--bg2); border:1px solid var(--line); border-radius:9px;
+    color:var(--ink); font:inherit; padding:7px 9px; text-align:right;
+  }
+  .row input[type=number]:focus{outline:none; border-color:var(--accent)}
+  .row input[type=color]{width:44px;height:32px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--bg2);cursor:pointer}
+  .sw{display:flex;align-items:center;gap:8px;cursor:pointer}
+  .sw input{appearance:none;width:40px;height:23px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);position:relative;cursor:pointer;transition:.18s;margin:0}
+  .sw input::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--dim2);transition:.18s}
+  .sw input:checked{background:color-mix(in srgb,var(--accent) 30%, var(--bg2));border-color:var(--accent)}
+  .sw input:checked::after{left:20px;background:var(--accent)}
+
+  .hero{
+    background:linear-gradient(160deg, color-mix(in srgb,var(--swatch) 26%, var(--card)), var(--card) 70%);
+    border:1px solid var(--line); border-radius:var(--r); padding:18px; margin-bottom:14px; transition:background .25s;
+  }
+  .big{font-size:40px; font-weight:800; letter-spacing:-1.5px; line-height:1}
+  .big small{font-size:16px; font-weight:600; color:var(--dim); letter-spacing:0; margin-left:6px}
+  .hero .lbl{font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim); margin-bottom:6px}
+  .cost{margin-top:12px; font-size:14px; color:var(--ink)}
+  .cost b{color:var(--accent); font-size:19px}
+
+  .bar{display:flex; height:12px; border-radius:99px; overflow:hidden; background:var(--bg2); margin:6px 0 10px}
+  .bar span{display:block; height:100%}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--dim)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim2); font-weight:600; padding:0 0 7px}
+  th.n,td.n{text-align:right}
+  td{padding:8px 0; border-top:1px solid var(--line); vertical-align:top}
+  td.name{font-weight:600}
+  td .note{display:block; color:var(--dim2); font-size:11.5px; font-weight:400}
+  tr.total td{border-top:2px solid var(--line); font-weight:700; font-size:15px}
+  tr.total td.n{color:var(--accent)}
+  .empty{color:var(--dim2); font-size:13px; padding:6px 0}
+  .tip{
+    margin-top:12px; font-size:12.5px; color:var(--dim); background:var(--bg2);
+    border-left:3px solid var(--accent); border-radius:0 9px 9px 0; padding:9px 11px;
+  }
+  footer{color:var(--dim2); font-size:12px; text-align:center; padding:26px 0 0; line-height:1.6}
+  .sticky{position:sticky; top:16px}
+  @media(max-width:880px){ .sticky{position:static} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo" id="logo"></div>
+    <div>
+      <h1>Coverage</h1>
+      <div class="sub">Measure the room, get the exact cans to put in the cart.</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg" id="units">
+      <button data-u="imp" class="on">ft / gal</button>
+      <button data-u="met">m / L</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div id="rooms"></div>
+      <button class="addbtn" id="add">+ Add a room</button>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Job settings</h2>
+        <div class="row"><label>Coats of colour</label><input type="number" id="coats" value="2" min="1" max="4" step="1"></div>
+        <div class="row"><label>Wall &amp; ceiling coverage <span class="f"><span class="unit" id="covU">sq ft / gal</span></span></label><input type="number" id="cov" value="350" min="1" step="10"></div>
+        <div class="row"><label class="sw"><input type="checkbox" id="primer"> <span>Add one coat of primer</span></label></div>
+        <div class="row"><label>Extra for touch-ups &amp; spills</label><input type="number" id="waste" value="10" min="0" max="50" step="5"></div>
+        <div class="row" style="margin-bottom:0"><label>Paint colour (preview)</label><input type="color" id="color" value="#5b7f9e"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Can prices</h2>
+        <div class="row"><label id="pL">5 gal bucket</label><input type="number" id="p5" value="165" min="0" step="1"></div>
+        <div class="row"><label id="pM">1 gal can</label><input type="number" id="p1" value="42" min="0" step="1"></div>
+        <div class="row" style="margin-bottom:0"><label id="pS">1 quart</label><input type="number" id="pq" value="18" min="0" step="1"></div>
+      </div>
+    </div>
+
+    <div class="sticky">
+      <div class="hero" id="hero">
+        <div class="lbl">Total paint to buy</div>
+        <div class="big" id="totalVol">—</div>
+        <div class="cost" id="totalCost"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h2>Surface area</h2>
+        <div class="bar" id="bar"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="card">
+        <h2>Shopping list</h2>
+        <div id="list"></div>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Openings are assumed standard: a door is 3 ft × 6 ft 8 in, a window 3 ft × 4 ft.<br>
+    Trim is estimated from baseboard plus casing around each opening. Coverage varies by paint and surface — check the can.
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- constants ---------- */
+var FT2_PER_M2 = 10.7639104;
+var M_PER_FT = 0.3048;
+var L_PER_GAL = 3.785411784;
+
+// everything internal is FEET and SQUARE FEET and GALLONS
+var DOOR_W = 3, DOOR_H = 6 + 8/12;          // 20.0 sq ft
+var WIN_W  = 3, WIN_H  = 4;                  // 12 sq ft
+var BASE_H = 5/12;                           // 5" baseboard
+var CASE_W = 3.5/12;                         // 3.5" casing
+var CEIL_COVER_BONUS = 1.0;                  // ceiling paint covers same as wall
+var TRIM_COVER = 400;                        // sq ft per gal, trim enamel
+
+var state = {
+  unit: 'imp',
+  rooms: [
+    mkRoom('Living room', 16, 13, 9, 2, 3),
+    mkRoom('Bedroom',     12, 11, 9, 1, 2)
+  ]
+};
+var nextId = 3;
+
+function mkRoom(name, l, w, h, doors, wins){
+  return { id:nextId++, name:name, l:l, w:w, h:h, doors:doors, wins:wins,
+           walls:true, ceiling:false, trim:false };
+}
+
+/* ---------- unit helpers ---------- */
+function isImp(){ return state.unit === 'imp'; }
+function lenOut(ft){ return isImp() ? ft : ft * M_PER_FT; }          // display value
+function lenIn(v){ return isImp() ? v : v / M_PER_FT; }              // to feet
+function areaOut(sqft){ return isImp() ? sqft : sqft / FT2_PER_M2; }
+function volOut(gal){ return isImp() ? gal : gal * L_PER_GAL; }
+function lenU(){ return isImp() ? 'ft' : 'm'; }
+function areaU(){ return isImp() ? 'sq ft' : 'm²'; }
+
+/* coverage field: user types sq ft/gal (imp) or m²/L (met). Convert to sqft/gal. */
+function coverageSqftGal(){
+  var v = num('cov', 350);
+  if (v <= 0) v = isImp() ? 350 : 8.6;
+  return isImp() ? v : v * FT2_PER_M2 * L_PER_GAL;
+}
+
+/* ---------- dom helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function num(id, dflt){
+  var el = $(id); if(!el) return dflt;
+  var v = parseFloat(el.value);
+  return isFinite(v) ? v : dflt;
+}
+function fmt(n, d){
+  if (!isFinite(n)) n = 0;
+  d = (d === undefined) ? 1 : d;
+  return n.toLocaleString(undefined, {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function money(n){
+  return '$' + Math.round(n).toLocaleString();
+}
+
+/* ---------- geometry ---------- */
+function roomAreas(r){
+  var L = Math.max(0, r.l), W = Math.max(0, r.w), H = Math.max(0, r.h);
+  var doors = Math.max(0, Math.round(r.doors)), wins = Math.max(0, Math.round(r.wins));
+  var perim = 2 * (L + W);
+  var gross = perim * H;
+  var openArea = doors * DOOR_W * DOOR_H + wins * WIN_W * WIN_H;
+  var walls = Math.max(0, gross - openArea);
+
+  var ceiling = L * W;
+
+  // baseboard runs the perimeter minus the width of each doorway
+  var baseLf = Math.max(0, perim - doors * DOOR_W);
+  // casing: up both sides and across the top of each opening
+  var caseLf = doors * (2 * DOOR_H + DOOR_W) + wins * (2 * WIN_H + 2 * WIN_W);
+  var trim = baseLf * BASE_H + caseLf * CASE_W;
+
+  return {
+    walls: r.walls ? walls : 0,
+    ceiling: r.ceiling ? ceiling : 0,
+    trim: r.trim ? trim : 0,
+    grossWalls: gross, openArea: openArea, perim: perim
+  };
+}
+
+/* ---------- can packing: cheapest combo that meets `need` gallons ---------- */
+function packCans(needGal){
+  if (needGal <= 0) return null;
+  var p5 = Math.max(0, num('p5', 165));
+  var p1 = Math.max(0, num('p1', 42));
+  var pq = Math.max(0, num('pq', 18));
+  var best = null;
+  var max5 = Math.floor(needGal / 5) + 1;
+  if (max5 > 40) max5 = 40;
+  for (var b = 0; b <= max5; b++){
+    var rem5 = needGal - b * 5;
+    var max1 = Math.max(0, Math.ceil(rem5)) + 1;
+    if (max1 > 40) max1 = 40;
+    for (var g = 0; g <= max1; g++){
+      var rem1 = rem5 - g;
+      var maxq = 4;
+      for (var q = 0; q <= maxq; q++){
+        var vol = b * 5 + g + q * 0.25;
+        if (vol + 1e-9 < needGal) continue;
+        var cost = b * p5 + g * p1 + q * pq;
+        // tie-break: cheaper, then less leftover, then fewer containers
+        if (!best ||
+            cost < best.cost - 1e-9 ||
+            (Math.abs(cost - best.cost) < 1e-9 && vol < best.vol - 1e-9) ||
+            (Math.abs(cost - best.cost) < 1e-9 && Math.abs(vol - best.vol) < 1e-9 && (b+g+q) < best.count)){
+          best = {b:b, g:g, q:q, vol:vol, cost:cost, count:b+g+q};
+        }
+        break; // smallest q that satisfies is best for this (b,g)
+      }
+    }
+  }
+  return best;
+}
+
+function cansLabel(p){
+  var out = [];
+  if (isImp()){
+    if (p.b) out.push(p.b + ' × 5 gal bucket' + (p.b>1?'s':''));
+    if (p.g) out.push(p.g + ' × 1 gal can' + (p.g>1?'s':''));
+    if (p.q) out.push(p.q + ' × 1 quart' + (p.q>1?'s':''));
+  } else {
+    if (p.b) out.push(p.b + ' × 19 L pail' + (p.b>1?'s':''));
+    if (p.g) out.push(p.g + ' × 3.8 L can' + (p.g>1?'s':''));
+    if (p.q) out.push(p.q + ' × 950 mL tin' + (p.q>1?'s':''));
+  }
+  return out.join(' + ');
+}
+
+/* ---------- render rooms ---------- */
+function renderRooms(){
+  var host = $('rooms');
+  host.innerHTML = '';
+  state.rooms.forEach(function(r){
+    var a = roomAreas(r);
+    var el = document.createElement('div');
+    el.className = 'room';
+    el.innerHTML =
+      '<div class="room-head">' +
+        '<input class="name" value="" data-k="name" aria-label="Room name">' +
+        '<button class="x" data-del="1" title="Remove room">×</button>' +
+      '</div>' +
+      '<div class="fields">' +
+        '<div class="f"><label>Length <span class="unit">' + lenU() + '</span></label><input type="number" step="0.1" min="0" data-k="l"></div>' +
+        '<div class="f"><label>Width <span class="unit">' + lenU() + '</span></label><input type="number" step="0.1" min="0" data-k="w"></div>' +
+        '<div class="f"><label>Height <span class="unit">' + lenU() + '</span></label><input type="number" step="0.1" min="0" data-k="h"></div>' +
+        '<div class="f"><label>Doors</label><input type="number" step="1" min="0" data-k="doors"></div>' +
+        '<div class="f"><label>Windows</label><input type="number" step="1" min="0" data-k="wins"></div>' +
+      '</div>' +
+      '<div class="surfaces">' +
+        '<div class="chip' + (r.walls?' on':'') + '" data-t="walls"><i class="dot"></i>Walls</div>' +
+        '<div class="chip' + (r.ceiling?' on':'') + '" data-t="ceiling"><i class="dot"></i>Ceiling</div>' +
+        '<div class="chip' + (r.trim?' on':'') + '" data-t="trim"><i class="dot"></i>Trim</div>' +
+      '</div>' +
+      '<div class="roomarea"></div>';
+
+    el.querySelector('[data-k="name"]').value = r.name;
+    el.querySelector('[data-k="l"]').value = round1(lenOut(r.l));
+    el.querySelector('[data-k="w"]').value = round1(lenOut(r.w));
+    el.querySelector('[data-k="h"]').value = round1(lenOut(r.h));
+    el.querySelector('[data-k="doors"]').value = r.doors;
+    el.querySelector('[data-k="wins"]').value = r.wins;
+
+    var parts = [];
+    if (r.walls) parts.push(fmt(areaOut(a.walls),0) + ' walls');
+    if (r.ceiling) parts.push(fmt(areaOut(a.ceiling),0) + ' ceiling');
+    if (r.trim) parts.push(fmt(areaOut(a.trim),0) + ' trim');
+    el.querySelector('.roomarea').textContent = parts.length
+      ? parts.join(' · ') + ' ' + areaU()
+      : 'Nothing selected to paint in this room.';
+
+    // events
+    el.querySelector('[data-del="1"]').addEventListener('click', function(){
+      state.rooms = state.rooms.filter(function(x){ return x.id !== r.id; });
+      renderRooms(); compute();
+    });
+    el.querySelectorAll('.chip').forEach(function(c){
+      c.addEventListener('click', function(){
+        r[c.dataset.t] = !r[c.dataset.t];
+        c.classList.toggle('on', r[c.dataset.t]);
+        renderRooms(); compute();
+      });
+    });
+    el.querySelectorAll('input[data-k]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var k = inp.dataset.k;
+        if (k === 'name'){ r.name = inp.value; return; }
+        var v = parseFloat(inp.value);
+        if (!isFinite(v) || v < 0) v = 0;
+        if (k === 'doors' || k === 'wins') r[k] = Math.round(v);
+        else r[k] = lenIn(v);
+        var a2 = roomAreas(r);
+        var p2 = [];
+        if (r.walls) p2.push(fmt(areaOut(a2.walls),0) + ' walls');
+        if (r.ceiling) p2.push(fmt(areaOut(a2.ceiling),0) + ' ceiling');
+        if (r.trim) p2.push(fmt(areaOut(a2.trim),0) + ' trim');
+        el.querySelector('.roomarea').textContent = p2.length
+          ? p2.join(' · ') + ' ' + areaU() : 'Nothing selected to paint in this room.';
+        compute();
+      });
+    });
+
+    host.appendChild(el);
+  });
+}
+function round1(v){ return Math.round(v * 10) / 10; }
+
+/* ---------- compute ---------- */
+function compute(){
+  var coats = Math.max(1, Math.round(num('coats', 2)));
+  var cov = coverageSqftGal();
+  var waste = 1 + Math.max(0, num('waste', 10)) / 100;
+  var usePrimer = $('primer').checked;
+
+  var wallA = 0, ceilA = 0, trimA = 0;
+  state.rooms.forEach(function(r){
+    var a = roomAreas(r);
+    wallA += a.walls; ceilA += a.ceiling; trimA += a.trim;
+  });
+  var totalA = wallA + ceilA + trimA;
+
+  var products = [];
+  function add(name, note, area, coatsN, coverage){
+    if (area <= 0) return;
+    var gal = area * coatsN * waste / coverage;
+    var pack = packCans(gal);
+    if (!pack) return;
+    products.push({name:name, note:note, area:area, need:gal, pack:pack});
+  }
+
+  add('Wall paint', fmt(areaOut(wallA),0) + ' ' + areaU() + ' · ' + coats + ' coat' + (coats>1?'s':''), wallA, coats, cov);
+  add('Ceiling paint', fmt(areaOut(ceilA),0) + ' ' + areaU() + ' · ' + coats + ' coat' + (coats>1?'s':''), ceilA, coats, cov);
+  add('Trim enamel', fmt(areaOut(trimA),0) + ' ' + areaU() + ' · ' + coats + ' coat' + (coats>1?'s':''), trimA, coats, TRIM_COVER);
+  if (usePrimer){
+    var primeA = wallA + ceilA;
+    add('Primer', fmt(areaOut(primeA),0) + ' ' + areaU() + ' · 1 coat', primeA, 1, cov * 0.85);
+  }
+
+  // hero
+  var boughtGal = 0, cost = 0, neededGal = 0;
+  products.forEach(function(p){ boughtGal += p.pack.vol; cost += p.pack.cost; neededGal += p.need; });
+
+  if (products.length === 0){
+    $('totalVol').innerHTML = '—';
+    $('totalCost').innerHTML = '<span style="color:var(--dim)">Pick at least one surface to paint.</span>';
+  } else {
+    $('totalVol').innerHTML = fmt(volOut(boughtGal), boughtGal < 2 ? 2 : 1) +
+      '<small>' + (isImp() ? 'gallons' : 'litres') + '</small>';
+    $('totalCost').innerHTML = 'about <b>' + money(cost) + '</b> at the prices below';
+  }
+
+  // area bar
+  var bar = $('bar'), legend = $('legend');
+  bar.innerHTML = ''; legend.innerHTML = '';
+  var segs = [
+    {k:'Walls', v:wallA, c:'var(--swatch)'},
+    {k:'Ceiling', v:ceilA, c:'#cfd8dd'},
+    {k:'Trim', v:trimA, c:'var(--accent)'}
+  ];
+  if (totalA > 0){
+    segs.forEach(function(s){
+      if (s.v <= 0) return;
+      var sp = document.createElement('span');
+      sp.style.width = (s.v / totalA * 100) + '%';
+      sp.style.background = s.c;
+      bar.appendChild(sp);
+      var li = document.createElement('div');
+      li.innerHTML = '<i style="background:' + s.c + '"></i>' + s.k + ' ' + fmt(areaOut(s.v),0) + ' ' + areaU();
+      legend.appendChild(li);
+    });
+  } else {
+    legend.innerHTML = '<div style="color:var(--dim2)">No surfaces selected.</div>';
+  }
+
+  // shopping list
+  var list = $('list');
+  if (products.length === 0){
+    list.innerHTML = '<div class="empty">Nothing to buy yet.</div>';
+    $('tip').textContent = 'Toggle Walls, Ceiling or Trim on a room to get started.';
+    return;
+  }
+  var html = '<table><thead><tr><th>Product</th><th class="n">Buy</th><th class="n">Cost</th></tr></thead><tbody>';
+  products.forEach(function(p){
+    html += '<tr><td class="name">' + p.name + '<span class="note">' + p.note + ' · needs ' +
+            fmt(volOut(p.need), 2) + ' ' + (isImp()?'gal':'L') + '</span></td>' +
+            '<td class="n">' + cansLabel(p.pack) + '</td>' +
+            '<td class="n">' + money(p.pack.cost) + '</td></tr>';
+  });
+  html += '<tr class="total"><td>Total</td><td class="n">' + fmt(volOut(boughtGal), 1) + ' ' + (isImp()?'gal':'L') +
+          '</td><td class="n">' + money(cost) + '</td></tr>';
+  html += '</tbody></table>';
+  list.innerHTML = html;
+
+  var leftover = boughtGal - neededGal;
+  var tip;
+  if (leftover > 0.9){
+    tip = 'You will have roughly ' + fmt(volOut(leftover),1) + ' ' + (isImp()?'gallons':'litres') +
+          ' spare. That is the cheapest can combination — buying less means a second trip mid-job.';
+  } else if (leftover > 0.2){
+    tip = 'About ' + fmt(volOut(leftover),1) + ' ' + (isImp()?'gallons':'litres') +
+          ' left over — a good cushion for touch-ups later.';
+  } else {
+    tip = 'This is a tight buy. Get your colour mixed in one batch so the cans match exactly.';
+  }
+  if (wallA > 0 && !usePrimer){
+    tip += ' Going lighter over a dark wall? Turn on primer — it beats a third colour coat.';
+  }
+  $('tip').textContent = tip;
+}
+
+/* ---------- unit switching ---------- */
+function setUnit(u){
+  if (u === state.unit) return;
+  var covEl = $('cov');
+  // convert coverage field between sqft/gal and m²/L
+  var cur = parseFloat(covEl.value);
+  if (isFinite(cur) && cur > 0){
+    covEl.value = (u === 'met')
+      ? (cur / FT2_PER_M2 / L_PER_GAL).toFixed(1)
+      : Math.round(cur * FT2_PER_M2 * L_PER_GAL);
+  }
+  state.unit = u;
+  $('covU').textContent = isImp() ? 'sq ft / gal' : 'm² / L';
+  $('pL').textContent = isImp() ? '5 gal bucket' : '19 L pail';
+  $('pM').textContent = isImp() ? '1 gal can' : '3.8 L can';
+  $('pS').textContent = isImp() ? '1 quart' : '950 mL tin';
+  Array.prototype.forEach.call($('units').children, function(b){
+    b.classList.toggle('on', b.dataset.u === u);
+  });
+  renderRooms(); compute();
+}
+
+/* ---------- wiring ---------- */
+Array.prototype.forEach.call($('units').children, function(b){
+  b.addEventListener('click', function(){ setUnit(b.dataset.u); });
+});
+$('add').addEventListener('click', function(){
+  var names = ['Bathroom','Hallway','Kitchen','Office','Dining room','Guest room','Nursery','Basement'];
+  var n = names[(state.rooms.length + 5) % names.length];
+  state.rooms.push(mkRoom(n, 10, 10, 9, 1, 1));
+  renderRooms(); compute();
+  window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+});
+['coats','cov','waste','p5','p1','pq'].forEach(function(id){
+  $(id).addEventListener('input', compute);
+});
+$('primer').addEventListener('change', compute);
+$('color').addEventListener('input', function(){
+  document.documentElement.style.setProperty('--swatch', $('color').value);
+  compute();
+});
+
+renderRooms();
+compute();
+</script>
+</body>
+</html>
