@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Span — connect your two sides</title>
+<style>
+  :root{
+    --bg:#0b0f18;
+    --bg2:#131a29;
+    --panel:rgba(255,255,255,.05);
+    --line:rgba(255,255,255,.10);
+    --txt:#e8eefc;
+    --dim:#8d9ab4;
+    --p1:#2fd4d4;
+    --p1d:#0e6f74;
+    --p2:#f4708f;
+    --p2d:#7d2440;
+    --gold:#ffd166;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:
+      radial-gradient(1100px 620px at 15% -10%, #1b2540 0%, transparent 60%),
+      radial-gradient(900px 560px at 92% 105%, #2a1730 0%, transparent 62%),
+      var(--bg);
+    color:var(--txt);
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100dvh;padding:14px 12px 22px;gap:12px;
+  }
+  header{width:100%;max-width:640px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  h1{
+    font-size:26px;margin:0;letter-spacing:.16em;font-weight:800;
+    background:linear-gradient(92deg,var(--p1),#9fb8ff 48%,var(--p2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tag{font-size:12.5px;color:var(--dim);letter-spacing:.02em}
+
+  .wrap{width:100%;max-width:640px;display:flex;flex-direction:column;gap:12px}
+
+  .statusbar{
+    display:flex;align-items:center;gap:10px;min-height:46px;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:9px 12px;backdrop-filter:blur(8px);
+  }
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.05)}
+  .dot.p1{background:var(--p1);box-shadow:0 0 14px var(--p1),0 0 0 3px rgba(47,212,212,.14)}
+  .dot.p2{background:var(--p2);box-shadow:0 0 14px var(--p2),0 0 0 3px rgba(244,112,143,.14)}
+  .dot.idle{background:#4a5570;box-shadow:none}
+  #status{font-size:15px;font-weight:650;flex:1;line-height:1.25}
+  #sub{display:block;font-size:12px;font-weight:400;color:var(--dim);margin-top:2px}
+
+  .boardbox{position:relative;width:100%;display:flex;justify-content:center}
+  canvas{display:block;touch-action:none;width:100%;height:auto;border-radius:16px}
+
+  .banner{
+    position:absolute;inset:auto 0 0 0;top:50%;transform:translateY(-50%);
+    display:flex;justify-content:center;pointer-events:none;opacity:0;transition:opacity .45s ease;
+  }
+  .banner.on{opacity:1}
+  .banner span{
+    background:rgba(9,13,22,.82);border:1px solid var(--line);backdrop-filter:blur(6px);
+    padding:12px 22px;border-radius:999px;font-weight:800;letter-spacing:.06em;font-size:19px;
+    box-shadow:0 14px 40px rgba(0,0,0,.5);
+  }
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .group{
+    display:flex;gap:6px;align-items:center;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:5px 7px;
+  }
+  .glabel{font-size:11px;color:var(--dim);letter-spacing:.09em;text-transform:uppercase;padding:0 3px}
+  .chip{
+    border:1px solid transparent;background:transparent;color:var(--dim);
+    font:inherit;font-size:13px;font-weight:600;padding:6px 11px;border-radius:9px;cursor:pointer;
+    transition:background .16s,color .16s,border-color .16s;
+  }
+  .chip:hover{color:var(--txt);background:rgba(255,255,255,.05)}
+  .chip.on{background:rgba(47,212,212,.16);color:#bff3f3;border-color:rgba(47,212,212,.35)}
+  .btn{
+    border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--txt);
+    font:inherit;font-size:13.5px;font-weight:650;padding:9px 15px;border-radius:12px;cursor:pointer;
+    transition:background .16s,transform .08s,opacity .16s;
+  }
+  .btn:hover{background:rgba(255,255,255,.11)}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.35;cursor:default}
+  .btn.hero{
+    background:linear-gradient(96deg,rgba(47,212,212,.22),rgba(244,112,143,.22));
+    border-color:rgba(255,255,255,.20);
+  }
+  .btn.swap{
+    background:linear-gradient(96deg,rgba(255,209,102,.28),rgba(255,209,102,.10));
+    border-color:rgba(255,209,102,.5);color:#ffe6ac;
+  }
+  .hint{font-size:12.5px;color:var(--dim);line-height:1.55;text-align:center;max-width:640px}
+  .hint b{color:#c9d5f0;font-weight:650}
+  .k{color:var(--p1);font-weight:700}
+  .m{color:var(--p2);font-weight:700}
+  @media (max-width:430px){
+    h1{font-size:22px}
+    .chip{padding:6px 9px;font-size:12.5px}
+    .btn{padding:8px 12px;font-size:13px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SPAN</h1>
+  <span class="tag">connect your two sides before the machine connects its own</span>
+</header>
+
+<div class="wrap">
+
+  <div class="statusbar">
+    <div class="dot p1" id="turndot"></div>
+    <div id="status">Your move<span id="sub">Claim any cell to begin.</span></div>
+    <button class="btn swap" id="swapBtn" style="display:none">Swap</button>
+  </div>
+
+  <div class="boardbox">
+    <canvas id="board"></canvas>
+    <div class="banner" id="banner"><span id="bannerTxt"></span></div>
+  </div>
+
+  <div class="row">
+    <div class="group">
+      <span class="glabel">Size</span>
+      <button class="chip" data-size="7">7</button>
+      <button class="chip on" data-size="9">9</button>
+      <button class="chip" data-size="11">11</button>
+    </div>
+    <div class="group">
+      <span class="glabel">Machine</span>
+      <button class="chip" data-lvl="0">Calm</button>
+      <button class="chip on" data-lvl="1">Sharp</button>
+      <button class="chip" data-lvl="2">Ruthless</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="btn hero" id="newBtn">New game</button>
+    <button class="btn" id="undoBtn">Undo</button>
+    <button class="btn" id="firstBtn">Machine opens</button>
+  </div>
+
+  <p class="hint">
+    You are <span class="k">teal</span> — link the <span class="k">left</span> and <span class="k">right</span> edges with an unbroken chain.
+    The machine is <span class="m">rose</span> and links <span class="m">top</span> to <span class="m">bottom</span>.
+    Chains connect through all six sides of a cell. <b>There are no draws</b> — someone always gets through.
+    <br>Whoever moves second may <b>Swap</b> once: steal the opening move by mirroring it.
+  </p>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------- geometry */
+const SQ3 = Math.sqrt(3);
+// neighbour offsets in (dr,dc), ordered by screen angle 0,60,120,180,240,300
+const DIRS = [[0,1],[1,0],[1,-1],[0,-1],[-1,0],[-1,1]];
+
+/* ---------------------------------------------------------------- board core */
+function buildNbrs(n){
+  const N = n*n;
+  const nb = new Int32Array(N*6);
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const i = r*n+c;
+    for(let d=0;d<6;d++){
+      const rr = r+DIRS[d][0], cc = c+DIRS[d][1];
+      nb[i*6+d] = (rr>=0&&rr<n&&cc>=0&&cc<n) ? rr*n+cc : -1;
+    }
+  }
+  return nb;
+}
+
+/* union-find scratch, reused across playouts */
+let UFp = new Int32Array(0);
+function ufFind(x){
+  let root = x;
+  while(UFp[root] !== root) root = UFp[root];
+  while(UFp[x] !== root){ const nx = UFp[x]; UFp[x] = root; x = nx; }
+  return root;
+}
+function ufUnion(a,b){
+  a = ufFind(a); b = ufFind(b);
+  if(a !== b) UFp[a] = b;
+}
+
+/* true when player 1 (left<->right) has a completed chain */
+function p1Connected(cells, n, nb){
+  const N = n*n, L = N, R = N+1;
+  if(UFp.length < N+2) UFp = new Int32Array(N+2);
+  for(let i=0;i<N+2;i++) UFp[i] = i;
+  for(let i=0;i<N;i++){
+    if(cells[i] !== 1) continue;
+    const c = i % n;
+    if(c === 0) ufUnion(i, L);
+    if(c === n-1) ufUnion(i, R);
+    for(let d=0;d<6;d++){
+      const j = nb[i*6+d];
+      if(j >= 0 && cells[j] === 1) ufUnion(i, j);
+    }
+  }
+  return ufFind(L) === ufFind(R);
+}
+
+/* transpose trick: player 2 connects top<->bottom, which is player 1's
+   problem on the transposed board. */
+let TSCRATCH = new Uint8Array(0);
+function p2Connected(cells, n, nb){
+  const N = n*n;
+  if(TSCRATCH.length < N) TSCRATCH = new Uint8Array(N);
+  const t = TSCRATCH;
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) t[c*n+r] = (cells[r*n+c] === 2) ? 1 : 0;
+  return p1Connected(t, n, nb);
+}
+
+function winnerOf(cells, n, nb){
+  if(p1Connected(cells, n, nb)) return 1;
+  if(p2Connected(cells, n, nb)) return 2;
+  return 0;
+}
+
+/* shortest chain of winner's stones bridging their two edges — for the glow */
+function winningPath(cells, n, nb, who){
+  const N = n*n;
+  const prev = new Int32Array(N).fill(-2);
+  const q = [];
+  for(let k=0;k<n;k++){
+    const i = (who === 1) ? k*n : k;          // left column | top row
+    if(cells[i] === who){ prev[i] = -1; q.push(i); }
+  }
+  let head = 0, end = -1;
+  while(head < q.length){
+    const i = q[head++];
+    const atEnd = (who === 1) ? (i % n === n-1) : (Math.floor(i/n) === n-1);
+    if(atEnd){ end = i; break; }
+    for(let d=0;d<6;d++){
+      const j = nb[i*6+d];
+      if(j >= 0 && cells[j] === who && prev[j] === -2){ prev[j] = i; q.push(j); }
+    }
+  }
+  const path = [];
+  let cur = end;
+  while(cur >= 0){ path.push(cur); cur = prev[cur]; }
+  return path;
+}
+
+/* ---------------------------------------------------------------- playout */
+function playout(work, toMove, n, nb, empties, count){
+  for(let i=count-1;i>0;i--){
+    const j = (Math.random()*(i+1))|0;
+    const t = empties[i]; empties[i] = empties[j]; empties[j] = t;
+  }
+  let p = toMove;
+  for(let i=0;i<count;i++){ work[empties[i]] = p; p = 3-p; }
+  return p1Connected(work, n, nb) ? 1 : 2;   // a full Hex board always has a winner
+}
+
+/* ---------------------------------------------------------------- UCT search */
+function Node(parent, move, player){
+  this.parent = parent; this.move = move; this.player = player;
+  this.kids = []; this.untried = null; this.w = 0; this.v = 0;
+}
+
+function Search(board, n, nb, toMove){
+  this.n = n; this.nb = nb; this.N = n*n;
+  this.root = new Node(null, -1, 3-toMove);
+  this.base = Uint8Array.from(board);
+  this.toMove = toMove;
+  this.work = new Uint8Array(this.N);
+  this.scratchE = new Int32Array(this.N);
+  this.iters = 0;
+}
+Search.prototype.emptiesOf = function(cells){
+  const out = [];
+  for(let i=0;i<this.N;i++) if(cells[i] === 0) out.push(i);
+  return out;
+};
+Search.prototype.fillEmpties = function(cells){
+  const e = this.scratchE; let k = 0;
+  for(let i=0;i<this.N;i++) if(cells[i] === 0) e[k++] = i;
+  return k;
+};
+Search.prototype.iterate = function(){
+  const work = this.work;
+  work.set(this.base);
+  let node = this.root, p = this.toMove, win = 0;
+
+  /* selection */
+  while(true){
+    if(node.untried === null) node.untried = this.emptiesOf(work);
+    if(node.untried.length > 0 || node.kids.length === 0) break;
+    let best = null, bestScore = -1;
+    const logN = Math.log(node.v + 1);
+    for(let k=0;k<node.kids.length;k++){
+      const ch = node.kids[k];
+      const s = ch.w/ch.v + 1.35*Math.sqrt(logN/ch.v);
+      if(s > bestScore){ bestScore = s; best = ch; }
+    }
+    node = best;
+    work[node.move] = node.player;
+    p = 3-node.player;
+    if(node.player === 1 ? p1Connected(work, this.n, this.nb) : p2Connected(work, this.n, this.nb)){
+      win = node.player; break;
+    }
+  }
+
+  /* expansion */
+  if(!win && node.untried && node.untried.length > 0){
+    const idx = (Math.random()*node.untried.length)|0;
+    const mv = node.untried[idx];
+    node.untried[idx] = node.untried[node.untried.length-1];
+    node.untried.pop();
+    work[mv] = p;
+    const child = new Node(node, mv, p);
+    node.kids.push(child);
+    node = child;
+    if(p === 1 ? p1Connected(work, this.n, this.nb) : p2Connected(work, this.n, this.nb)) win = p;
+    p = 3-p;
+  }
+
+  /* simulation */
+  if(!win){
+    const cnt = this.fillEmpties(work);
+    win = cnt ? playout(work, p, this.n, this.nb, this.scratchE, cnt)
+              : winnerOf(work, this.n, this.nb);
+  }
+
+  /* backpropagation */
+  while(node){
+    node.v++;
+    if(node.player === win) node.w++;
+    node = node.parent;
+  }
+  this.iters++;
+};
+Search.prototype.bestMove = function(jitter){
+  const kids = this.root.kids;
+  if(!kids.length) return -1;
+  let pool = kids.slice().sort((a,b) => b.v - a.v);
+  if(jitter && pool.length > 1 && Math.random() < jitter){
+    return pool[1 + ((Math.random()*Math.min(3, pool.length-1))|0)].move;
+  }
+  return pool[0].move;
+};
+Search.prototype.rootRate = function(){
+  return this.root.v ? this.root.w/this.root.v : 0.5;
+};
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function runSearch(search, budgetMs, iterCap){
+  const t0 = performance.now();
+  while(performance.now() - t0 < budgetMs && search.iters < iterCap){
+    const chunkStart = performance.now();
+    while(performance.now() - chunkStart < 11 && search.iters < iterCap) {
+      for(let k=0;k<16;k++) search.iterate();
+    }
+    await sleep(0);
+  }
+  return search;
+}
+
+/* ---------------------------------------------------------------- state */
+const LEVELS = [
+  {name:"Calm",     budget:220,  cap:900,    jitter:0.35},
+  {name:"Sharp",    budget:1100, cap:60000,  jitter:0.05},
+  {name:"Ruthless", budget:2600, cap:250000, jitter:0.0}
+];
+
+const S = {
+  n: 9, level: 1, humanFirst: true,
+  board: null, nb: null,
+  turn: 1, moves: 0, last: -1,
+  over: false, winner: 0, path: [],
+  thinking: false, swapOffer: false, swapDone: false,
+  history: [], hover: -1, anim: 0
+};
+
+function newGame(){
+  S.board = new Uint8Array(S.n*S.n);
+  S.nb = buildNbrs(S.n);
+  S.turn = 1; S.moves = 0; S.last = -1;
+  S.over = false; S.winner = 0; S.path = [];
+  S.thinking = false; S.swapOffer = false; S.swapDone = false;
+  S.history = []; S.hover = -1;
+  banner.classList.remove('on');
+  layout(); draw(); refresh();
+  if(!S.humanFirst) setTimeout(machineTurn, 320);
+}
+
+function snapshot(){
+  S.history.push({
+    b: Uint8Array.from(S.board), turn: S.turn, moves: S.moves,
+    last: S.last, swapDone: S.swapDone, swapOffer: S.swapOffer
+  });
+  if(S.history.length > 120) S.history.shift();
+}
+function restore(s){
+  S.board.set(s.b); S.turn = s.turn; S.moves = s.moves;
+  S.last = s.last; S.swapDone = s.swapDone; S.swapOffer = s.swapOffer;
+  S.over = false; S.winner = 0; S.path = [];
+  banner.classList.remove('on');
+}
+
+const humanColor = () => S.humanFirst ? 1 : 2;
+const aiColor    = () => S.humanFirst ? 2 : 1;
+
+/* ---------------------------------------------------------------- moves */
+function place(cell, who){
+  S.board[cell] = who;
+  S.last = cell;
+  S.moves++;
+  S.turn = 3-who;
+  const w = winnerOf(S.board, S.n, S.nb);
+  if(w){ endGame(w); }
+}
+function endGame(w){
+  S.over = true; S.winner = w;
+  S.path = winningPath(S.board, S.n, S.nb, w);
+  S.anim = performance.now();
+  bannerTxt.textContent = (w === humanColor()) ? "You span it." : "The machine got through.";
+  bannerTxt.style.color = (w === 1) ? "var(--p1)" : "var(--p2)";
+  banner.classList.add('on');
+}
+
+/* pie rule, "swap pieces" form: the lone stone is mirrored across the main
+   diagonal and handed to the swapper, so colours & directions never change. */
+function doSwap(){
+  let only = -1;
+  for(let i=0;i<S.board.length;i++) if(S.board[i]){ only = i; break; }
+  if(only < 0) return;
+  const r = Math.floor(only/S.n), c = only % S.n;
+  const mirrored = c*S.n + r;
+  const mover = S.board[only];
+  S.board[only] = 0;
+  S.board[mirrored] = 3-mover;
+  S.last = mirrored;
+  S.moves = 2;
+  S.turn = mover;
+  S.swapDone = true;
+  S.swapOffer = false;
+}
+
+async function machineTurn(){
+  if(S.over || S.thinking) return;
+  S.thinking = true;
+  refresh();
+  await sleep(60);
+
+  const me = aiColor();
+  const L = LEVELS[S.level];
+
+  /* pie-rule decision: rootRate is the win estimate for whoever owns the
+     opening stone. If that opening looks strong, steal it. */
+  if(S.moves === 1 && !S.swapDone && S.turn === me){
+    const probe = new Search(S.board, S.n, S.nb, me);
+    await runSearch(probe, Math.min(L.budget, 600), 12000);
+    if(probe.rootRate() > 0.55){
+      doSwap();
+      S.thinking = false;
+      draw(); refresh();
+      return;
+    }
+  }
+
+  const search = new Search(S.board, S.n, S.nb, me);
+  await runSearch(search, L.budget, L.cap);
+  let mv = search.bestMove(L.jitter);
+  if(mv < 0){
+    const opts = [];
+    for(let i=0;i<S.board.length;i++) if(!S.board[i]) opts.push(i);
+    if(!opts.length){ S.thinking = false; refresh(); return; }
+    mv = opts[(Math.random()*opts.length)|0];
+  }
+  snapshot();
+  place(mv, me);
+  S.thinking = false;
+  draw(); refresh();
+}
+
+function humanMove(cell){
+  if(S.over || S.thinking) return;
+  if(S.turn !== humanColor()) return;
+  if(S.board[cell]) return;
+  snapshot();
+  place(cell, humanColor());
+  draw(); refresh();
+  if(!S.over) setTimeout(machineTurn, 120);
+}
+
+/* ---------------------------------------------------------------- rendering */
+const cv = document.getElementById('board');
+const ctx = cv.getContext('2d');
+const banner = document.getElementById('banner');
+const bannerTxt = document.getElementById('bannerTxt');
+let geo = {s:20, ox:0, oy:0, w:100, h:100};
+
+function layout(){
+  const parent = cv.parentElement;
+  const availW = Math.max(260, parent.clientWidth || 320);
+  const availH = Math.max(240, Math.min(window.innerHeight * 0.56, 520));
+  const n = S.n, pad = 16;
+  const sW = (availW - 2*pad) / (SQ3 * (1.5*(n-1) + 1));
+  const sH = (availH - 2*pad) / (1.5*(n-1) + 2);
+  const s = Math.max(9, Math.min(sW, sH));
+  const w = SQ3 * s * (1.5*(n-1) + 1) + 2*pad;
+  const h = 1.5*s*(n-1) + 2*s + 2*pad;
+  geo = {s, ox: pad + SQ3*s/2, oy: pad + s, w, h};
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.width = Math.round(w*dpr);
+  cv.height = Math.round(h*dpr);
+  cv.style.width = w + 'px';
+  cv.style.height = h + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function centerOf(r,c){
+  return { x: geo.ox + SQ3*geo.s*(c + r/2), y: geo.oy + 1.5*geo.s*r };
+}
+function vertex(cx,cy,angDeg,rad){
+  const a = angDeg*Math.PI/180;
+  return [cx + rad*Math.cos(a), cy + rad*Math.sin(a)];
+}
+function hexPath(cx,cy,rad){
+  ctx.beginPath();
+  for(let k=0;k<6;k++){
+    const [x,y] = vertex(cx,cy,30+60*k,rad);
+    if(k===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+}
+
+function draw(){
+  const n = S.n, s = geo.s;
+  ctx.clearRect(0,0,geo.w,geo.h);
+
+  /* board plate */
+  ctx.save();
+  const g = ctx.createLinearGradient(0,0,geo.w,geo.h);
+  g.addColorStop(0,'rgba(28,38,62,.55)');
+  g.addColorStop(1,'rgba(38,26,50,.55)');
+  ctx.fillStyle = g;
+  roundRect(0,0,geo.w,geo.h,16); ctx.fill();
+  ctx.restore();
+
+  const now = performance.now();
+  const pathSet = S.over ? new Set(S.path) : null;
+
+  /* cells */
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const i = r*n+c, {x,y} = centerOf(r,c), v = S.board[i];
+    hexPath(x,y,s*0.955);
+    ctx.fillStyle = (S.hover === i && !v && !S.over && !S.thinking && S.turn === humanColor())
+      ? 'rgba(255,255,255,.10)' : 'rgba(255,255,255,.035)';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.09)';
+    ctx.stroke();
+
+    if(v){
+      const col  = v === 1 ? '#2fd4d4' : '#f4708f';
+      const dark = v === 1 ? '#0d5b60' : '#6d2038';
+      const onPath = pathSet && pathSet.has(i);
+      const pulse = onPath ? 0.55 + 0.45*Math.sin((now - S.anim)/260) : 0;
+
+      ctx.save();
+      hexPath(x,y,s*0.80);
+      const rg = ctx.createRadialGradient(x-s*0.25, y-s*0.3, s*0.08, x, y, s*0.95);
+      rg.addColorStop(0, col);
+      rg.addColorStop(1, dark);
+      ctx.fillStyle = rg;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = onPath ? 10 + 16*pulse : 8;
+      ctx.fill();
+      ctx.restore();
+
+      if(onPath){
+        ctx.save();
+        hexPath(x,y,s*0.80);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,' + (0.35 + 0.5*pulse) + ')';
+        ctx.stroke();
+        ctx.restore();
+      }
+      if(i === S.last && !S.over){
+        ctx.beginPath();
+        ctx.arc(x, y, s*0.20, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,.85)';
+        ctx.fill();
+      }
+    }
+  }
+
+  /* coloured borders: teal = left/right, rose = top/bottom */
+  ctx.lineCap = 'round';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const {x,y} = centerOf(r,c);
+    for(let d=0;d<6;d++){
+      const rr = r+DIRS[d][0], cc = c+DIRS[d][1];
+      const rowOut = (rr<0 || rr>=n), colOut = (cc<0 || cc>=n);
+      if(!rowOut && !colOut) continue;
+      const col = rowOut ? '#f4708f' : '#2fd4d4';
+      const a = d*60;
+      const [x1,y1] = vertex(x,y,a-30,s*0.985);
+      const [x2,y2] = vertex(x,y,a+30,s*0.985);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(3, s*0.20);
+      ctx.shadowColor = col; ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  if(S.over) requestAnimationFrame(draw);
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+/* nearest centre === correct hex (hex grid is the Voronoi diagram of its centres) */
+function cellAt(px,py){
+  const n = S.n; let best = -1, bd = Infinity;
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const {x,y} = centerOf(r,c);
+    const d = (x-px)*(x-px) + (y-py)*(y-py);
+    if(d < bd){ bd = d; best = r*n+c; }
+  }
+  return (bd <= (geo.s*1.05)*(geo.s*1.05)) ? best : -1;
+}
+
+/* ---------------------------------------------------------------- UI */
+const statusEl = document.getElementById('status');
+const subEl = document.getElementById('sub');
+const dotEl = document.getElementById('turndot');
+const swapBtn = document.getElementById('swapBtn');
+const undoBtn = document.getElementById('undoBtn');
+const firstBtn = document.getElementById('firstBtn');
+
+function refresh(){
+  const hc = humanColor();
+  const swappable = (S.moves === 1 && !S.swapDone && S.turn === hc && !S.over && !S.thinking);
+  swapBtn.style.display = swappable ? '' : 'none';
+
+  dotEl.className = 'dot ' + (S.over ? 'idle' : (S.turn === 1 ? 'p1' : 'p2'));
+
+  let main, sub;
+  if(S.over){
+    main = (S.winner === hc) ? 'You win' : 'Machine wins';
+    sub  = (S.winner === 1 ? 'Teal' : 'Rose') + ' completed the span in ' + S.moves + ' moves.';
+  } else if(S.thinking){
+    main = 'Thinking…';
+    sub  = LEVELS[S.level].name + ' — running thousands of imagined games.';
+  } else if(S.turn === hc){
+    main = 'Your move';
+    sub  = swappable ? 'You may take the opening for yourself — or just play on.'
+         : (S.moves === 0 ? 'Claim any cell to begin.'
+                          : 'Link ' + (hc === 1 ? 'left to right.' : 'top to bottom.'));
+  } else {
+    main = 'Machine’s move';
+    sub  = '';
+  }
+  statusEl.innerHTML = main + '<span id="sub"></span>';
+  document.getElementById('sub').textContent = sub;
+
+  undoBtn.disabled = S.thinking || S.history.length === 0;
+  firstBtn.textContent = S.humanFirst ? 'Machine opens' : 'You open';
+}
+
+cv.addEventListener('pointermove', e => {
+  const rect = cv.getBoundingClientRect();
+  const scale = geo.w / rect.width;
+  const i = cellAt((e.clientX-rect.left)*scale, (e.clientY-rect.top)*scale);
+  if(i !== S.hover){ S.hover = i; draw(); }
+});
+cv.addEventListener('pointerleave', () => { if(S.hover !== -1){ S.hover = -1; draw(); } });
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const rect = cv.getBoundingClientRect();
+  const scale = geo.w / rect.width;
+  const i = cellAt((e.clientX-rect.left)*scale, (e.clientY-rect.top)*scale);
+  if(i >= 0) humanMove(i);
+});
+
+swapBtn.addEventListener('click', () => {
+  if(S.over || S.thinking) return;
+  snapshot();
+  doSwap();
+  draw(); refresh();
+  if(!S.over && S.turn !== humanColor()) setTimeout(machineTurn, 160);
+});
+
+undoBtn.addEventListener('click', () => {
+  if(S.thinking || !S.history.length) return;
+  const hc = humanColor();
+  restore(S.history.pop());
+  while(S.history.length && S.turn !== hc) restore(S.history.pop());
+  S.hover = -1;
+  draw(); refresh();
+});
+
+document.getElementById('newBtn').addEventListener('click', newGame);
+
+firstBtn.addEventListener('click', () => {
+  S.humanFirst = !S.humanFirst;
+  newGame();
+});
+
+document.querySelectorAll('[data-size]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-size]').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  S.n = parseInt(b.dataset.size, 10);
+  newGame();
+}));
+document.querySelectorAll('[data-lvl]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-lvl]').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  S.level = parseInt(b.dataset.lvl, 10);
+  refresh();
+}));
+
+let rt;
+window.addEventListener('resize', () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { layout(); draw(); }, 120);
+});
+
+newGame();
+})();
+</script>
+</body>
+</html>

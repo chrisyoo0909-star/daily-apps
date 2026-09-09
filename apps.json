@@ -285,5 +285,12 @@
     "emoji": "🎨",
     "date": "2026-09-08",
     "blurb": "Measure your rooms and it works out the exact cans of paint to buy — openings subtracted, trim estimated, and the cheapest bucket-and-quart combination costed out."
+  },
+  {
+    "file": "apps/app-2026-09-09-span.html",
+    "name": "Span",
+    "emoji": "🔷",
+    "date": "2026-09-09",
+    "blurb": "A neon connection game against a machine that thinks by playing thousands of imagined games — link your two edges before it links its own, and steal the opening move if it looks too good."
   }
 ]
