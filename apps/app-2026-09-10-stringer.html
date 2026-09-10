@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stringer — Stair Layout Calculator</title>
+<style>
+  :root{
+    --bg:#0b1622;
+    --bg2:#0f1e2e;
+    --panel:#122437;
+    --panel2:#162c42;
+    --edge:#22456a;
+    --ink:#e8f2fb;
+    --dim:#8fb0cc;
+    --cyan:#4fd1e0;
+    --amber:#f5b34a;
+    --green:#5fd39a;
+    --red:#ff6b6b;
+    --paper:#cfe6f5;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #16324b 0%, rgba(22,50,75,0) 60%),
+      radial-gradient(900px 600px at 100% 0%, #123043 0%, rgba(18,48,67,0) 55%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.5 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:0 0 48px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+
+  header{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:22px 0 16px;
+  }
+  .logo{
+    width:42px;height:42px;flex:none;border-radius:11px;
+    background:linear-gradient(150deg,#1d4a68,#0e2334);
+    border:1px solid var(--edge);
+    display:grid;place-items:center;
+  }
+  .logo svg{display:block}
+  h1{font-size:22px;margin:0;letter-spacing:.2px;font-weight:650}
+  .tag{color:var(--dim);font-size:13px;margin:2px 0 0}
+  .spacer{flex:1}
+  .units{
+    display:flex;background:var(--panel);border:1px solid var(--edge);
+    border-radius:10px;padding:3px;gap:3px;
+  }
+  .units button{
+    background:none;border:0;color:var(--dim);font:inherit;font-size:13px;font-weight:600;
+    padding:7px 13px;border-radius:7px;cursor:pointer;
+  }
+  .units button.on{background:var(--cyan);color:#07202c}
+
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+  @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel) 0%, var(--bg2) 100%);
+    border:1px solid var(--edge);border-radius:14px;padding:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.28);
+  }
+  .card h2{
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);
+    margin:0 0 14px;font-weight:700;
+  }
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px;font-weight:550}
+  label .hint{color:#5d7f9b;font-weight:400}
+  .inrow{display:flex;gap:8px;align-items:stretch}
+  input[type=number],input[type=text]{
+    width:100%;background:#0a1927;border:1px solid #27506f;color:var(--ink);
+    border-radius:9px;padding:10px 12px;font:inherit;font-variant-numeric:tabular-nums;
+    -moz-appearance:textfield;
+  }
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(79,209,224,.16)}
+  .suffix{
+    display:grid;place-items:center;padding:0 11px;background:#0d2135;border:1px solid #27506f;
+    border-radius:9px;color:#6f93b1;font-size:12px;font-weight:600;flex:none;min-width:42px;
+  }
+  .toggle{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--dim)}
+  .toggle input{width:16px;height:16px;accent-color:var(--cyan);cursor:pointer}
+
+  /* headline results */
+  .heroes{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:14px}
+  .hero{
+    background:linear-gradient(180deg,#14293d,#0e1f30);border:1px solid var(--edge);
+    border-radius:12px;padding:12px 13px;
+  }
+  .hero .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7fa3c1;margin-bottom:5px}
+  .hero .v{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+  .hero .v small{font-size:13px;font-weight:600;color:var(--dim)}
+  .hero.pri .v{color:var(--cyan)}
+
+  /* drawing */
+  .draw{background:#08141f;border:1px solid var(--edge);border-radius:12px;padding:6px;overflow:hidden}
+  svg.plan{display:block;width:100%;height:auto}
+
+  /* checks */
+  .checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;
+    padding:7px 11px;border-radius:999px;border:1px solid;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .chip.ok{color:var(--green);border-color:rgba(95,211,154,.4);background:rgba(95,211,154,.09)}
+  .chip.ok .dot{background:var(--green)}
+  .chip.warn{color:var(--amber);border-color:rgba(245,179,74,.42);background:rgba(245,179,74,.1)}
+  .chip.warn .dot{background:var(--amber)}
+  .chip.bad{color:var(--red);border-color:rgba(255,107,107,.42);background:rgba(255,107,107,.1)}
+  .chip.bad .dot{background:var(--red)}
+
+  /* table */
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums;min-width:520px}
+  th{
+    text-align:right;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#7fa3c1;
+    padding:0 10px 9px;font-weight:700;white-space:nowrap;
+  }
+  th:first-child,td:first-child{text-align:left}
+  td{padding:9px 10px;text-align:right;border-top:1px solid #1b3854}
+  tbody tr{cursor:pointer}
+  tbody tr:hover td{background:rgba(79,209,224,.06)}
+  tbody tr.sel td{background:rgba(79,209,224,.14)}
+  tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
+  tbody tr.no td{color:#6b8aa5}
+  .pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+  .pill.ok{background:rgba(95,211,154,.16);color:var(--green)}
+  .pill.no{background:rgba(255,107,107,.14);color:var(--red)}
+  .pill.best{background:var(--cyan);color:#07202c}
+
+  /* cut sheet */
+  .cuts{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+  .cut{background:#0d1e2e;border:1px solid #22456a;border-radius:11px;padding:13px}
+  .cut .t{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7fa3c1;margin-bottom:7px;font-weight:700}
+  .cut .b{font-size:14px;line-height:1.55;color:var(--paper)}
+  .cut .b b{color:#fff;font-variant-numeric:tabular-nums}
+  .note{font-size:12.5px;color:#7b9cb8;line-height:1.6;margin:14px 0 0}
+  .note b{color:var(--dim)}
+  .sec{margin-top:16px}
+  .warnbox{
+    margin-top:12px;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.5;
+    background:rgba(245,179,74,.09);border:1px solid rgba(245,179,74,.35);color:#ffd899;
+  }
+  footer{text-align:center;color:#5a7b96;font-size:12px;margin-top:26px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4fd1e0" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3 21h4v-5h5v-5h5V6h4"/>
+        <path d="M3 21 21 3" opacity=".45" stroke-dasharray="2 2.5"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Stringer</h1>
+      <p class="tag">Type one measurement — get the whole staircase, marked out and code-checked.</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="units" role="group" aria-label="Units">
+      <button id="uIn" class="on" type="button">inches</button>
+      <button id="uCm" type="button">cm</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ INPUTS ============ -->
+    <div class="card">
+      <h2>Measurements</h2>
+
+      <div class="field">
+        <label for="rise">Total rise <span class="hint">— finished floor to finished floor</span></label>
+        <div class="inrow">
+          <input id="rise" type="number" step="0.125" value="108">
+          <div class="suffix" id="sfx1">in</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="tread">Tread depth <span class="hint">— nosing to nosing</span></label>
+        <div class="inrow">
+          <input id="tread" type="number" step="0.125" value="10.5">
+          <div class="suffix" id="sfx2">in</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="toggle" for="useRun">
+          <input id="useRun" type="checkbox">
+          <span>Limit the total run (tight space)</span>
+        </label>
+        <div class="inrow" id="runRow" style="display:none;margin-top:8px">
+          <input id="maxrun" type="number" step="0.25" value="120">
+          <div class="suffix" id="sfx3">in</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="nosing">Nosing overhang</label>
+        <div class="inrow">
+          <input id="nosing" type="number" step="0.0625" value="1">
+          <div class="suffix" id="sfx4">in</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="treadthk">Tread stock thickness <span class="hint">— for the bottom cut</span></label>
+        <div class="inrow">
+          <input id="treadthk" type="number" step="0.0625" value="1">
+          <div class="suffix" id="sfx5">in</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="floorthk">Upper floor assembly <span class="hint">— for headroom</span></label>
+        <div class="inrow">
+          <input id="floorthk" type="number" step="0.25" value="12">
+          <div class="suffix" id="sfx6">in</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OUTPUT ============ -->
+    <div>
+      <div class="card">
+        <h2>The staircase</h2>
+        <div class="heroes" id="heroes"></div>
+        <div class="draw"><svg class="plan" id="plan" viewBox="0 0 900 460" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="checks" id="checks"></div>
+        <div id="warn"></div>
+      </div>
+
+      <div class="card sec">
+        <h2>Other riser counts</h2>
+        <div class="tblwrap">
+          <table>
+            <thead><tr>
+              <th>Risers</th><th>Riser height</th><th>Treads</th><th>Tread</th>
+              <th>Total run</th><th>Angle</th><th>2R+T</th><th>Code</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="note">Tap any row to lay that version out. <b>2R+T</b> is the old carpenter's comfort rule — two risers plus a tread should land between 24 and 25 inches (610–635 mm).</p>
+      </div>
+
+      <div class="card sec">
+        <h2>Cut sheet</h2>
+        <div class="cuts" id="cuts"></div>
+        <p class="note">Checked against IRC residential limits (max riser 7¾″, min tread 10″, min headroom 80″, ≤⅜″ variation between any two risers). <b>Always confirm against your local code before you cut.</b></p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Stringer · a Daily Arcade build</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- state ----------
+  var metric = false;          // false = inches, true = centimetres
+  var chosenN = null;          // user-picked riser count (null = auto)
+  var CM = 2.54;
+
+  var el = function(id){ return document.getElementById(id); };
+  var I = {
+    rise: el('rise'), tread: el('tread'), maxrun: el('maxrun'), nosing: el('nosing'),
+    treadthk: el('treadthk'), floorthk: el('floorthk'), useRun: el('useRun')
+  };
+
+  // ---------- number formatting ----------
+  function toFrac(inches){
+    var neg = inches < 0; inches = Math.abs(inches);
+    var whole = Math.floor(inches + 1e-9);
+    var num = Math.round((inches - whole) * 16);
+    if (num === 16){ whole++; num = 0; }
+    var den = 16;
+    while (num > 0 && num % 2 === 0){ num /= 2; den /= 2; }
+    var s;
+    if (num === 0) s = String(whole);
+    else if (whole === 0) s = num + '/' + den;
+    else s = whole + ' ' + num + '/' + den;
+    return (neg ? '-' : '') + s + '″';
+  }
+  // length in internal inches -> display string
+  function L(inches, decimals){
+    if (metric) return (inches * CM).toFixed(decimals === undefined ? 1 : decimals) + ' cm';
+    return toFrac(inches);
+  }
+  function Ldec(inches){
+    if (metric) return (inches * CM).toFixed(1) + ' cm';
+    return (Math.round(inches * 100) / 100) + '″';
+  }
+  function ftin(inches){
+    if (metric){
+      var m = inches * CM / 100;
+      return m.toFixed(2) + ' m';
+    }
+    var f = Math.floor(inches / 12);
+    var r = inches - f * 12;
+    if (Math.abs(r) < 1/32) return f + "'";
+    return f + "' " + toFrac(r);
+  }
+  function num(inputEl, fallback){
+    var v = parseFloat(inputEl.value);
+    if (!isFinite(v)) v = fallback;
+    return metric ? v / CM : v;   // store internally in inches
+  }
+
+  // ---------- code limits (inches) ----------
+  var MAX_RISER = 7.75, MIN_TREAD = 10, MIN_HEADROOM = 80;
+
+  // ---------- the maths ----------
+  function layout(N, cfg){
+    var riser   = cfg.rise / N;
+    var treads  = N - 1;
+    var tread   = cfg.tread;
+    if (cfg.maxRun && treads > 0) tread = Math.min(tread, cfg.maxRun / treads);
+    var run     = treads * tread;
+    var hyp     = Math.sqrt(riser*riser + tread*tread);
+    var angle   = Math.atan2(riser, tread) * 180 / Math.PI;
+    // perpendicular meat left behind the notch, plus a 3.5" minimum throat
+    var throat  = 3.5;
+    var board   = throat + (riser * tread) / hyp;
+    // minimum stairwell opening measured back from the top of the stairs
+    var drop    = cfg.rise - cfg.floor - MIN_HEADROOM;         // vertical room before headroom is lost
+    var opening = run - (riser > 0 ? (drop * tread / riser) : 0);
+    if (opening < 0) opening = 0;
+
+    var ok = riser <= MAX_RISER + 1e-9 && tread >= MIN_TREAD - 1e-9;
+    var comfort = 2 * riser + tread;
+
+    return {
+      N: N, riser: riser, treads: treads, tread: tread, run: run,
+      stringer: Math.sqrt(cfg.rise*cfg.rise + run*run),
+      angle: angle, board: board, comfort: comfort, ok: ok,
+      opening: opening, squeezed: cfg.maxRun ? (tread < cfg.tread - 1e-6) : false,
+      cfg: cfg
+    };
+  }
+
+  function readCfg(){
+    var cfg = {
+      rise:  Math.max(1, num(I.rise, 108)),
+      tread: Math.max(4, num(I.tread, 10.5)),
+      nosing: Math.max(0, num(I.nosing, 1)),
+      treadThk: Math.max(0, num(I.treadthk, 1)),
+      floor: Math.max(0, num(I.floorthk, 12)),
+      maxRun: I.useRun.checked ? Math.max(6, num(I.maxrun, 120)) : 0
+    };
+    return cfg;
+  }
+
+  function candidates(cfg){
+    var lo = Math.max(2, Math.floor(cfg.rise / MAX_RISER));
+    var hi = Math.max(lo + 1, Math.ceil(cfg.rise / 5.5));
+    if (hi - lo > 14) hi = lo + 14;
+    var out = [];
+    for (var n = lo; n <= hi; n++) out.push(layout(n, cfg));
+    return out;
+  }
+
+  function pickBest(list){
+    var best = null, bestScore = Infinity;
+    for (var i = 0; i < list.length; i++){
+      var c = list[i];
+      if (!c.ok) continue;
+      var score = Math.abs(c.comfort - 24.5) * 4 + Math.abs(c.riser - 7.125) * 3;
+      if (score < bestScore){ bestScore = score; best = c; }
+    }
+    if (best) return best;
+    // nothing passes: fall back to the smallest total code violation
+    var alt = null, ad = Infinity;
+    for (var j = 0; j < list.length; j++){
+      var c2 = list[j];
+      var d = Math.max(0, c2.riser - MAX_RISER) * 3 + Math.max(0, MIN_TREAD - c2.tread) * 2;
+      if (d < ad){ ad = d; alt = c2; }
+    }
+    return alt;
+  }
+
+  // ---------- rendering ----------
+  function heroes(s){
+    var items = [
+      ['Risers', s.N + ' <small>@ ' + L(s.riser) + '</small>', true],
+      ['Treads', s.treads + ' <small>@ ' + L(s.tread) + '</small>', false],
+      ['Total run', ftin(s.run), false],
+      ['Slope', (Math.round(s.angle * 10) / 10) + '°', false],
+      ['Stringer length', ftin(s.stringer), false]
+    ];
+    var h = '';
+    for (var i = 0; i < items.length; i++){
+      h += '<div class="hero' + (items[i][2] ? ' pri' : '') + '"><div class="k">' +
+           items[i][0] + '</div><div class="v">' + items[i][1] + '</div></div>';
+    }
+    el('heroes').innerHTML = h;
+  }
+
+  function checks(s){
+    var c = [];
+    function add(state, text){ c.push('<span class="chip ' + state + '"><span class="dot"></span>' + text + '</span>'); }
+
+    add(s.riser <= MAX_RISER + 1e-9 ? 'ok' : 'bad',
+        'Riser ' + L(s.riser) + (s.riser <= MAX_RISER + 1e-9 ? ' ≤ max ' : ' over max ') + (metric ? '19.7 cm' : '7¾″'));
+
+    add(s.tread >= MIN_TREAD - 1e-9 ? 'ok' : 'bad',
+        'Tread ' + L(s.tread) + (s.tread >= MIN_TREAD - 1e-9 ? ' ≥ min ' : ' under min ') + (metric ? '25.4 cm' : '10″'));
+
+    var comfy = s.comfort >= 24 && s.comfort <= 25;
+    add(comfy ? 'ok' : 'warn', '2R+T = ' + Ldec(s.comfort) + (comfy ? ' — comfortable' : ' — outside 24–25'));
+
+    var steep = s.angle >= 30 && s.angle <= 37.5;
+    add(steep ? 'ok' : 'warn', (Math.round(s.angle * 10) / 10) + '° slope' + (steep ? '' : (s.angle > 37.5 ? ' — steep' : ' — shallow')));
+
+    add(s.board <= 11.25 ? 'ok' : 'warn',
+        'Stringer stock ≥ ' + L(s.board) + (s.board <= 11.25 ? ' — a 2×12 works' : ' — wider than a 2×12'));
+
+    el('checks').innerHTML = c.join('');
+
+    var w = '';
+    if (s.squeezed && s.tread < MIN_TREAD){
+      w += '<div class="warnbox">Your run limit forces a ' + L(s.tread) + ' tread, below the ' +
+           (metric ? '25.4 cm' : '10″') + ' minimum. You need about ' + ftin(s.treads * MIN_TREAD) +
+           ' of run for this many steps — or use a landing and turn the flight.</div>';
+    } else if (s.squeezed){
+      w += '<div class="warnbox">Tread trimmed to ' + L(s.tread) + ' to fit inside your ' + ftin(s.cfg.maxRun) + ' run limit.</div>';
+    }
+    el('warn').innerHTML = w;
+  }
+
+  function rows(list, sel){
+    var best = pickBest(list);
+    var h = '';
+    for (var i = 0; i < list.length; i++){
+      var c = list[i];
+      var isSel = c.N === sel.N;
+      var isBest = best && c.N === best.N;
+      h += '<tr class="' + (isSel ? 'sel ' : '') + (c.ok ? '' : 'no') + '" data-n="' + c.N + '">' +
+           '<td>' + c.N + '</td>' +
+           '<td>' + L(c.riser) + '</td>' +
+           '<td>' + c.treads + '</td>' +
+           '<td>' + L(c.tread) + '</td>' +
+           '<td>' + ftin(c.run) + '</td>' +
+           '<td>' + (Math.round(c.angle * 10) / 10) + '°</td>' +
+           '<td>' + Ldec(c.comfort) + '</td>' +
+           '<td><span class="pill ' + (isBest ? 'best' : (c.ok ? 'ok' : 'no')) + '">' +
+              (isBest ? 'best fit' : (c.ok ? 'passes' : 'fails')) + '</span></td>' +
+           '</tr>';
+    }
+    var tb = el('rows');
+    tb.innerHTML = h;
+    var trs = tb.getElementsByTagName('tr');
+    for (var j = 0; j < trs.length; j++){
+      trs[j].addEventListener('click', function(){
+        chosenN = parseInt(this.getAttribute('data-n'), 10);
+        render();
+      });
+    }
+  }
+
+  function cuts(s){
+    var cfg = s.cfg;
+    var bottomCut = s.riser - cfg.treadThk;      // drop the bottom of the stringer
+    var boardName = metric ? '' :
+      (s.board <= 9.25 ? ' (a 2×10 is enough)' : s.board <= 11.25 ? ' — use a 2×12' : ' — wider than a 2×12, laminate or use LVL');
+
+    var items = [
+      ['Framing square',
+        'Set the gauges at <b>' + L(s.riser) + '</b> on the tongue and <b>' + L(s.tread - cfg.nosing) + '</b> on the blade' +
+        (cfg.nosing > 0 ? ' <span style="color:#7b9cb8">(tread ' + L(s.tread) + ' less the ' + L(cfg.nosing) + ' nosing)</span>' : '') +
+        '.<br>Step it <b>' + s.N + '</b> times down the board.'],
+      ['Bottom cut',
+        'Trim <b>' + L(cfg.treadThk) + '</b> off the bottom of the stringer, so the first step ends up the same height as the rest.<br>' +
+        'Bottom riser cut: <b>' + L(bottomCut) + '</b>.'],
+      ['Stringer stock',
+        'Minimum board width <b>' + L(s.board) + '</b>' + boardName + '.<br>Cut length <b>' + ftin(s.stringer + 6) + '</b> to leave waste.'],
+      ['Materials',
+        '<b>' + s.treads + '</b> treads at <b>' + L(s.tread) + '</b> deep &nbsp;·&nbsp; <b>' + s.N + '</b> risers at <b>' + L(s.riser - 0) + '</b> tall<br>' +
+        'Tread stock needed: <b>' + ftin(s.treads * s.tread) + '</b> per stringer bay.'],
+      ['Headroom',
+        (s.opening > 0
+          ? 'The floor opening must run back at least <b>' + ftin(s.opening) + '</b> from the top of the stairs to keep ' +
+            (metric ? '203 cm' : '80″') + ' of headroom.'
+          : 'Any opening size clears ' + (metric ? '203 cm' : '80″') + ' of headroom with this floor thickness.')],
+      ['Handrail',
+        'Mount the rail <b>' + L(34) + '–' + L(38) + '</b> above the nosing line, measured straight up from each nosing. Minimum stair width <b>' + L(36) + '</b>.']
+    ];
+    var h = '';
+    for (var i = 0; i < items.length; i++){
+      h += '<div class="cut"><div class="t">' + items[i][0] + '</div><div class="b">' + items[i][1] + '</div></div>';
+    }
+    el('cuts').innerHTML = h;
+  }
+
+  // ---------- the drawing ----------
+  function draw(s){
+    var svg = el('plan');
+    var W = 900, H = 470, PAD_L = 74, PAD_R = 34, PAD_T = 34, PAD_B = 62;
+    var rise = s.cfg.rise, run = s.run;
+    var extL = Math.max(14, run * 0.09);      // lower floor stub
+    var extR = Math.max(20, run * 0.13);      // upper floor stub
+    var boardDrop = s.board;
+
+    var minX = -extL, maxX = run + extR;
+    var minY = -Math.max(8, rise * 0.06), maxY = rise + boardDrop * 0.9 + 8;
+
+    var sx = (W - PAD_L - PAD_R) / (maxX - minX);
+    var sy = (H - PAD_T - PAD_B) / (maxY - minY);
+    var sc = Math.min(sx, sy);
+    var offX = PAD_L + ((W - PAD_L - PAD_R) - (maxX - minX) * sc) / 2;
+    var offY = PAD_T + ((H - PAD_T - PAD_B) - (maxY - minY) * sc) / 2;
+
+    function X(x){ return offX + (x - minX) * sc; }
+    function Y(y){ return offY + (y - minY) * sc; }   // y measured DOWN from upper floor level
+
+    var g = [];
+    function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+    function line(x1,y1,x2,y2,stroke,w,dash,op){
+      g.push('<line x1="'+X(x1).toFixed(1)+'" y1="'+Y(y1).toFixed(1)+'" x2="'+X(x2).toFixed(1)+'" y2="'+Y(y2).toFixed(1)+
+        '" stroke="'+stroke+'" stroke-width="'+(w||1)+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+
+        (op?' opacity="'+op+'"':'')+' stroke-linecap="round"/>');
+    }
+    function text(x,y,t,fill,size,anchor,weight,rot){
+      g.push('<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" fill="'+fill+'" font-size="'+(size||11)+
+        '" text-anchor="'+(anchor||'middle')+'" font-weight="'+(weight||600)+
+        '" font-family="ui-sans-serif,Segoe UI,Roboto,Helvetica,Arial,sans-serif"'+
+        (rot?' transform="rotate('+rot+' '+x.toFixed(1)+' '+y.toFixed(1)+')"':'')+'>'+esc(t)+'</text>');
+    }
+
+    // graph paper
+    var gridStep = rise > 160 ? 24 : 12;
+    for (var gx = Math.ceil(minX / gridStep) * gridStep; gx <= maxX; gx += gridStep) line(gx, minY, gx, maxY, '#123650', 1, null, .75);
+    for (var gy = Math.ceil(minY / gridStep) * gridStep; gy <= maxY; gy += gridStep) line(minX, gy, maxX, gy, '#123650', 1, null, .75);
+
+    // floors
+    var ft = s.cfg.floor;
+    g.push('<rect x="'+X(minX).toFixed(1)+'" y="'+Y(rise).toFixed(1)+'" width="'+((0-minX)*sc).toFixed(1)+
+           '" height="'+Math.max(3,(Math.min(ft, maxY-rise))*sc).toFixed(1)+'" fill="#17384f"/>');
+    line(minX, rise, 0, rise, '#5f8fb4', 2.5);
+    g.push('<rect x="'+X(run).toFixed(1)+'" y="'+Y(0).toFixed(1)+'" width="'+((maxX-run)*sc).toFixed(1)+
+           '" height="'+(ft*sc).toFixed(1)+'" fill="#17384f"/>');
+    line(run, 0, maxX, 0, '#5f8fb4', 2.5);
+    line(run, ft, maxX, ft, '#3f6f92', 1.5);
+
+    // stringer underside (parallel to the pitch line)
+    var hypAll = Math.sqrt(rise*rise + run*run);
+    var ox = boardDrop * (rise / hypAll), oy = boardDrop * (run / hypAll);
+    line(0 + ox, rise + oy, run + ox, 0 + oy, '#2c6a8e', 2, null, .95);
+    line(0, rise, 0 + ox, rise + oy, '#2c6a8e', 2, null, .95);
+    line(run, 0, run + ox, 0 + oy, '#2c6a8e', 2, null, .95);
+    // shade the stringer body
+    g.push('<path d="M'+X(0)+' '+Y(rise)+' L'+X(run)+' '+Y(0)+' L'+X(run+ox)+' '+Y(0+oy)+' L'+X(0+ox)+' '+Y(rise+oy)+' Z" fill="#0f2f45" opacity=".55"/>');
+
+    // pitch line
+    line(0, rise, run, 0, '#4fd1e0', 1.2, '6 5', .5);
+
+    // the steps
+    var stepPath = 'M' + X(0) + ' ' + Y(rise);
+    for (var i = 1; i <= s.N; i++){
+      var yTop = rise - i * s.riser;
+      var xAt = (i - 1) * s.tread;
+      stepPath += ' L' + X(xAt).toFixed(1) + ' ' + Y(yTop).toFixed(1);
+      if (i < s.N) stepPath += ' L' + X(xAt + s.tread).toFixed(1) + ' ' + Y(yTop).toFixed(1);
+      else stepPath += ' L' + X(run).toFixed(1) + ' ' + Y(0).toFixed(1);
+    }
+    g.push('<path d="'+stepPath+'" fill="none" stroke="#cfe6f5" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+
+    // tread numbers when there is room
+    if (s.treads <= 20 && s.tread * sc > 16){
+      for (var t = 1; t <= s.treads; t++){
+        var cx = X((t - 0.5) * s.tread), cy = Y(rise - t * s.riser) - 5;
+        if (s.tread * sc > 22) text(cx, cy, String(t), '#6f9ec0', Math.min(12, s.tread * sc * 0.42));
+      }
+    }
+
+    // ---- dimensions ----
+    var dimX = X(minX) - 16;
+    line(minX + (dimX - X(minX)) / sc, 0, minX + (dimX - X(minX)) / sc, rise, '#f5b34a', 1.2, null, .9);
+    g.push('<line x1="'+(dimX-5)+'" y1="'+Y(0)+'" x2="'+(dimX+5)+'" y2="'+Y(0)+'" stroke="#f5b34a" stroke-width="1.2"/>');
+    g.push('<line x1="'+(dimX-5)+'" y1="'+Y(rise)+'" x2="'+(dimX+5)+'" y2="'+Y(rise)+'" stroke="#f5b34a" stroke-width="1.2"/>');
+    text(dimX - 9, (Y(0) + Y(rise)) / 2, 'rise ' + ftin(rise), '#f5b34a', 12, 'middle', 700, -90);
+
+    var dimY = Y(maxY) + 22;
+    g.push('<line x1="'+X(0)+'" y1="'+dimY+'" x2="'+X(run)+'" y2="'+dimY+'" stroke="#f5b34a" stroke-width="1.2" opacity=".9"/>');
+    g.push('<line x1="'+X(0)+'" y1="'+(dimY-5)+'" x2="'+X(0)+'" y2="'+(dimY+5)+'" stroke="#f5b34a" stroke-width="1.2"/>');
+    g.push('<line x1="'+X(run)+'" y1="'+(dimY-5)+'" x2="'+X(run)+'" y2="'+(dimY+5)+'" stroke="#f5b34a" stroke-width="1.2"/>');
+    g.push('<rect x="'+((X(0)+X(run))/2-52)+'" y="'+(dimY-9)+'" width="104" height="18" rx="5" fill="#08141f"/>');
+    text((X(0) + X(run)) / 2, dimY + 4, 'run ' + ftin(run), '#f5b34a', 12, 'middle', 700);
+
+    // angle arc at the foot
+    var arcR = Math.min(58, run * sc * 0.34);
+    if (arcR > 20){
+      var ax = X(0), ay = Y(rise);
+      var ex = ax + arcR, ey = ay;
+      var tx = ax + arcR * Math.cos(s.angle * Math.PI / 180);
+      var ty = ay - arcR * Math.sin(s.angle * Math.PI / 180);
+      g.push('<path d="M'+ex.toFixed(1)+' '+ey.toFixed(1)+' A'+arcR.toFixed(1)+' '+arcR.toFixed(1)+' 0 0 0 '+tx.toFixed(1)+' '+ty.toFixed(1)+
+             '" fill="none" stroke="#4fd1e0" stroke-width="1.3" opacity=".85"/>');
+      text(ax + arcR * 0.62, ay - arcR * 0.26, (Math.round(s.angle * 10) / 10) + '°', '#4fd1e0', 12, 'start', 700);
+    }
+
+    // one step called out
+    if (s.treads >= 1 && s.tread * sc > 30 && s.riser * sc > 14){
+      var k = Math.min(2, s.treads);
+      var rx1 = (k - 1) * s.tread, ry1 = rise - (k - 1) * s.riser, ry2 = rise - k * s.riser;
+      line(rx1 - 0.001, ry1, rx1 - 0.001, ry2, '#5fd39a', 2.2, null, 1);
+      line(rx1, ry2, rx1 + s.tread, ry2, '#5fd39a', 2.2, null, 1);
+      text(X(rx1) - 6, (Y(ry1) + Y(ry2)) / 2 + 4, L(s.riser), '#5fd39a', 11.5, 'end', 700);
+      text(X(rx1 + s.tread / 2), Y(ry2) - 7, L(s.tread), '#5fd39a', 11.5, 'middle', 700);
+    }
+
+    text(X(run + extR / 2), Y(0) - 9, 'upper floor', '#6f9ec0', 11, 'middle', 600);
+    text(X(minX + extL / 2), Y(rise) - 9, 'lower floor', '#6f9ec0', 11, 'middle', 600);
+
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = g.join('');
+  }
+
+  // ---------- main ----------
+  function render(){
+    var cfg = readCfg();
+    var list = candidates(cfg);
+    var sel = null;
+    if (chosenN !== null){
+      for (var i = 0; i < list.length; i++) if (list[i].N === chosenN) sel = list[i];
+    }
+    if (!sel) sel = pickBest(list);
+    if (!sel) return;
+    heroes(sel); draw(sel); checks(sel); rows(list, sel); cuts(sel);
+  }
+
+  // ---------- units ----------
+  function convertFields(toMetric){
+    var ids = ['rise','tread','maxrun','nosing','treadthk','floorthk'];
+    var steps = toMetric ? ['0.5','0.5','1','0.1','0.1','0.5'] : ['0.125','0.125','0.25','0.0625','0.0625','0.25'];
+    for (var i = 0; i < ids.length; i++){
+      var n = el(ids[i]);
+      var v = parseFloat(n.value);
+      if (isFinite(v)) n.value = toMetric ? Math.round(v * CM * 10) / 10 : Math.round((v / CM) * 100) / 100;
+      n.step = steps[i];
+    }
+    for (var k = 1; k <= 6; k++) el('sfx' + k).textContent = toMetric ? 'cm' : 'in';
+  }
+  el('uIn').addEventListener('click', function(){
+    if (!metric) return;
+    convertFields(false); metric = false;
+    el('uIn').classList.add('on'); el('uCm').classList.remove('on'); render();
+  });
+  el('uCm').addEventListener('click', function(){
+    if (metric) return;
+    convertFields(true); metric = true;
+    el('uCm').classList.add('on'); el('uIn').classList.remove('on'); render();
+  });
+
+  // ---------- wiring ----------
+  var inputs = ['rise','tread','maxrun','nosing','treadthk','floorthk'];
+  for (var i = 0; i < inputs.length; i++){
+    el(inputs[i]).addEventListener('input', function(){ chosenN = null; render(); });
+  }
+  I.useRun.addEventListener('change', function(){
+    el('runRow').style.display = this.checked ? 'flex' : 'none';
+    chosenN = null; render();
+  });
+  window.addEventListener('resize', function(){ render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
