@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rubric — weighted grade calculator</title>
+<style>
+  :root{
+    --paper:#faf8f4;
+    --card:#ffffff;
+    --ink:#1b2130;
+    --ink2:#5b6478;
+    --ink3:#8e97a8;
+    --line:#e6e2d9;
+    --indigo:#3b3aa8;
+    --indigo-soft:#eeeefb;
+    --amber:#c2760a;
+    --green:#17795e;
+    --red:#b4352c;
+    --shadow:0 1px 2px rgba(27,33,48,.06),0 8px 24px rgba(27,33,48,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 50% -180px,#fff 0%,rgba(255,255,255,0) 70%),
+      var(--paper);
+    color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    padding:0 16px 64px;
+  }
+  .wrap{max-width:640px;margin:0 auto}
+
+  header{padding:30px 2px 18px;display:flex;align-items:center;gap:13px}
+  .logo{
+    width:46px;height:46px;flex:0 0 46px;border-radius:13px;
+    background:linear-gradient(160deg,#4746c4,#2f2e8f);
+    display:grid;place-items:center;font-size:23px;
+    box-shadow:0 6px 16px rgba(59,58,168,.3);
+  }
+  h1{font:700 24px/1.1 Georgia,"Times New Roman",serif;margin:0;letter-spacing:-.2px}
+  header p{margin:3px 0 0;color:var(--ink2);font-size:13px}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:16px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  h2{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+     letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:0 0 12px}
+
+  /* hero */
+  .hero{padding:22px 18px 18px;text-align:center;position:relative;overflow:hidden}
+  .hero:before{content:"";position:absolute;inset:0 0 auto;height:4px;
+    background:linear-gradient(90deg,#3b3aa8,#7b5ad9,#c2760a)}
+  .gradeRow{display:flex;align-items:baseline;justify-content:center;gap:14px}
+  .pct{font:700 52px/1 Georgia,serif;letter-spacing:-1.5px}
+  .pct small{font-size:24px;color:var(--ink3);letter-spacing:0}
+  .letter{
+    font:700 26px/1 Georgia,serif;color:var(--indigo);
+    background:var(--indigo-soft);border-radius:11px;padding:9px 14px;min-width:56px;
+  }
+  .sub{color:var(--ink2);font-size:13px;margin-top:10px}
+  .bar{height:8px;border-radius:5px;background:#eceae4;margin:16px 0 8px;position:relative;overflow:hidden}
+  .bar i{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#8f8ee0,#3b3aa8);border-radius:5px}
+  .bar u{position:absolute;top:0;bottom:0;left:0;text-decoration:none;background:repeating-linear-gradient(45deg,#c9c8ee,#c9c8ee 4px,#e4e2f6 4px,#e4e2f6 8px)}
+  .rangeLbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink3)}
+
+  /* categories */
+  .cat{background:var(--card);border:1px solid var(--line);border-radius:16px;
+       padding:13px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .catHead{display:flex;align-items:center;gap:8px}
+  .catName{
+    flex:1 1 auto;min-width:0;border:none;background:transparent;font:600 15.5px/1.2 inherit;
+    color:var(--ink);padding:5px 4px;border-radius:7px;
+  }
+  .catName:focus{outline:none;background:#f4f3ef}
+  .wgt{display:flex;align-items:center;gap:2px;background:#f4f3ef;border-radius:9px;padding:4px 8px 4px 4px}
+  .wgt input{width:38px;border:none;background:transparent;text-align:right;font:600 14px inherit;color:var(--indigo);padding:2px}
+  .wgt input:focus{outline:none}
+  .wgt span{font-size:12px;color:var(--ink3);font-weight:600}
+  .x{border:none;background:transparent;color:var(--ink3);font-size:19px;line-height:1;
+     cursor:pointer;padding:3px 5px;border-radius:7px;flex:0 0 auto}
+  .x:hover{background:#f6ecea;color:var(--red)}
+
+  .items{display:flex;flex-wrap:wrap;gap:7px;margin:11px 0 3px}
+  .item{display:flex;align-items:center;gap:3px;background:#f7f6f2;border:1px solid var(--line);
+        border-radius:10px;padding:4px 4px 4px 7px}
+  .item.up{background:#fff8ec;border-color:#f0e2c8}
+  .item input{border:none;background:transparent;font:600 14px inherit;color:var(--ink);
+              width:38px;text-align:center;padding:3px 0}
+  .item input:focus{outline:none;background:#fff;border-radius:5px}
+  .item input.tot{color:var(--ink2);font-weight:500}
+  .item .sl{color:var(--ink3);font-size:13px}
+  .item .x{font-size:15px;padding:1px 3px}
+
+  .catFoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px;
+           padding-top:9px;border-top:1px dashed var(--line)}
+  .mini{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:8px;
+        font:600 12px inherit;padding:5px 9px;cursor:pointer}
+  .mini:hover{border-color:var(--indigo);color:var(--indigo)}
+  .drop{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)}
+  .drop input{width:34px;border:1px solid var(--line);border-radius:7px;background:#fff;
+              text-align:center;font:600 12px inherit;color:var(--ink2);padding:4px 2px}
+  .catPct{margin-left:auto;font:700 14px Georgia,serif;color:var(--indigo)}
+  .catPct.none{color:var(--ink3);font-weight:400;font-size:12px;font-family:inherit}
+
+  .addCat{width:100%;border:1.5px dashed #d8d3c7;background:transparent;color:var(--ink2);
+          border-radius:14px;padding:12px;font:600 13px inherit;cursor:pointer;margin-bottom:14px}
+  .addCat:hover{border-color:var(--indigo);color:var(--indigo);background:#fbfbff}
+
+  .warn{background:#fff6e6;border:1px solid #f0dcb4;color:#8a5b06;border-radius:12px;
+        padding:10px 13px;font-size:12.5px;margin-bottom:14px}
+  .hide{display:none}
+
+  /* need table */
+  table{width:100%;border-collapse:collapse}
+  td{padding:9px 2px;border-bottom:1px solid #f1eee7;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .tl{font:700 17px Georgia,serif;width:46px}
+  .need{text-align:right;font:700 15px Georgia,serif;white-space:nowrap}
+  .hint{font-size:12px;color:var(--ink3);font-family:inherit;font-weight:400;display:block;margin-top:1px}
+  .ok{color:var(--green)} .warnc{color:var(--amber)} .bad{color:var(--red)} .dim{color:var(--ink3)}
+  .locked{background:#eef7f3;color:var(--green);font-size:11.5px;font-weight:700;
+          border-radius:6px;padding:2px 7px;display:inline-block}
+
+  /* what-if */
+  .wiTop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .wiVal{font:700 16px Georgia,serif;color:var(--indigo)}
+  input[type=range]{width:100%;-webkit-appearance:none;background:transparent;margin:8px 0 4px}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:4px;background:#eceae4}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-8px;
+    border-radius:50%;background:#fff;border:2px solid var(--indigo);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  input[type=range]::-moz-range-track{height:6px;border-radius:4px;background:#eceae4}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--indigo)}
+  .wiOut{text-align:center;font-size:13.5px;color:var(--ink2);margin-top:8px}
+  .wiOut b{font:700 22px Georgia,serif;color:var(--ink);display:block;margin-top:2px}
+
+  .scaleRow{display:flex;gap:8px}
+  .seg{flex:1;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:10px;
+       padding:9px;font:600 13px inherit;cursor:pointer}
+  .seg.on{background:var(--indigo);border-color:var(--indigo);color:#fff}
+
+  footer{text-align:center;color:var(--ink3);font-size:11.5px;padding:6px 10px 0;line-height:1.6}
+  @media(max-width:420px){
+    .pct{font-size:44px}
+    .item input{width:34px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">📋</div>
+    <div>
+      <h1>Rubric</h1>
+      <p>Your real grade — and exactly what you need on what's left.</p>
+    </div>
+  </header>
+
+  <section class="card hero">
+    <div class="gradeRow">
+      <div class="pct" id="curPct">—</div>
+      <div class="letter" id="curLtr">—</div>
+    </div>
+    <div class="sub" id="curSub">Add a score to get started.</div>
+    <div class="bar" id="bar"><u id="barU"></u><i id="barI"></i></div>
+    <div class="rangeLbl"><span id="lblMin"></span><span id="lblMax"></span></div>
+  </section>
+
+  <div id="cats"></div>
+  <button class="addCat" id="addCat">+ Add category</button>
+  <div class="warn hide" id="weightWarn"></div>
+
+  <section class="card">
+    <h2>What you need on what's left</h2>
+    <div id="needBody"></div>
+  </section>
+
+  <section class="card">
+    <h2>What-if</h2>
+    <div class="wiTop">
+      <span style="font-size:13px;color:var(--ink2)">If I average</span>
+      <span class="wiVal" id="wiVal">90%</span>
+    </div>
+    <input type="range" id="wi" min="0" max="110" step="1" value="90">
+    <div class="wiOut" id="wiOut"></div>
+  </section>
+
+  <section class="card">
+    <h2>Grading scale</h2>
+    <div class="scaleRow">
+      <button class="seg on" id="segPM">A / A− / B+ …</button>
+      <button class="seg" id="segS">A / B / C / D</button>
+    </div>
+  </section>
+
+  <footer>
+    Leave a score blank to mark it as work you haven't done yet.<br>
+    Nothing is saved or sent anywhere — refresh to start over.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SCALES = {
+    pm: [
+      {l:"A",  m:93}, {l:"A−", m:90},
+      {l:"B+", m:87}, {l:"B", m:83}, {l:"B−", m:80},
+      {l:"C+", m:77}, {l:"C", m:73}, {l:"C−", m:70},
+      {l:"D+", m:67}, {l:"D", m:63}, {l:"D−", m:60},
+      {l:"F",  m:0}
+    ],
+    simple: [
+      {l:"A", m:90}, {l:"B", m:80}, {l:"C", m:70}, {l:"D", m:60}, {l:"F", m:0}
+    ]
+  };
+  var scaleKey = "pm";
+
+  var uid = 0;
+  function nid(){ uid += 1; return uid; }
+
+  var cats = [
+    { id:nid(), name:"Homework", weight:"20", drop:"1", items:[
+      mk("18","20"), mk("20","20"), mk("15","20"), mk("19","20")
+    ]},
+    { id:nid(), name:"Quizzes", weight:"15", drop:"0", items:[
+      mk("8","10"), mk("9","10"), mk("","10")
+    ]},
+    { id:nid(), name:"Midterm", weight:"25", drop:"0", items:[ mk("84","100") ]},
+    { id:nid(), name:"Final exam", weight:"40", drop:"0", items:[ mk("","100") ]}
+  ];
+
+  function mk(e,t){ return { id:nid(), earned:e, total:t }; }
+
+  /* ---------- helpers ---------- */
+  function num(v){
+    if (v === null || v === undefined) return NaN;
+    var s = String(v).trim();
+    if (s === "") return NaN;
+    var n = parseFloat(s);
+    return isFinite(n) ? n : NaN;
+  }
+  function isGraded(it){ return !isNaN(num(it.earned)); }
+  var ESCMAP = {"&":"&amp;","<":"&lt;",">":"&gt;"};
+  ESCMAP['"'] = "&quot;";
+  ESCMAP["'"] = "&#39;";
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return ESCMAP[c]; });
+  }
+  function fmt(n, d){
+    if (n === null || !isFinite(n)) return "—";
+    var p = (d === undefined) ? 1 : d;
+    return (Math.round(n * Math.pow(10,p)) / Math.pow(10,p)).toFixed(p);
+  }
+  function scale(){ return SCALES[scaleKey]; }
+  function letterFor(pct){
+    var s = scale();
+    for (var i=0;i<s.length;i++){ if (pct >= s[i].m - 1e-9) return s[i].l; }
+    return s[s.length-1].l;
+  }
+
+  /* drop the n lowest-scoring entries, always keeping at least one */
+  function applyDrop(list, n){
+    if (!(n > 0) || list.length <= 1) return list;
+    var k = Math.min(Math.floor(n), list.length - 1);
+    var sorted = list.slice().sort(function(a,b){ return (a.e/a.t) - (b.e/b.t); });
+    return sorted.slice(k);
+  }
+
+  /* build a category's entry list; x = assumed fraction on ungraded work,
+     or null to include only graded work */
+  function entries(c, x){
+    var out = [];
+    for (var i=0;i<c.items.length;i++){
+      var it = c.items[i];
+      var t = num(it.total);
+      if (!(t > 0)) continue;
+      if (isGraded(it)) out.push({ e:num(it.earned), t:t });
+      else if (x !== null) out.push({ e:x*t, t:t });
+    }
+    return out;
+  }
+
+  function weighted(x){
+    var acc = 0, W = 0;
+    for (var i=0;i<cats.length;i++){
+      var c = cats[i];
+      var w = num(c.weight);
+      if (!(w > 0)) continue;
+      var list = entries(c, x);
+      if (!list.length) continue;
+      var kept = applyDrop(list, num(c.drop) || 0);
+      var se = 0, st = 0;
+      for (var j=0;j<kept.length;j++){ se += kept[j].e; st += kept[j].t; }
+      if (!(st > 0)) continue;
+      acc += w * (se/st);
+      W += w;
+    }
+    return W > 0 ? (acc / W) * 100 : null;
+  }
+
+  function currentGrade(){ return weighted(null); }
+  function projected(x){ return weighted(x); }
+
+  function hasRemaining(){
+    for (var i=0;i<cats.length;i++){
+      var c = cats[i];
+      if (!(num(c.weight) > 0)) continue;
+      for (var j=0;j<c.items.length;j++){
+        var it = c.items[j];
+        if (num(it.total) > 0 && !isGraded(it)) return true;
+      }
+    }
+    return false;
+  }
+
+  function remainingItems(){
+    var out = [];
+    for (var i=0;i<cats.length;i++){
+      var c = cats[i];
+      if (!(num(c.weight) > 0)) continue;
+      for (var j=0;j<c.items.length;j++){
+        var it = c.items[j];
+        if (num(it.total) > 0 && !isGraded(it)) out.push({ cat:c, item:it });
+      }
+    }
+    return out;
+  }
+
+  /* smallest uniform fraction on remaining work that reaches target %
+     returns 0 if already locked in, null if unreachable */
+  function solveFor(target){
+    var hi = projected(3);
+    if (hi === null) return null;
+    if (projected(0) >= target - 1e-9) return 0;
+    if (hi < target - 1e-9) return null;
+    var lo = 0, h = 3;
+    for (var i=0;i<70;i++){
+      var m = (lo + h) / 2;
+      if (projected(m) >= target - 1e-12) h = m; else lo = m;
+    }
+    return h;
+  }
+
+  /* ---------- rendering ---------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var catsEl = $("cats");
+
+  function renderCats(){
+    var html = "";
+    for (var i=0;i<cats.length;i++){
+      var c = cats[i];
+      html += '<div class="cat">';
+      html +=   '<div class="catHead">';
+      html +=     '<input class="catName" data-c="'+i+'" data-f="name" value="'+esc(c.name)+'" aria-label="Category name">';
+      html +=     '<div class="wgt"><input inputmode="decimal" data-c="'+i+'" data-f="weight" value="'+esc(c.weight)+'" aria-label="Weight"><span>%</span></div>';
+      html +=     '<button class="x" data-act="delCat" data-c="'+i+'" title="Remove category">&times;</button>';
+      html +=   '</div>';
+      html +=   '<div class="items">';
+      for (var j=0;j<c.items.length;j++){
+        var it = c.items[j];
+        var up = isGraded(it) ? "" : " up";
+        html += '<div class="item'+up+'">';
+        html +=   '<input inputmode="decimal" data-c="'+i+'" data-i="'+j+'" data-f="earned" value="'+esc(it.earned)+'" placeholder="–" aria-label="Points earned">';
+        html +=   '<span class="sl">/</span>';
+        html +=   '<input class="tot" inputmode="decimal" data-c="'+i+'" data-i="'+j+'" data-f="total" value="'+esc(it.total)+'" aria-label="Points possible">';
+        html +=   '<button class="x" data-act="delItem" data-c="'+i+'" data-i="'+j+'" title="Remove">&times;</button>';
+        html += '</div>';
+      }
+      html +=   '</div>';
+      html +=   '<div class="catFoot">';
+      html +=     '<button class="mini" data-act="addItem" data-c="'+i+'">+ score</button>';
+      html +=     '<span class="drop">drop lowest <input inputmode="numeric" data-c="'+i+'" data-f="drop" value="'+esc(c.drop)+'" aria-label="Drop lowest"></span>';
+      html +=     '<span class="catPct" id="cp'+i+'"></span>';
+      html +=   '</div>';
+      html += '</div>';
+    }
+    catsEl.innerHTML = html;
+  }
+
+  function renderResults(){
+    /* per-category current percentage */
+    for (var i=0;i<cats.length;i++){
+      var el = $("cp"+i);
+      if (!el) continue;
+      var c = cats[i];
+      var list = entries(c, null);
+      if (!list.length){
+        el.className = "catPct none";
+        el.textContent = "not graded yet";
+      } else {
+        var kept = applyDrop(list, num(c.drop) || 0);
+        var se = 0, st = 0;
+        for (var j=0;j<kept.length;j++){ se += kept[j].e; st += kept[j].t; }
+        el.className = "catPct";
+        el.textContent = st > 0 ? fmt(se/st*100) + "%" : "—";
+      }
+    }
+
+    /* weight warning */
+    var sumW = 0, anyW = false;
+    for (var k=0;k<cats.length;k++){
+      var w = num(cats[k].weight);
+      if (w > 0){ sumW += w; anyW = true; }
+    }
+    var ww = $("weightWarn");
+    if (anyW && Math.abs(sumW - 100) > 0.05){
+      ww.className = "warn";
+      ww.innerHTML = "Your weights add up to <b>" + fmt(sumW) + "%</b>, not 100%. " +
+        "Everything below is scaled to that total, so it still works — but double-check the syllabus.";
+    } else {
+      ww.className = "warn hide";
+    }
+
+    /* hero */
+    var cur = currentGrade();
+    var floorG = projected(0);
+    var ceilG = projected(1);
+    var pctEl = $("curPct"), ltrEl = $("curLtr"), subEl = $("curSub");
+
+    if (cur === null){
+      pctEl.innerHTML = "—";
+      ltrEl.textContent = "—";
+      subEl.textContent = "Add a category weight and at least one score.";
+      $("barI").style.width = "0%";
+      $("barU").style.left = "0%"; $("barU").style.width = "0%";
+      $("lblMin").textContent = ""; $("lblMax").textContent = "";
+    } else {
+      pctEl.innerHTML = fmt(cur) + '<small>%</small>';
+      ltrEl.textContent = letterFor(cur);
+      var rem = remainingItems();
+      subEl.textContent = rem.length
+        ? "Grade so far, on graded work only · " + rem.length + " thing" + (rem.length>1?"s":"") + " still to come"
+        : "Everything is graded — this is your final grade.";
+
+      var lo = floorG === null ? cur : floorG;
+      var hi = ceilG === null ? cur : ceilG;
+      $("barI").style.width = Math.max(0, Math.min(100, lo)) + "%";
+      $("barU").style.left = Math.max(0, Math.min(100, lo)) + "%";
+      $("barU").style.width = Math.max(0, Math.min(100, hi - lo)) + "%";
+      if (hi - lo < 0.05){
+        $("lblMin").textContent = "locked in";
+        $("lblMax").textContent = "";
+      } else {
+        $("lblMin").textContent = "worst case " + fmt(lo) + "% (" + letterFor(lo) + ")";
+        $("lblMax").textContent = "best case " + fmt(hi) + "% (" + letterFor(hi) + ")";
+      }
+    }
+
+    renderNeed();
+    renderWhatIf();
+  }
+
+  function renderNeed(){
+    var body = $("needBody");
+    if (currentGrade() === null){
+      body.innerHTML = '<div class="sub" style="margin:0;color:var(--ink3)">Fill in your categories above.</div>';
+      return;
+    }
+    var rem = remainingItems();
+    if (!rem.length){
+      var cur = currentGrade();
+      body.innerHTML = '<div style="font-size:13.5px;color:var(--ink2)">Nothing left to grade — you finished with <b>' +
+        fmt(cur) + '% (' + letterFor(cur) + ')</b>.</div>';
+      return;
+    }
+
+    var s = scale();
+    var rows = [], unreachable = 0;
+    for (var i=0;i<s.length;i++){
+      if (s[i].m <= 0) continue;
+      var req = solveFor(s[i].m);
+      if (req === null){
+        if (rows.length === 0 && unreachable < 2){ rows.push({ t:s[i], req:null }); unreachable++; }
+        continue;
+      }
+      rows.push({ t:s[i], req:req });
+      if (req <= 1e-9) break;
+      if (rows.length >= 6) break;
+    }
+
+    var single = rem.length === 1 ? rem[0] : null;
+    var html = '<table>';
+    for (var r=0;r<rows.length;r++){
+      var row = rows[r];
+      html += '<tr><td class="tl">' + row.t.l + '</td><td style="font-size:12.5px;color:var(--ink3)">' +
+              row.t.m + '% or better</td><td class="need">';
+      if (row.req === null){
+        html += '<span class="dim">out of reach</span>';
+      } else if (row.req <= 1e-9){
+        html += '<span class="locked">already locked in</span>';
+      } else {
+        var p = row.req * 100;
+        var cls = p > 100 ? "bad" : (p >= 90 ? "warnc" : "ok");
+        html += '<span class="' + cls + '">' + fmt(p) + '%</span>';
+        if (single){
+          var pts = Math.ceil(row.req * num(single.item.total) - 1e-9);
+          html += '<span class="hint">' + pts + ' / ' + fmt(num(single.item.total),0) +
+                  ' on ' + esc(single.cat.name) + '</span>';
+        } else {
+          html += '<span class="hint">on everything left</span>';
+        }
+        if (p > 100) html += '<span class="hint">needs extra credit</span>';
+      }
+      html += '</td></tr>';
+    }
+    html += '</table>';
+    body.innerHTML = html;
+  }
+
+  function renderWhatIf(){
+    var v = parseInt($("wi").value, 10);
+    $("wiVal").textContent = v + "%";
+    var p = projected(v / 100);
+    var out = $("wiOut");
+    if (p === null){
+      out.innerHTML = "";
+      return;
+    }
+    var rem = remainingItems();
+    var lead = rem.length
+      ? "on everything left, I finish with"
+      : "— nothing left to grade, so you finish with";
+    out.innerHTML = lead + "<b>" + fmt(p) + "% · " + letterFor(p) + "</b>";
+  }
+
+  function renderAll(){ renderCats(); renderResults(); }
+
+  /* ---------- events ---------- */
+  catsEl.addEventListener("input", function(e){
+    var t = e.target;
+    var f = t.getAttribute("data-f");
+    if (!f) return;
+    var ci = parseInt(t.getAttribute("data-c"), 10);
+    var ii = t.getAttribute("data-i");
+    if (isNaN(ci) || !cats[ci]) return;
+    if (ii === null){
+      cats[ci][f] = t.value;
+    } else {
+      var it = cats[ci].items[parseInt(ii,10)];
+      if (!it) return;
+      it[f] = t.value;
+      var box = t.parentNode;
+      if (box && box.className.indexOf("item") === 0){
+        box.className = isGraded(it) ? "item" : "item up";
+      }
+    }
+    renderResults();
+  });
+
+  catsEl.addEventListener("click", function(e){
+    var t = e.target;
+    var act = t.getAttribute("data-act");
+    if (!act) return;
+    var ci = parseInt(t.getAttribute("data-c"), 10);
+    if (isNaN(ci) || !cats[ci]) return;
+    if (act === "addItem"){
+      var last = cats[ci].items[cats[ci].items.length - 1];
+      cats[ci].items.push(mk("", last ? last.total : "100"));
+    } else if (act === "delItem"){
+      cats[ci].items.splice(parseInt(t.getAttribute("data-i"),10), 1);
+    } else if (act === "delCat"){
+      cats.splice(ci, 1);
+    }
+    renderAll();
+    if (act === "addItem"){
+      var inputs = catsEl.querySelectorAll('[data-c="'+ci+'"][data-f="earned"]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }
+  });
+
+  $("addCat").addEventListener("click", function(){
+    cats.push({ id:nid(), name:"New category", weight:"", drop:"0", items:[ mk("","100") ] });
+    renderAll();
+    var names = catsEl.querySelectorAll(".catName");
+    if (names.length){
+      var n = names[names.length - 1];
+      n.focus(); n.select();
+    }
+  });
+
+  $("wi").addEventListener("input", renderWhatIf);
+
+  $("segPM").addEventListener("click", function(){
+    scaleKey = "pm";
+    this.className = "seg on";
+    $("segS").className = "seg";
+    renderResults();
+  });
+  $("segS").addEventListener("click", function(){
+    scaleKey = "simple";
+    this.className = "seg on";
+    $("segPM").className = "seg";
+    renderResults();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
