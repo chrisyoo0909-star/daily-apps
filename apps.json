@@ -306,5 +306,12 @@
     "emoji": "💥",
     "date": "2026-09-11",
     "blurb": "A turn-based artillery duel against a CPU that ranges you in by simulating thousands of shots — real wind, destructible ground, and a cluster round that rains five bomblets."
+  },
+  {
+    "file": "apps/app-2026-09-12-rubric.html",
+    "name": "Rubric",
+    "emoji": "📋",
+    "date": "2026-09-12",
+    "blurb": "Type in your syllabus and it tells you your real weighted grade — plus the exact score you need on the final for every letter still within reach."
   }
 ]
