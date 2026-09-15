@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Metroline</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    background:#14161c;color:#f2efe6;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  #shell{
+    width:100%;max-width:560px;height:100%;max-height:960px;
+    display:flex;flex-direction:column;
+    background:#1b1e26;
+    box-shadow:0 0 60px rgba(0,0,0,.6);
+  }
+
+  header{
+    flex:0 0 auto;padding:10px 14px 8px;
+    display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid #2b2f3a;
+  }
+  .brand{font-size:15px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#f2efe6}
+  .brand span{color:#e4572e}
+  .stat{display:flex;flex-direction:column;align-items:center;min-width:44px}
+  .stat b{font-size:17px;font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat i{font-style:normal;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:#7d8496;margin-top:2px}
+  .spacer{flex:1}
+
+  #stage{flex:1 1 auto;position:relative;min-height:0;background:#f6f1e7}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  #hint{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    background:rgba(27,30,38,.9);color:#f2efe6;
+    font-size:12px;letter-spacing:.3px;padding:8px 14px;border-radius:20px;
+    white-space:nowrap;pointer-events:none;transition:opacity .4s;
+  }
+
+  #over{
+    position:absolute;inset:0;background:rgba(20,22,28,.9);
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  }
+  #over.show{display:flex}
+  #over h2{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#e4572e}
+  #over .big{font-size:58px;font-weight:700;line-height:1}
+  #over p{font-size:12px;color:#9aa1b2;margin-bottom:14px;text-align:center;max-width:280px;line-height:1.5}
+  button.play{
+    border:0;background:#e4572e;color:#fff;font-size:13px;font-weight:700;
+    letter-spacing:1.6px;text-transform:uppercase;padding:12px 26px;border-radius:24px;cursor:pointer;
+  }
+  button.play:active{transform:translateY(1px)}
+
+  footer{
+    flex:0 0 auto;padding:10px 12px 14px;
+    display:flex;align-items:center;gap:8px;
+    border-top:1px solid #2b2f3a;
+  }
+  .chip{
+    position:relative;width:38px;height:38px;border-radius:50%;
+    border:3px solid transparent;cursor:pointer;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s,border-color .12s;
+  }
+  .chip .dot{width:20px;height:20px;border-radius:50%}
+  .chip.locked{opacity:.22;cursor:default}
+  .chip.sel{border-color:#f2efe6;transform:scale(1.08)}
+  .chip .cnt{
+    position:absolute;bottom:-3px;right:-3px;background:#1b1e26;color:#f2efe6;
+    font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;line-height:1.3;
+  }
+  .clear{
+    margin-left:auto;border:1px solid #3a3f4d;background:transparent;color:#9aa1b2;
+    font-size:10px;letter-spacing:1.4px;text-transform:uppercase;padding:9px 12px;
+    border-radius:16px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .15s;
+  }
+  .clear.on{opacity:1;pointer-events:auto}
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <header>
+    <div class="brand">Metro<span>line</span></div>
+    <div class="spacer"></div>
+    <div class="stat"><b id="sScore">0</b><i>riders</i></div>
+    <div class="stat"><b id="sTrains">0</b><i>trains</i></div>
+    <div class="stat"><b id="sTime">0:00</b><i>time</i></div>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hint">Tap a colour below, then tap stations to link them</div>
+    <div id="over">
+      <h2>Service suspended</h2>
+      <div class="big" id="oScore">0</div>
+      <p id="oMsg">riders delivered</p>
+      <button class="play" id="again">Play again</button>
+    </div>
+  </div>
+
+  <footer>
+    <div id="palette" style="display:flex;gap:8px"></div>
+    <button class="clear" id="clearBtn">Erase line</button>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLORS = ["#e4572e","#2e86ab","#f2b705","#3a9d4a","#8e44ad","#00a5a5"];
+  var SHAPES = ["circle","triangle","square","star","cross"];
+
+  var STATION_R    = 11;
+  var PICK_R       = 26;
+  var TRAIN_SPEED  = 100;
+  var TRAIN_CAP    = 6;
+  var DWELL        = 0.45;
+  var PLATFORM_CAP = 6;
+  var MELTDOWN     = 20;
+  var MAX_TRAINS_PER_LINE = 3;
+  var LANE_GAP     = 3;
+
+  var cv  = document.getElementById("cv");
+  var ctx = cv.getContext("2d");
+  var W = 0, H = 0;
+
+  var S = null;
+  var lastT = 0;
+
+  function perp(a,b){
+    var dx=b.x-a.x, dy=b.y-a.y, l=Math.hypot(dx,dy)||1;
+    return {x:-dy/l, y:dx/l};
+  }
+
+  function offsetPoly(pts,d){
+    if(d===0 || pts.length<2) return pts.slice();
+    var out=[],i;
+    for(i=0;i<pts.length;i++){
+      var nx=0,ny=0;
+      if(i>0){ var p1=perp(pts[i-1],pts[i]); nx+=p1.x; ny+=p1.y; }
+      if(i<pts.length-1){ var p2=perp(pts[i],pts[i+1]); nx+=p2.x; ny+=p2.y; }
+      var l=Math.hypot(nx,ny)||1;
+      out.push({x:pts[i].x+nx/l*d, y:pts[i].y+ny/l*d});
+    }
+    return out;
+  }
+
+  function bendPoint(a,b){
+    var dx=b.x-a.x, dy=b.y-a.y;
+    var m=Math.min(Math.abs(dx),Math.abs(dy));
+    if(m<2) return null;
+    return {x:a.x+Math.sign(dx)*m, y:a.y+Math.sign(dy)*m};
+  }
+
+  function shapePath(c,shape,x,y,r){
+    c.beginPath();
+    if(shape==="circle"){
+      c.arc(x,y,r,0,Math.PI*2);
+    } else if(shape==="square"){
+      c.rect(x-r*0.88,y-r*0.88,r*1.76,r*1.76);
+    } else if(shape==="triangle"){
+      var h=r*1.22;
+      c.moveTo(x,y-h);
+      c.lineTo(x+h*0.95,y+h*0.72);
+      c.lineTo(x-h*0.95,y+h*0.72);
+      c.closePath();
+    } else if(shape==="star"){
+      var i,ang,rad;
+      for(i=0;i<10;i++){
+        ang=-Math.PI/2 + i*Math.PI/5;
+        rad=(i%2===0)?r*1.25:r*0.52;
+        if(i===0) c.moveTo(x+Math.cos(ang)*rad,y+Math.sin(ang)*rad);
+        else c.lineTo(x+Math.cos(ang)*rad,y+Math.sin(ang)*rad);
+      }
+      c.closePath();
+    } else {
+      var a=r*0.36, b=r*1.02;
+      c.moveTo(x-a,y-b); c.lineTo(x+a,y-b); c.lineTo(x+a,y-a);
+      c.lineTo(x+b,y-a); c.lineTo(x+b,y+a); c.lineTo(x+a,y+a);
+      c.lineTo(x+a,y+b); c.lineTo(x-a,y+b); c.lineTo(x-a,y+a);
+      c.lineTo(x-b,y+a); c.lineTo(x-b,y-a); c.lineTo(x-a,y-a);
+      c.closePath();
+    }
+  }
+
+  function newGame(){
+    S = {
+      stations: [], lines: [], linesUnlocked: 3, trainsTotal: 3,
+      score: 0, t: 0, over: false, sel: -1,
+      nextStation: 10, nextRider: 3, nextReward: 45, rewardFlip: 0, dist: {}
+    };
+    var i;
+    for(i=0;i<COLORS.length;i++) S.lines.push({color:COLORS[i], st:[], pts:[], cum:[], stCum:[], trains:[], lane:i, len:0});
+
+    addStation("circle",   W*0.30, H*0.32);
+    addStation("circle",   W*0.70, H*0.44);
+    addStation("triangle", W*0.44, H*0.68);
+    rebuild();
+    buildPalette();
+    document.getElementById("hint").style.opacity = "1";
+    document.getElementById("over").classList.remove("show");
+    syncHud();
+  }
+
+  function addStation(shape,x,y){
+    S.stations.push({x:x,y:y,shape:shape,wait:[],crowd:0,pulse:1});
+  }
+
+  function freeSpot(){
+    var pad=54, tries, x, y, ok, i, d;
+    for(tries=0;tries<200;tries++){
+      x = pad + Math.random()*(W-pad*2);
+      y = pad + Math.random()*(H-pad*2);
+      ok = true;
+      for(i=0;i<S.stations.length;i++){
+        d = Math.hypot(S.stations[i].x-x, S.stations[i].y-y);
+        if(d < 78){ ok=false; break; }
+      }
+      if(ok) return {x:x,y:y};
+    }
+    return null;
+  }
+
+  function pickNewShape(){
+    var r = Math.random();
+    if(S.t>150 && r<0.035) return "cross";
+    if(S.t>80  && r<0.09)  return "star";
+    r = Math.random();
+    if(r<0.54) return "circle";
+    if(r<0.78) return "triangle";
+    return "square";
+  }
+
+  function rebuild(){
+    var i,j,L,pts,a,bp,cum,stCum,d;
+    for(i=0;i<S.lines.length;i++){
+      L = S.lines[i];
+      pts=[]; stCum=[];
+      if(L.st.length>=1){
+        var raw=[];
+        for(j=0;j<L.st.length;j++){
+          a = S.stations[L.st[j]];
+          if(j>0){
+            bp = bendPoint(S.stations[L.st[j-1]], a);
+            if(bp) raw.push({x:bp.x,y:bp.y,stn:-1});
+          }
+          raw.push({x:a.x,y:a.y,stn:j});
+        }
+        var lane = (L.lane - (COLORS.length-1)/2) * LANE_GAP;
+        var off = offsetPoly(raw, lane);
+        for(j=0;j<raw.length;j++) pts.push({x:off[j].x,y:off[j].y,stn:raw[j].stn});
+      }
+      cum=[]; d=0;
+      for(j=0;j<pts.length;j++){
+        if(j>0) d += Math.hypot(pts[j].x-pts[j-1].x, pts[j].y-pts[j-1].y);
+        cum.push(d);
+        if(pts[j].stn>=0) stCum[pts[j].stn]=d;
+      }
+      L.pts=pts; L.cum=cum; L.stCum=stCum; L.len=d;
+
+      for(j=0;j<L.trains.length;j++){
+        var tr=L.trains[j];
+        if(tr.idx>=L.st.length) tr.idx=Math.max(0,L.st.length-1);
+        tr.dist = L.stCum[tr.idx]!==undefined ? L.stCum[tr.idx] : 0;
+        tr.state="dwell"; tr.dwell=0.1;
+      }
+    }
+    assignTrains();
+    computeDistances();
+  }
+
+  function trainsUsed(){
+    var n=0,i;
+    for(i=0;i<S.lines.length;i++) n+=S.lines[i].trains.length;
+    return n;
+  }
+
+  function assignTrains(){
+    var i,L;
+    for(i=0;i<S.lines.length;i++){
+      L=S.lines[i];
+      if(L.st.length>=2 && L.trains.length===0 && trainsUsed()<S.trainsTotal){
+        L.trains.push({idx:0,dir:1,dist:L.stCum[0]||0,state:"dwell",dwell:0.2,pax:[]});
+      }
+      if(L.st.length<2 && L.trains.length>0) L.trains=[];
+    }
+    var guard=0;
+    while(trainsUsed()<S.trainsTotal && guard<12){
+      guard++;
+      var best=null;
+      for(i=0;i<S.lines.length;i++){
+        L=S.lines[i];
+        if(L.st.length<2 || L.trains.length>=MAX_TRAINS_PER_LINE) continue;
+        if(!best || L.st.length/(L.trains.length+1) > best.st.length/(best.trains.length+1)) best=L;
+      }
+      if(!best) break;
+      var start = Math.floor(Math.random()*best.st.length);
+      best.trains.push({idx:start,dir:1,dist:best.stCum[start]||0,state:"dwell",dwell:0.2,pax:[]});
+    }
+  }
+
+  function computeDistances(){
+    var n=S.stations.length, adj=[], i,j,k,L;
+    for(i=0;i<n;i++) adj.push([]);
+    for(i=0;i<S.lines.length;i++){
+      L=S.lines[i];
+      for(j=0;j<L.st.length-1;j++){
+        var a=L.st[j], b=L.st[j+1];
+        if(adj[a].indexOf(b)<0) adj[a].push(b);
+        if(adj[b].indexOf(a)<0) adj[b].push(a);
+      }
+    }
+    S.adj = adj;
+    S.dist = {};
+    for(k=0;k<SHAPES.length;k++){
+      var shape=SHAPES[k], d=new Array(n), q=[], head=0;
+      for(i=0;i<n;i++) d[i]=Infinity;
+      for(i=0;i<n;i++) if(S.stations[i].shape===shape){ d[i]=0; q.push(i); }
+      if(q.length===0) continue;
+      while(head<q.length){
+        var cur=q[head++];
+        for(j=0;j<adj[cur].length;j++){
+          var nb=adj[cur][j];
+          if(d[nb]===Infinity){ d[nb]=d[cur]+1; q.push(nb); }
+        }
+      }
+      S.dist[shape]=d;
+    }
+  }
+
+  function dOf(shape,idx){
+    var arr=S.dist[shape];
+    if(!arr) return Infinity;
+    return arr[idx];
+  }
+
+  function shapeCounts(){
+    var c={},i,s;
+    for(i=0;i<S.stations.length;i++){
+      s=S.stations[i].shape;
+      c[s]=(c[s]||0)+1;
+    }
+    return c;
+  }
+
+  function spawnRider(){
+    if(S.stations.length<2) return;
+    var pool=[],i;
+    for(i=0;i<S.stations.length;i++) if(S.stations[i].wait.length<11) pool.push(i);
+    if(!pool.length) return;
+    var si = pool[Math.floor(Math.random()*pool.length)];
+    var stn = S.stations[si];
+    var counts = shapeCounts();
+    var opts=[], weights=[], total=0, key;
+    for(key in counts){
+      if(key===stn.shape) continue;
+      var w = 1/Math.pow(counts[key],1.15);
+      opts.push(key); weights.push(w); total+=w;
+    }
+    if(!opts.length) return;
+    var r=Math.random()*total, acc=0, want=opts[0];
+    for(i=0;i<opts.length;i++){ acc+=weights[i]; if(r<=acc){ want=opts[i]; break; } }
+    stn.wait.push({want:want});
+    stn.pulse = 1.5;
+  }
+
+  function nextStationIdx(L,tr){
+    if(L.st.length<2) return -1;
+    var n = tr.idx + tr.dir;
+    if(n<0 || n>=L.st.length) return -1;
+    return n;
+  }
+
+  function arrive(L,tr){
+    var here = L.st[tr.idx];
+    var stn = S.stations[here];
+
+    if(tr.idx===0) tr.dir=1;
+    else if(tr.idx===L.st.length-1) tr.dir=-1;
+
+    var nIdx = nextStationIdx(L,tr);
+    var nextStn = nIdx>=0 ? L.st[nIdx] : -1;
+
+    var keep=[],i,p;
+    for(i=0;i<tr.pax.length;i++){
+      p=tr.pax[i];
+      if(stn.shape===p.want){ S.score++; stn.pulse=1.8; continue; }
+      if(nextStn>=0 && dOf(p.want,nextStn) < dOf(p.want,here)) keep.push(p);
+      else stn.wait.push(p);
+    }
+    tr.pax = keep;
+
+    if(nextStn>=0){
+      var left=[];
+      for(i=0;i<stn.wait.length;i++){
+        p=stn.wait[i];
+        if(tr.pax.length<TRAIN_CAP && dOf(p.want,nextStn) < dOf(p.want,here)) tr.pax.push(p);
+        else left.push(p);
+      }
+      stn.wait=left;
+    }
+
+    tr.state="dwell";
+    tr.dwell=DWELL;
+  }
+
+  function updateTrain(L,tr,dt){
+    if(L.st.length<2) return;
+    if(tr.state==="dwell"){
+      tr.dwell-=dt;
+      if(tr.dwell<=0) tr.state="move";
+      return;
+    }
+    var nIdx = nextStationIdx(L,tr);
+    if(nIdx<0){ tr.dir=-tr.dir; nIdx=nextStationIdx(L,tr); if(nIdx<0) return; }
+    var target = L.stCum[nIdx];
+    var adv = TRAIN_SPEED*dt;
+    if(target>tr.dist){
+      tr.dist += adv;
+      if(tr.dist>=target){ tr.dist=target; tr.idx=nIdx; arrive(L,tr); }
+    } else {
+      tr.dist -= adv;
+      if(tr.dist<=target){ tr.dist=target; tr.idx=nIdx; arrive(L,tr); }
+    }
+  }
+
+  function pointAt(L,d){
+    var pts=L.pts, cum=L.cum, i;
+    if(pts.length===0) return null;
+    if(pts.length===1) return {x:pts[0].x,y:pts[0].y,ang:0};
+    if(d<=0) d=0;
+    if(d>=L.len) d=L.len;
+    for(i=1;i<pts.length;i++){
+      if(cum[i]>=d){
+        var seg=cum[i]-cum[i-1] || 1;
+        var f=(d-cum[i-1])/seg;
+        return {
+          x:pts[i-1].x+(pts[i].x-pts[i-1].x)*f,
+          y:pts[i-1].y+(pts[i].y-pts[i-1].y)*f,
+          ang:Math.atan2(pts[i].y-pts[i-1].y, pts[i].x-pts[i-1].x)
+        };
+      }
+    }
+    var last=pts[pts.length-1];
+    return {x:last.x,y:last.y,ang:0};
+  }
+
+  function step(dt){
+    if(S.over) return;
+    S.t += dt;
+
+    S.nextRider -= dt;
+    if(S.nextRider<=0){
+      spawnRider();
+      S.nextRider = Math.max(1.15, 4.4 - S.t*0.019);
+    }
+
+    S.nextStation -= dt;
+    if(S.nextStation<=0 && S.stations.length<26){
+      var spot=freeSpot();
+      if(spot){ addStation(pickNewShape(), spot.x, spot.y); rebuild(); }
+      S.nextStation = Math.max(9, 15 - S.t*0.012);
+    }
+
+    S.nextReward -= dt;
+    if(S.nextReward<=0){
+      S.rewardFlip++;
+      if(S.rewardFlip%2===1 && S.linesUnlocked<COLORS.length){
+        S.linesUnlocked++;
+        buildPalette();
+      } else {
+        S.trainsTotal++;
+        assignTrains();
+      }
+      S.nextReward = 45;
+      syncHud();
+    }
+
+    var i,j,L;
+    for(i=0;i<S.lines.length;i++){
+      L=S.lines[i];
+      for(j=0;j<L.trains.length;j++) updateTrain(L,L.trains[j],dt);
+    }
+
+    for(i=0;i<S.stations.length;i++){
+      var st=S.stations[i];
+      if(st.wait.length>PLATFORM_CAP) st.crowd += dt;
+      else st.crowd = Math.max(0, st.crowd - dt*2.2);
+      if(st.crowd>MELTDOWN && !S.over) gameOver();
+      if(st.pulse>1) st.pulse = Math.max(1, st.pulse - dt*2.2);
+    }
+  }
+
+  function gameOver(){
+    S.over=true;
+    document.getElementById("oScore").textContent = S.score;
+    var mins = Math.floor(S.t/60), secs = Math.floor(S.t%60);
+    document.getElementById("oMsg").textContent =
+      "riders delivered in " + mins + "m " + secs + "s before a platform overflowed";
+    document.getElementById("over").classList.add("show");
+  }
+
+  function draw(){
+    ctx.save();
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle="#f6f1e7";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.strokeStyle="#e8dfcc"; ctx.lineWidth=1;
+    var g=44,x,y;
+    ctx.beginPath();
+    for(x=g;x<W;x+=g){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,H); }
+    for(y=g;y<H;y+=g){ ctx.moveTo(0,y+0.5); ctx.lineTo(W,y+0.5); }
+    ctx.stroke();
+
+    var i,j,L;
+
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    for(i=0;i<S.lines.length;i++){
+      L=S.lines[i];
+      if(L.pts.length<2) continue;
+      ctx.strokeStyle=L.color; ctx.lineWidth=6;
+      ctx.beginPath();
+      ctx.moveTo(L.pts[0].x,L.pts[0].y);
+      for(j=1;j<L.pts.length;j++) ctx.lineTo(L.pts[j].x,L.pts[j].y);
+      ctx.stroke();
+    }
+
+    for(i=0;i<S.lines.length;i++){
+      L=S.lines[i];
+      for(j=0;j<L.trains.length;j++){
+        var tr=L.trains[j];
+        var p=pointAt(L,tr.dist);
+        if(!p) continue;
+        ctx.save();
+        ctx.translate(p.x,p.y);
+        ctx.rotate(p.ang);
+        ctx.fillStyle="#1b1e26";
+        roundRect(ctx,-14,-7,28,14,4); ctx.fill();
+        ctx.fillStyle=L.color;
+        roundRect(ctx,-12.5,-5.5,25,11,3); ctx.fill();
+        var k;
+        for(k=0;k<tr.pax.length;k++){
+          var cx=-9.5+ (k%3)*7.5, cy=(k<3?-2.6:2.6);
+          ctx.fillStyle="rgba(255,255,255,.92)";
+          shapePath(ctx,tr.pax[k].want,cx,cy,2.3); ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    for(i=0;i<S.stations.length;i++){
+      var st=S.stations[i];
+      var lines=0;
+      for(j=0;j<S.lines.length;j++) if(S.lines[j].st.indexOf(i)>=0) lines++;
+      var r=STATION_R*(lines>1?1.18:1)*st.pulse;
+
+      if(st.crowd>0){
+        var f=Math.min(1,st.crowd/MELTDOWN);
+        ctx.strokeStyle="rgba(214,48,49,"+(0.35+f*0.65).toFixed(2)+")";
+        ctx.lineWidth=3.5;
+        ctx.beginPath();
+        ctx.arc(st.x,st.y,r+7,-Math.PI/2,-Math.PI/2+Math.PI*2*f);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle="#fffdf8";
+      ctx.strokeStyle="#22242c";
+      ctx.lineWidth=3;
+      shapePath(ctx,st.shape,st.x,st.y,r);
+      ctx.fill(); ctx.stroke();
+
+      for(j=0;j<st.wait.length && j<12;j++){
+        var col=j%4, row=Math.floor(j/4);
+        var wx=st.x + r + 8 + col*9;
+        var wy=st.y - r - 2 + row*9;
+        ctx.fillStyle = st.crowd>0 ? "#c0392b" : "#3d4250";
+        shapePath(ctx,st.wait[j].want,wx,wy,3.2);
+        ctx.fill();
+      }
+    }
+
+    if(S.sel>=0){
+      var SL=S.lines[S.sel];
+      if(SL.st.length>0){
+        var last=S.stations[SL.st[SL.st.length-1]];
+        var pulse=3+Math.sin(S.t*6)*2.2;
+        ctx.strokeStyle=SL.color; ctx.lineWidth=2.5;
+        ctx.beginPath();
+        ctx.arc(last.x,last.y,STATION_R+9+pulse,0,Math.PI*2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function roundRect(c,x,y,w,h,r){
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    c.closePath();
+  }
+
+  function buildPalette(){
+    var pal=document.getElementById("palette");
+    pal.innerHTML="";
+    var i;
+    for(i=0;i<COLORS.length;i++){
+      (function(idx){
+        var el=document.createElement("div");
+        el.className="chip"+(idx>=S.linesUnlocked?" locked":"")+(S.sel===idx?" sel":"");
+        var dot=document.createElement("div");
+        dot.className="dot"; dot.style.background=COLORS[idx];
+        el.appendChild(dot);
+        if(S.lines[idx] && S.lines[idx].st.length>0){
+          var c=document.createElement("div");
+          c.className="cnt"; c.textContent=S.lines[idx].st.length;
+          el.appendChild(c);
+        }
+        el.addEventListener("pointerdown",function(e){
+          e.preventDefault();
+          if(idx>=S.linesUnlocked) return;
+          S.sel = (S.sel===idx) ? -1 : idx;
+          buildPalette(); syncHud();
+        });
+        pal.appendChild(el);
+      })(i);
+    }
+    document.getElementById("clearBtn").className =
+      "clear" + (S.sel>=0 && S.lines[S.sel].st.length>0 ? " on" : "");
+  }
+
+  function syncHud(){
+    document.getElementById("sScore").textContent = S.score;
+    document.getElementById("sTrains").textContent = S.trainsTotal;
+    var m=Math.floor(S.t/60), s=Math.floor(S.t%60);
+    document.getElementById("sTime").textContent = m+":"+(s<10?"0":"")+s;
+  }
+
+  function hitStation(x,y){
+    var best=-1, bd=PICK_R, i, d;
+    for(i=0;i<S.stations.length;i++){
+      d=Math.hypot(S.stations[i].x-x, S.stations[i].y-y);
+      if(d<bd){ bd=d; best=i; }
+    }
+    return best;
+  }
+
+  function onTap(e){
+    if(S.over) return;
+    var rect=cv.getBoundingClientRect();
+    var x=e.clientX-rect.left, y=e.clientY-rect.top;
+    var si=hitStation(x,y);
+
+    if(S.sel<0){
+      if(si>=0){
+        var i;
+        for(i=0;i<S.linesUnlocked;i++){
+          if(S.lines[i].st.length===0){ S.sel=i; break; }
+        }
+        if(S.sel<0) return;
+      } else return;
+    }
+
+    var L=S.lines[S.sel];
+    if(si<0){ S.sel=-1; buildPalette(); return; }
+
+    var pos=L.st.indexOf(si);
+    if(pos>=0){
+      if(pos===L.st.length-1){
+        S.sel=-1;
+      } else if(pos===L.st.length-2){
+        L.st.pop();
+      }
+    } else {
+      L.st.push(si);
+      document.getElementById("hint").style.opacity="0";
+    }
+    rebuild(); buildPalette(); syncHud();
+  }
+
+  document.getElementById("clearBtn").addEventListener("pointerdown",function(e){
+    e.preventDefault();
+    if(S.sel<0) return;
+    S.lines[S.sel].st=[];
+    S.lines[S.sel].trains=[];
+    S.sel=-1;
+    rebuild(); buildPalette();
+  });
+
+  document.getElementById("again").addEventListener("pointerdown",function(e){
+    e.preventDefault(); newGame();
+  });
+
+  cv.addEventListener("pointerdown",onTap);
+
+  function resize(){
+    var rect=cv.parentNode.getBoundingClientRect();
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    W=rect.width; H=rect.height;
+    cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  window.addEventListener("resize",function(){
+    var oldW=W, oldH=H;
+    resize();
+    if(S && oldW>0 && oldH>0){
+      var i;
+      for(i=0;i<S.stations.length;i++){
+        S.stations[i].x *= W/oldW;
+        S.stations[i].y *= H/oldH;
+      }
+      rebuild();
+    }
+  });
+
+  function frame(now){
+    if(!lastT) lastT=now;
+    var dt=Math.min(0.05,(now-lastT)/1000);
+    lastT=now;
+    step(dt);
+    draw();
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  newGame();
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
