@@ -313,5 +313,12 @@
     "emoji": "📋",
     "date": "2026-09-12",
     "blurb": "Type in your syllabus and it tells you your real weighted grade — plus the exact score you need on the final for every letter still within reach."
+  },
+  {
+    "file": "apps/app-2026-09-15-metroline.html",
+    "name": "Metroline",
+    "emoji": "🚇",
+    "date": "2026-09-15",
+    "blurb": "Draw subway lines across a growing city and keep it moving — riders pick their own route, transfer between your lines, and one overflowing platform shuts the whole network down."
   }
 ]
