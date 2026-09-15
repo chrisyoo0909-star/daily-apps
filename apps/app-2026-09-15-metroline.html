@@ -200,9 +200,9 @@
     var i;
     for(i=0;i<COLORS.length;i++) S.lines.push({color:COLORS[i], st:[], pts:[], cum:[], stCum:[], trains:[], lane:i, len:0});
 
-    addStation("circle",   W*0.30, H*0.32);
-    addStation("circle",   W*0.70, H*0.44);
-    addStation("triangle", W*0.44, H*0.68);
+    addStation("circle",   0.30, 0.32);
+    addStation("circle",   0.70, 0.44);
+    addStation("triangle", 0.44, 0.68);
     rebuild();
     buildPalette();
     document.getElementById("hint").style.opacity = "1";
@@ -210,11 +210,20 @@
     syncHud();
   }
 
-  function addStation(shape,x,y){
-    S.stations.push({x:x,y:y,shape:shape,wait:[],crowd:0,pulse:1});
+  function addStation(shape,rx,ry){
+    S.stations.push({rx:rx,ry:ry,x:rx*W,y:ry*H,shape:shape,wait:[],crowd:0,pulse:1});
+  }
+
+  function layout(){
+    var i;
+    for(i=0;i<S.stations.length;i++){
+      S.stations[i].x = S.stations[i].rx*W;
+      S.stations[i].y = S.stations[i].ry*H;
+    }
   }
 
   function freeSpot(){
+    if(W<10 || H<10) return null;
     var pad=54, tries, x, y, ok, i, d;
     for(tries=0;tries<200;tries++){
       x = pad + Math.random()*(W-pad*2);
@@ -224,7 +233,7 @@
         d = Math.hypot(S.stations[i].x-x, S.stations[i].y-y);
         if(d < 78){ ok=false; break; }
       }
-      if(ok) return {x:x,y:y};
+      if(ok) return {x:x/W,y:y/H};
     }
     return null;
   }
@@ -455,6 +464,11 @@
 
   function step(dt){
     if(S.over) return;
+    if(W<10 || H<10){
+      resize();
+      if(W<10 || H<10) return;
+      layout(); rebuild();
+    }
     S.t += dt;
 
     S.nextRider -= dt;
@@ -715,31 +729,33 @@
   }
 
   window.addEventListener("resize",function(){
-    var oldW=W, oldH=H;
     resize();
-    if(S && oldW>0 && oldH>0){
-      var i;
-      for(i=0;i<S.stations.length;i++){
-        S.stations[i].x *= W/oldW;
-        S.stations[i].y *= H/oldH;
-      }
-      rebuild();
-    }
+    if(S){ layout(); rebuild(); }
   });
 
-  function frame(now){
+  var rafAlive=false;
+
+  function tick(now){
     if(!lastT) lastT=now;
     var dt=Math.min(0.05,(now-lastT)/1000);
     lastT=now;
     step(dt);
     draw();
     syncHud();
+  }
+
+  function frame(now){
+    rafAlive=true;
+    tick(now);
     requestAnimationFrame(frame);
   }
 
   resize();
   newGame();
   requestAnimationFrame(frame);
+  setTimeout(function(){
+    if(!rafAlive) setInterval(function(){ tick(performance.now()); },16);
+  },700);
 
 })();
 </script>
