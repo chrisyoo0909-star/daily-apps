@@ -320,5 +320,12 @@
     "emoji": "🚇",
     "date": "2026-09-15",
     "blurb": "Draw subway lines across a growing city and keep it moving — riders pick their own route, transfer between your lines, and one overflowing platform shuts the whole network down."
+  },
+  {
+    "file": "apps/app-2026-09-16-gauge.html",
+    "name": "Gauge",
+    "emoji": "🔌",
+    "date": "2026-09-16",
+    "blurb": "Size a wire run properly — it checks ampacity and voltage drop together, derates for heat and conduit fill, and tells you which limit is actually forcing the gauge."
   }
 ]
