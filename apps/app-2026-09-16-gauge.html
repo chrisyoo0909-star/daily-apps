@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gauge — wire size &amp; voltage drop</title>
+<style>
+  :root{
+    --bg:#0e1319;
+    --bg2:#141b23;
+    --card:#19212b;
+    --card2:#1f2935;
+    --line:#2a3644;
+    --txt:#e8eef5;
+    --dim:#8fa2b5;
+    --dim2:#64798e;
+    --cu:#e08a4c;
+    --cu2:#f0a868;
+    --ok:#3fcf8e;
+    --warn:#f2c14e;
+    --bad:#f2685c;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 12% -12%, #1d2a38 0%, transparent 60%),
+      radial-gradient(900px 500px at 105% 8%, #2a1e17 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:22px 16px 56px;
+    line-height:1.45;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  header{margin-bottom:18px}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  h1{
+    font-size:38px;margin:0;letter-spacing:-1.2px;font-weight:800;
+    background:linear-gradient(95deg,var(--cu2),#ffd9ae 55%,var(--cu));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tag{font-size:13.5px;color:var(--dim);font-weight:500}
+  .sub{color:var(--dim2);font-size:13px;margin-top:6px;max-width:640px}
+
+  .presets{display:flex;gap:8px;overflow-x:auto;padding:14px 0 4px;margin-bottom:6px;scrollbar-width:none}
+  .presets::-webkit-scrollbar{display:none}
+  .preset{
+    flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--dim);
+    padding:8px 13px;border-radius:999px;font-size:12.5px;cursor:pointer;white-space:nowrap;
+    transition:.15s;font-weight:600;
+  }
+  .preset:hover{border-color:var(--cu);color:var(--cu2)}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--bg2));
+    border:1px solid var(--line);border-radius:var(--radius);padding:18px;
+    box-shadow:0 14px 34px rgba(0,0,0,.34);
+  }
+  .card + .card{margin-top:16px}
+
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--dim2);font-weight:700;margin-bottom:7px;display:block}
+  .row{margin-bottom:15px}
+  .row:last-child{margin-bottom:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+
+  .seg{display:flex;background:#111820;border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px}
+  .seg button{
+    flex:1;background:transparent;border:0;color:var(--dim);padding:8px 4px;border-radius:8px;
+    font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;
+  }
+  .seg button.on{background:var(--cu);color:#1a1008;box-shadow:0 2px 10px rgba(224,138,76,.35)}
+
+  input[type=number],select{
+    width:100%;background:#111820;border:1px solid var(--line);color:var(--txt);
+    padding:11px 12px;border-radius:11px;font-size:16px;font-family:inherit;font-weight:600;
+    outline:none;transition:.15s;
+  }
+  input[type=number]:focus,select:focus{border-color:var(--cu);box-shadow:0 0 0 3px rgba(224,138,76,.14)}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+    background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+
+  .chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .chip{
+    background:#111820;border:1px solid var(--line);color:var(--dim2);border-radius:8px;
+    padding:5px 10px;font-size:12px;cursor:pointer;font-weight:700;transition:.15s;font-family:inherit;
+  }
+  .chip:hover{color:var(--cu2);border-color:var(--cu)}
+  .chip.on{background:rgba(224,138,76,.16);border-color:var(--cu);color:var(--cu2)}
+
+  .sliderrow{display:flex;align-items:center;gap:13px}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:5px;background:#26313d;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--cu);cursor:pointer;border:3px solid #11181f;box-shadow:0 0 0 1px var(--cu)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--cu);cursor:pointer;border:3px solid #11181f}
+  .pctval{font-variant-numeric:tabular-nums;font-weight:800;font-size:17px;color:var(--cu2);min-width:46px;text-align:right}
+
+  .check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;font-size:13.5px;color:var(--dim)}
+  .check input{width:17px;height:17px;accent-color:var(--cu);cursor:pointer;flex:0 0 auto}
+
+  details{margin-top:15px;border-top:1px solid var(--line);padding-top:13px}
+  summary{cursor:pointer;font-size:12px;color:var(--dim2);font-weight:700;letter-spacing:.7px;text-transform:uppercase;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary:before{content:"+ ";color:var(--cu)}
+  details[open] summary:before{content:"– "}
+  details > .row:first-of-type{margin-top:14px}
+
+  /* result */
+  .result{text-align:center;padding:24px 18px 20px;position:relative;overflow:hidden}
+  .result:before{content:"";position:absolute;inset:0;background:radial-gradient(420px 150px at 50% 0%,rgba(224,138,76,.17),transparent 70%);pointer-events:none}
+  .rlabel{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim2);font-weight:700}
+  .rsize{font-size:62px;font-weight:800;letter-spacing:-2.5px;margin:4px 0 2px;line-height:1;color:#fff;text-shadow:0 0 34px rgba(224,138,76,.35)}
+  .rsize small{font-size:26px;letter-spacing:-1px;color:var(--cu2)}
+  .rsub{color:var(--dim);font-size:13.5px}
+  .rgov{display:inline-block;margin-top:12px;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;background:rgba(224,138,76,.14);border:1px solid rgba(224,138,76,.4);color:var(--cu2)}
+  .rfail .rsize{font-size:30px;letter-spacing:-.5px;color:var(--bad);text-shadow:none}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
+  @media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card2);padding:12px 8px;text-align:center}
+  .stat b{display:block;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .stat span{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim2);font-weight:700}
+
+  .notes{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+  .note{display:flex;gap:9px;font-size:12.5px;color:var(--dim);background:#141c25;border:1px solid var(--line);border-left:3px solid var(--dim2);padding:9px 12px;border-radius:9px}
+  .note.w{border-left-color:var(--warn)}
+  .note.e{border-left-color:var(--bad)}
+  .note.g{border-left-color:var(--ok)}
+  .note i{font-style:normal;flex:0 0 auto}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{
+    text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim2);
+    font-weight:700;padding:0 8px 9px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);
+  }
+  th:first-child,td:first-child{text-align:left}
+  td{padding:8px;border-bottom:1px solid rgba(42,54,68,.5);font-variant-numeric:tabular-nums;text-align:right;color:var(--dim)}
+  tr.pick td{background:rgba(224,138,76,.11);color:var(--txt);font-weight:700}
+  tr.pick td:first-child{box-shadow:inset 3px 0 0 var(--cu)}
+  tr.na td{opacity:.38}
+  td.sz{font-weight:800;color:var(--txt)}
+  .bar{height:5px;border-radius:3px;background:#242f3b;overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;border-radius:3px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;vertical-align:1px}
+  .tscroll{max-height:430px;overflow:auto;margin:0 -4px;padding:0 4px}
+  .tscroll::-webkit-scrollbar{width:7px}
+  .tscroll::-webkit-scrollbar-thumb{background:#2d3948;border-radius:4px}
+
+  .ct{font-size:12.5px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin-bottom:13px}
+  footer{margin-top:24px;font-size:11.5px;color:var(--dim2);text-align:center;line-height:1.7;max-width:720px;margin-left:auto;margin-right:auto}
+  footer b{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <h1>Gauge</h1>
+      <div class="tag">wire size &amp; voltage drop, done properly</div>
+    </div>
+    <div class="sub">Tell it the load, the voltage and how far the run is. It sizes the conductor against both ampacity and voltage drop, and tells you which one is actually forcing your hand.</div>
+  </header>
+
+  <div class="presets" id="presets"></div>
+
+  <div class="grid">
+
+    <div>
+      <div class="card">
+        <div class="ct">The run</div>
+
+        <div class="row">
+          <label class="lbl">System</label>
+          <div class="seg" id="segMode">
+            <button data-v="dc">DC</button>
+            <button data-v="1ph">AC 1-phase</button>
+            <button data-v="3ph">AC 3-phase</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="lbl">Voltage</label>
+          <input type="number" id="volts" value="120" min="1" step="1">
+          <div class="chips" id="vChips"></div>
+        </div>
+
+        <div class="two">
+          <div class="row">
+            <label class="lbl">Load</label>
+            <input type="number" id="load" value="20" min="0" step="0.1">
+            <div class="seg" style="margin-top:8px">
+              <button data-u="A" class="on" id="uA">Amps</button>
+              <button data-u="W" id="uW">Watts</button>
+            </div>
+          </div>
+          <div class="row">
+            <label class="lbl">One-way distance</label>
+            <input type="number" id="len" value="60" min="0" step="1">
+            <div class="seg" style="margin-top:8px">
+              <button data-l="ft" class="on" id="lFt">Feet</button>
+              <button data-l="m" id="lM">Metres</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" id="pfRow">
+          <label class="lbl">Power factor</label>
+          <input type="number" id="pf" value="1" min="0.5" max="1" step="0.05">
+        </div>
+
+        <div class="row">
+          <label class="lbl">Conductor</label>
+          <div class="seg" id="segMat">
+            <button data-m="cu" class="on">Copper</button>
+            <button data-m="al">Aluminium</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="lbl">Maximum voltage drop</label>
+          <div class="sliderrow">
+            <input type="range" id="drop" min="1" max="10" step="0.5" value="3">
+            <div class="pctval" id="dropVal">3%</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="check"><input type="checkbox" id="cont"> Continuous load — on for 3 hours or more (sizes at 125%)</label>
+        </div>
+
+        <details>
+          <summary>Conditions &amp; terminations</summary>
+          <div class="row">
+            <label class="lbl">Terminal temperature rating</label>
+            <select id="term">
+              <option value="0">60 °C — older gear, most 15/20 A devices</option>
+              <option value="1" selected>75 °C — typical breakers and lugs</option>
+              <option value="2">90 °C — only if everything is listed for it</option>
+            </select>
+          </div>
+          <div class="two">
+            <div class="row">
+              <label class="lbl">Ambient temperature</label>
+              <select id="amb">
+                <option value="1.15">Up to 10 °C</option>
+                <option value="1.12">11–15 °C</option>
+                <option value="1.08">16–20 °C</option>
+                <option value="1.04">21–25 °C</option>
+                <option value="1" selected>26–30 °C</option>
+                <option value="0.96">31–35 °C</option>
+                <option value="0.91">36–40 °C</option>
+                <option value="0.87">41–45 °C</option>
+                <option value="0.82">46–50 °C</option>
+                <option value="0.76">51–55 °C</option>
+                <option value="0.71">56–60 °C</option>
+              </select>
+            </div>
+            <div class="row">
+              <label class="lbl">Current-carrying wires in the raceway</label>
+              <select id="fill">
+                <option value="1" selected>1–3</option>
+                <option value="0.8">4–6</option>
+                <option value="0.7">7–9</option>
+                <option value="0.5">10–20</option>
+                <option value="0.45">21–30</option>
+                <option value="0.4">31–40</option>
+              </select>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div>
+      <div class="card result" id="resultCard">
+        <div class="rlabel">Smallest size that works</div>
+        <div class="rsize" id="rSize">—</div>
+        <div class="rsub" id="rSub"></div>
+        <div id="rGovWrap"><span class="rgov" id="rGov"></span></div>
+        <div class="stats">
+          <div class="stat"><b id="sDrop">—</b><span>Volt drop</span></div>
+          <div class="stat"><b id="sAtLoad">—</b><span>V at load</span></div>
+          <div class="stat"><b id="sAmp">—</b><span>Ampacity</span></div>
+          <div class="stat"><b id="sMax">—</b><span>Max run</span></div>
+        </div>
+        <div class="notes" id="notes"></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Every size, side by side</div>
+        <div class="tscroll">
+          <table>
+            <thead><tr>
+              <th>Size</th><th>Ampacity</th><th>Drop</th><th>V at load</th><th>Drop %</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Resistances are NEC Chapter 9 Table 8 (uncoated conductors at 75&nbsp;°C); ampacities are NEC Table 310.16 at 30&nbsp;°C ambient, derated from the 90&nbsp;°C column and then capped at your termination rating. 14/12/10&nbsp;AWG are also held to the 15/20/30&nbsp;A small-conductor limit. AC figures ignore conductor reactance, which matters on large conductors in steel conduit.<br>
+    <b>This is a planning tool, not an electrical design.</b> Have real work checked against your local code by a licensed electrician.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SIZES = [
+    {n:"22 AWG",  r:{cu:19.60, al:null}, a:null,                              ch:7,   small:true},
+    {n:"20 AWG",  r:{cu:12.35, al:null}, a:null,                              ch:11,  small:true},
+    {n:"18 AWG",  r:{cu:7.77,  al:null}, a:null,                              ch:16,  small:true},
+    {n:"16 AWG",  r:{cu:4.89,  al:null}, a:null,                              ch:22,  small:true},
+    {n:"14 AWG",  r:{cu:3.07,  al:null}, a:{cu:[15,20,25],   al:null},        ocpd:15},
+    {n:"12 AWG",  r:{cu:1.93,  al:3.18}, a:{cu:[20,25,30],   al:[15,20,25]},  ocpd:20},
+    {n:"10 AWG",  r:{cu:1.21,  al:2.00}, a:{cu:[30,35,40],   al:[25,30,35]},  ocpd:30},
+    {n:"8 AWG",   r:{cu:0.764, al:1.26}, a:{cu:[40,50,55],   al:[30,40,45]}},
+    {n:"6 AWG",   r:{cu:0.491, al:0.808},a:{cu:[55,65,75],   al:[40,50,55]}},
+    {n:"4 AWG",   r:{cu:0.308, al:0.508},a:{cu:[70,85,95],   al:[55,65,75]}},
+    {n:"3 AWG",   r:{cu:0.245, al:0.403},a:{cu:[85,100,115], al:[65,75,85]}},
+    {n:"2 AWG",   r:{cu:0.194, al:0.319},a:{cu:[95,115,130], al:[75,90,100]}},
+    {n:"1 AWG",   r:{cu:0.154, al:0.253},a:{cu:[110,130,145],al:[85,100,115]}},
+    {n:"1/0",     r:{cu:0.122, al:0.201},a:{cu:[125,150,170],al:[100,120,135]}},
+    {n:"2/0",     r:{cu:0.0967,al:0.159},a:{cu:[145,175,195],al:[115,135,150]}},
+    {n:"3/0",     r:{cu:0.0766,al:0.126},a:{cu:[165,200,225],al:[130,155,175]}},
+    {n:"4/0",     r:{cu:0.0608,al:0.100},a:{cu:[195,230,260],al:[150,180,205]}},
+    {n:"250 kcmil",r:{cu:0.0515,al:0.0847},a:{cu:[215,255,290],al:[170,205,230]}},
+    {n:"300 kcmil",r:{cu:0.0429,al:0.0707},a:{cu:[240,285,320],al:[195,230,260]}},
+    {n:"350 kcmil",r:{cu:0.0367,al:0.0605},a:{cu:[260,310,350],al:[210,250,280]}},
+    {n:"400 kcmil",r:{cu:0.0321,al:0.0529},a:{cu:[280,335,380],al:[225,270,305]}},
+    {n:"500 kcmil",r:{cu:0.0258,al:0.0424},a:{cu:[320,380,430],al:[260,310,350]}}
+  ];
+
+  var PRESETS = [
+    {t:"EV charger 48 A @ 240 V, 60 ft", mode:"1ph", v:240, load:48, u:"A", len:60, unit:"ft", mat:"cu", drop:3, cont:true},
+    {t:"Shed subpanel 60 A @ 240 V, 120 ft", mode:"1ph", v:240, load:60, u:"A", len:120, unit:"ft", mat:"cu", drop:3, cont:false},
+    {t:"Kitchen circuit 20 A @ 120 V, 45 ft", mode:"1ph", v:120, load:20, u:"A", len:45, unit:"ft", mat:"cu", drop:3, cont:false},
+    {t:"Van solar 30 A @ 12 V, 10 ft", mode:"dc", v:12, load:30, u:"A", len:10, unit:"ft", mat:"cu", drop:3, cont:false},
+    {t:"Boat windlass 80 A @ 12 V, 25 ft", mode:"dc", v:12, load:80, u:"A", len:25, unit:"ft", mat:"cu", drop:3, cont:false},
+    {t:"48 V battery bank 100 A, 6 ft", mode:"dc", v:48, load:100, u:"A", len:6, unit:"ft", mat:"cu", drop:1.5, cont:false},
+    {t:"Shop motor 15 A @ 240 V, 50 ft", mode:"1ph", v:240, load:15, u:"A", len:50, unit:"ft", mat:"cu", drop:3, cont:false},
+    {t:"3-phase pump 40 A @ 480 V, 400 ft", mode:"3ph", v:480, load:40, u:"A", len:400, unit:"ft", mat:"cu", drop:3, cont:true}
+  ];
+
+  var V_CHIPS = {dc:[12,24,36,48], "1ph":[120,240,277], "3ph":[208,240,480,600]};
+
+  var S = {mode:"1ph", unit:"ft", loadUnit:"A", mat:"cu"};
+
+  var $ = function(id){ return document.getElementById(id); };
+  var el = {
+    volts:$("volts"), load:$("load"), len:$("len"), pf:$("pf"), pfRow:$("pfRow"),
+    drop:$("drop"), dropVal:$("dropVal"), cont:$("cont"), term:$("term"),
+    amb:$("amb"), fill:$("fill"), vChips:$("vChips"), tbody:$("tbody"),
+    notes:$("notes"), card:$("resultCard")
+  };
+
+  function num(n, dflt){
+    var v = parseFloat(n);
+    return (isFinite(v) ? v : (dflt === undefined ? 0 : dflt));
+  }
+  function fmt(v, d){
+    if(v === null || v === undefined || typeof v !== "number" || !isFinite(v)) return "—";
+    return v.toFixed(d === undefined ? 1 : d);
+  }
+
+  /* ---------- controls ---------- */
+
+  function setSeg(container, attr, value){
+    var b = container.querySelectorAll("button"), i;
+    for(i=0;i<b.length;i++){
+      if(b[i].getAttribute(attr) === value) b[i].classList.add("on");
+      else b[i].classList.remove("on");
+    }
+  }
+
+  function bindSeg(id, attr, key, after){
+    var c = $(id);
+    c.addEventListener("click", function(e){
+      var b = e.target.closest("button");
+      if(!b) return;
+      S[key] = b.getAttribute(attr);
+      setSeg(c, attr, S[key]);
+      if(after) after();
+      render();
+    });
+  }
+
+  bindSeg("segMode", "data-v", "mode", function(){
+    buildVChips();
+    var list = V_CHIPS[S.mode];
+    var cur = num(el.volts.value);
+    if(list.indexOf(cur) === -1) el.volts.value = list[0];
+    el.pfRow.style.display = (S.mode === "dc") ? "none" : "";
+  });
+  bindSeg("segMat", "data-m", "mat");
+
+  (function(){
+    var c = document.querySelector("#uA").parentNode;
+    c.addEventListener("click", function(e){
+      var b = e.target.closest("button"); if(!b) return;
+      S.loadUnit = b.getAttribute("data-u");
+      setSeg(c, "data-u", S.loadUnit);
+      render();
+    });
+    var d = document.querySelector("#lFt").parentNode;
+    d.addEventListener("click", function(e){
+      var b = e.target.closest("button"); if(!b) return;
+      S.unit = b.getAttribute("data-l");
+      setSeg(d, "data-l", S.unit);
+      render();
+    });
+  })();
+
+  function buildVChips(){
+    var list = V_CHIPS[S.mode], h = "", i;
+    for(i=0;i<list.length;i++) h += '<button class="chip" data-v="' + list[i] + '">' + list[i] + " V</button>";
+    el.vChips.innerHTML = h;
+  }
+  el.vChips.addEventListener("click", function(e){
+    var b = e.target.closest(".chip"); if(!b) return;
+    el.volts.value = b.getAttribute("data-v");
+    render();
+  });
+
+  (function(){
+    var h = "", i;
+    for(i=0;i<PRESETS.length;i++) h += '<button class="preset" data-i="' + i + '">' + PRESETS[i].t + "</button>";
+    $("presets").innerHTML = h;
+  })();
+  $("presets").addEventListener("click", function(e){
+    var b = e.target.closest(".preset"); if(!b) return;
+    var p = PRESETS[parseInt(b.getAttribute("data-i"), 10)];
+    S.mode = p.mode; S.unit = p.unit; S.loadUnit = p.u; S.mat = p.mat;
+    setSeg($("segMode"), "data-v", S.mode);
+    setSeg($("segMat"), "data-m", S.mat);
+    setSeg($("uA").parentNode, "data-u", S.loadUnit);
+    setSeg($("lFt").parentNode, "data-l", S.unit);
+    buildVChips();
+    el.volts.value = p.v; el.load.value = p.load; el.len.value = p.len;
+    el.drop.value = p.drop; el.cont.checked = p.cont;
+    el.pfRow.style.display = (S.mode === "dc") ? "none" : "";
+    render();
+  });
+
+  var inputs = ["volts","load","len","pf","drop","cont","term","amb","fill"], k;
+  for(k=0;k<inputs.length;k++){
+    $(inputs[k]).addEventListener("input", render);
+    $(inputs[k]).addEventListener("change", render);
+  }
+
+  /* ---------- the maths ---------- */
+
+  function compute(){
+    var V = num(el.volts.value);
+    var pf = (S.mode === "dc") ? 1 : Math.min(1, Math.max(0.5, num(el.pf.value, 1)));
+    var raw = num(el.load.value);
+    var k = (S.mode === "3ph") ? Math.sqrt(3) : 2;
+
+    var I;
+    if(S.loadUnit === "A") I = raw;
+    else I = (S.mode === "3ph") ? raw / (Math.sqrt(3) * V * pf) : raw / (V * pf);
+
+    var Lft = (S.unit === "ft") ? num(el.len.value) : num(el.len.value) * 3.28084;
+    var limitPct = num(el.drop.value, 3);
+    var continuous = el.cont.checked;
+    var designI = continuous ? I * 1.25 : I;
+    var termIdx = parseInt(el.term.value, 10);
+    var tc = num(el.amb.value, 1);
+    var cc = num(el.fill.value, 1);
+    var lowVoltDC = (S.mode === "dc" && V <= 60);
+
+    var rows = [], i;
+    for(i=0;i<SIZES.length;i++){
+      var s = SIZES[i];
+      if(s.small && !lowVoltDC) continue;
+      if(!lowVoltDC && !s.a) continue;
+      var R = s.r[S.mat];
+      var row = {name:s.n, avail:(R !== null && R !== undefined)};
+
+      if(row.avail){
+        row.vd = k * Lft * I * R / 1000;
+        row.pct = V > 0 ? (row.vd / V) * 100 : Infinity;
+        row.atLoad = V - row.vd;
+        row.okVd = row.pct <= limitPct + 1e-9;
+
+        var amp = null, source = "NEC";
+        if(s.a && s.a[S.mat]){
+          var t = s.a[S.mat];
+          amp = Math.min(t[2] * tc * cc, t[termIdx]);
+          if(S.mode !== "dc" && s.ocpd) amp = Math.min(amp, s.ocpd);
+        } else if(s.ch && lowVoltDC){
+          amp = s.ch * tc * cc;
+          source = "chassis";
+        }
+        row.amp = amp;
+        row.ampSource = source;
+        row.okAmp = (amp !== null) && (amp >= designI - 1e-9);
+      } else {
+        row.okVd = false; row.okAmp = false; row.amp = null;
+      }
+      row.ok = row.avail && row.okVd && row.okAmp;
+      rows.push(row);
+    }
+
+    var pick = -1, firstAmp = -1, firstVd = -1;
+    for(i=0;i<rows.length;i++){
+      if(firstAmp < 0 && rows[i].avail && rows[i].okAmp) firstAmp = i;
+      if(firstVd  < 0 && rows[i].avail && rows[i].okVd)  firstVd  = i;
+      if(pick < 0 && rows[i].ok) pick = i;
+    }
+
+    var gov = "";
+    if(pick >= 0){
+      if(firstVd === pick && firstAmp === pick) gov = "Ampacity and voltage drop land on the same size";
+      else if(firstVd === pick) gov = "Voltage drop is what forces this size";
+      else gov = "Ampacity is what forces this size";
+    }
+
+    var maxLen = null;
+    if(pick >= 0 && I > 0){
+      var Rp = SIZES.filter(function(z){ return z.n === rows[pick].name; })[0].r[S.mat];
+      maxLen = (V * limitPct / 100) * 1000 / (k * I * Rp);
+    }
+
+    return {
+      rows:rows, pick:pick, gov:gov, I:I, V:V, designI:designI, limitPct:limitPct,
+      continuous:continuous, maxLen:maxLen, lowVoltDC:lowVoltDC, Lft:Lft,
+      tc:tc, cc:cc, termIdx:termIdx
+    };
+  }
+
+  /* ---------- rendering ---------- */
+
+  function barColor(pct, limit){
+    if(pct <= limit) return "var(--ok)";
+    if(pct <= limit * 1.75) return "var(--warn)";
+    return "var(--bad)";
+  }
+
+  function render(){
+    el.dropVal.textContent = num(el.drop.value, 3) + "%";
+    el.pfRow.style.display = (S.mode === "dc") ? "none" : "";
+
+    var c = compute();
+    var html = "", i;
+
+    for(i=0;i<c.rows.length;i++){
+      var r = c.rows[i];
+      var cls = [];
+      if(i === c.pick) cls.push("pick");
+      if(!r.avail) cls.push("na");
+      html += '<tr class="' + cls.join(" ") + '">';
+      html += '<td class="sz">' + r.name +
+              '<span class="dot" style="background:' + (r.ok ? "var(--ok)" : (r.avail && r.okVd ? "var(--warn)" : "var(--bad)")) + '"></span></td>';
+      if(!r.avail){
+        html += '<td colspan="4" style="text-align:right">not made in aluminium</td></tr>';
+        continue;
+      }
+      html += "<td>" + (r.amp === null ? "—" : fmt(r.amp, 0) + " A") +
+              (r.ampSource === "chassis" ? '<div style="font-size:9.5px;color:var(--dim2)">free air</div>' : "") + "</td>";
+      html += "<td>" + fmt(r.vd, 2) + " V</td>";
+      html += "<td>" + fmt(r.atLoad, 1) + " V</td>";
+      html += "<td>" + fmt(r.pct, 2) + "%" +
+              '<div class="bar"><i style="width:' + Math.min(100, (r.pct / (c.limitPct * 2)) * 100) +
+              "%;background:" + barColor(r.pct, c.limitPct) + '"></i></div></td>';
+      html += "</tr>";
+    }
+    el.tbody.innerHTML = html;
+
+    var notes = [];
+    if(!(c.I > 0) || !isFinite(c.I)){
+      el.card.classList.remove("rfail");
+      $("rSize").textContent = "—";
+      $("rSub").textContent = "Enter a load to size the run.";
+      $("rGov").style.display = "none";
+      $("sDrop").textContent = "—"; $("sDrop").style.color = "";
+      $("sAtLoad").textContent = "—"; $("sAmp").textContent = "—"; $("sMax").textContent = "—";
+      notes.push({c:"w", i:"!", t:"Enter the load in amps or watts and the tool will size the conductor."});
+    } else if(c.pick >= 0){
+      var p = c.rows[c.pick];
+      var nm = p.name.split(" ");
+      el.card.classList.remove("rfail");
+      $("rSize").innerHTML = nm[0] + (nm[1] ? " <small>" + nm[1] + "</small>" : "");
+      $("rSub").textContent = (S.mat === "cu" ? "Copper" : "Aluminium") + " · " +
+        fmt(c.I, c.I < 10 ? 1 : 0) + " A over " + fmt(c.Lft, 0) + " ft one way · " +
+        (S.mode === "dc" ? "DC" : (S.mode === "1ph" ? "single phase" : "three phase")) + " " + fmt(c.V, 0) + " V";
+      $("rGov").textContent = c.gov;
+      $("rGov").style.display = "";
+      $("sDrop").textContent = fmt(p.pct, 2) + "%";
+      $("sDrop").style.color = "var(--ok)";
+      $("sAtLoad").textContent = fmt(p.atLoad, 1) + " V";
+      $("sAtLoad").style.color = "";
+      $("sAmp").textContent = fmt(p.amp, 0) + " A";
+      $("sAmp").style.color = "";
+      $("sMax").textContent = fmt(c.maxLen, 0) + " ft";
+      $("sMax").style.color = "";
+
+      notes.push({c:"g", i:"✓", t:"At " + fmt(p.pct, 2) + "% you lose " + fmt(p.vd, 2) +
+        " V in the cable, so the load sees " + fmt(p.atLoad, 1) + " V."});
+      if(c.maxLen && c.Lft > 0){
+        notes.push({c:"", i:"↔", t:"This size stays inside " + c.limitPct + "% out to " + fmt(c.maxLen, 0) +
+          " ft one way — " + fmt(c.maxLen - c.Lft, 0) + " ft of headroom."});
+      }
+      if(c.continuous){
+        notes.push({c:"", i:"⏱", t:"Continuous load: sized for " + fmt(c.designI, 1) +
+          " A (125% of " + fmt(c.I, 1) + " A), but the drop figures use the real " + fmt(c.I, 1) + " A."});
+      }
+      if(p.ampSource === "chassis"){
+        notes.push({c:"w", i:"!", t:"Below 14 AWG there is no NEC 310.16 row — that ampacity is a free-air chassis-wiring figure. Bundled in a loom, derate it hard."});
+      }
+      if(S.mode !== "dc" && p.amp !== null && (p.name.indexOf("14 ") === 0 || p.name.indexOf("12 ") === 0 || p.name.indexOf("10 ") === 0)){
+        notes.push({c:"", i:"§", t:"Small-conductor rule (240.4(D)) caps this at " + fmt(p.amp, 0) + " A of overcurrent protection regardless of the table value."});
+      }
+      if(S.mat === "al"){
+        notes.push({c:"w", i:"!", t:"Aluminium needs terminals listed for it (AL/CU) and an antioxidant compound on the joint."});
+      }
+      if(c.tc !== 1 || c.cc !== 1){
+        notes.push({c:"", i:"θ", t:"Derated by " + Math.round(c.tc * c.cc * 100) + "% for ambient temperature and raceway fill, then capped at the termination rating."});
+      }
+      if(S.mode === "3ph"){
+        notes.push({c:"", i:"3", t:"Three-phase drop uses √3 × L × I × R and is the line-to-line figure."});
+      }
+    } else {
+      el.card.classList.add("rfail");
+      $("rSize").textContent = "Nothing in range works";
+      $("rSub").textContent = "Not even 500 kcmil " + (S.mat === "cu" ? "copper" : "aluminium") +
+        " meets both limits for this run.";
+      $("rGov").style.display = "none";
+      $("sDrop").textContent = "—"; $("sAtLoad").textContent = "—";
+      $("sAmp").textContent = "—"; $("sMax").textContent = "—";
+      notes.push({c:"e", i:"×", t:"Options: shorten the run, raise the system voltage, relax the drop limit, or run two conductors in parallel (which halves both resistance and the drop)."});
+    }
+
+    var nh = "";
+    for(i=0;i<notes.length;i++){
+      nh += '<div class="note ' + notes[i].c + '"><i>' + notes[i].i + "</i><span>" + notes[i].t + "</span></div>";
+    }
+    el.notes.innerHTML = nh;
+  }
+
+  buildVChips();
+  setSeg($("segMode"), "data-v", S.mode);
+  setSeg($("segMat"), "data-m", S.mat);
+  render();
+})();
+</script>
+</body>
+</html>
