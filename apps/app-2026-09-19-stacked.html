@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Stacked! — Diner Rush</title>
+<style>
+  :root{
+    --bg1:#2b1a1a;
+    --bg2:#1a1010;
+    --panel:#3a2420;
+    --panel-edge:#54332c;
+    --accent:#ffb703;
+    --accent2:#fb5607;
+    --good:#4caf50;
+    --bad:#e63946;
+    --text:#fff3e0;
+    --sub:#d9b8a3;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, #452a24 0%, transparent 45%),
+      radial-gradient(circle at 85% 90%, #3a221d 0%, transparent 50%),
+      linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:var(--text);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:10px 12px 22px;
+    position:relative;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 4px 10px;
+  }
+  header h1{
+    margin:0;
+    font-size:22px;
+    letter-spacing:0.5px;
+    color:var(--accent);
+    text-shadow:0 2px 0 rgba(0,0,0,0.4);
+  }
+  header h1 span{color:var(--text);}
+  .hud{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    font-size:14px;
+    color:var(--sub);
+  }
+  .hud .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;}
+  .hud .stat b{font-size:17px;color:var(--text);}
+  .hearts{font-size:16px;letter-spacing:2px;}
+  .hearts .dead{opacity:0.25;filter:grayscale(1);}
+
+  .panel{
+    background:linear-gradient(180deg,var(--panel),#2f1c19);
+    border:1px solid var(--panel-edge);
+    border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+    padding:12px;
+    margin-bottom:12px;
+  }
+
+  /* ---- Ticket ---- */
+  #ticketPanel{position:relative;}
+  .ticket-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .ticket-head .label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color:var(--sub);
+    font-weight:600;
+  }
+  .ticket-head .level{
+    font-size:11px;
+    color:var(--accent);
+    font-weight:700;
+    background:rgba(255,183,3,0.12);
+    padding:3px 8px;
+    border-radius:20px;
+  }
+  .timerBar{
+    height:7px;
+    border-radius:6px;
+    background:rgba(0,0,0,0.35);
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .timerFill{
+    height:100%;
+    width:100%;
+    border-radius:6px;
+    background:linear-gradient(90deg,var(--good),var(--accent));
+    transition:width 0.1s linear, background 0.3s;
+  }
+  .ticketStack{
+    display:flex;
+    flex-direction:column-reverse;
+    align-items:center;
+    gap:3px;
+    min-height:40px;
+  }
+
+  /* ---- Build area ---- */
+  #buildPanel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:190px;
+    justify-content:flex-end;
+    position:relative;
+  }
+  .plate{
+    width:80%;
+    max-width:220px;
+    height:14px;
+    border-radius:50%;
+    background:radial-gradient(ellipse at center, #cfcfcf 0%, #9a9a9a 60%, #6f6f6f 100%);
+    box-shadow:0 4px 10px rgba(0,0,0,0.5);
+    margin-top:8px;
+    flex-shrink:0;
+  }
+  .stackWrap{
+    display:flex;
+    flex-direction:column-reverse;
+    align-items:center;
+    gap:2px;
+    min-height:150px;
+    justify-content:flex-start;
+    width:100%;
+  }
+  .layer{
+    width:150px;
+    height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    font-weight:700;
+    color:rgba(0,0,0,0.55);
+    box-shadow:0 2px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25);
+    animation:drop 0.22s ease-out;
+    position:relative;
+  }
+  .layer.mini{
+    width:70px;
+    height:14px;
+    font-size:9px;
+  }
+  @keyframes drop{
+    from{transform:translateY(-18px) scale(0.9);opacity:0;}
+    to{transform:translateY(0) scale(1);opacity:1;}
+  }
+  .placeholder{
+    color:var(--sub);
+    font-size:13px;
+    opacity:0.6;
+    padding-bottom:6px;
+  }
+
+  .shake{animation:shake 0.35s;}
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-8px);}
+    40%{transform:translateX(7px);}
+    60%{transform:translateX(-5px);}
+    80%{transform:translateX(4px);}
+  }
+  .pulseGood{animation:pulseGood 0.5s;}
+  @keyframes pulseGood{
+    0%{box-shadow:0 0 0 0 rgba(76,175,80,0.6);}
+    100%{box-shadow:0 0 0 22px rgba(76,175,80,0);}
+  }
+
+  /* ---- Palette ---- */
+  #palette{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:8px;
+  }
+  .ing-btn{
+    border:none;
+    border-radius:12px;
+    padding:10px 2px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    cursor:pointer;
+    font-size:22px;
+    color:rgba(0,0,0,0.6);
+    box-shadow:0 3px 0 rgba(0,0,0,0.25), 0 4px 8px rgba(0,0,0,0.3);
+    transition:transform 0.08s;
+    -webkit-user-select:none;user-select:none;
+    touch-action:manipulation;
+  }
+  .ing-btn small{font-size:9px;font-weight:700;color:rgba(0,0,0,0.55);text-transform:uppercase;letter-spacing:0.3px;}
+  .ing-btn:active{transform:translateY(3px);box-shadow:0 0 0 rgba(0,0,0,0.25);}
+  .ing-btn:disabled{opacity:0.35;cursor:default;}
+
+  .controls{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+  .ctrl-btn{
+    flex:1;
+    padding:11px 6px;
+    border-radius:12px;
+    border:1px solid var(--panel-edge);
+    background:#2f1c19;
+    color:var(--sub);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.3px;
+    cursor:pointer;
+  }
+  .ctrl-btn:active{background:#241512;}
+
+  .toast{
+    position:absolute;
+    left:50%;
+    top:-6px;
+    transform:translate(-50%,-100%);
+    background:rgba(20,10,8,0.95);
+    border:1px solid var(--panel-edge);
+    padding:8px 16px;
+    border-radius:30px;
+    font-size:13px;
+    font-weight:700;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity 0.2s, transform 0.2s;
+    pointer-events:none;
+    z-index:5;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,-130%);}
+  .toast.good{color:#8ef58e;border-color:#3a6b3a;}
+  .toast.bad{color:#ff9a9a;border-color:#6b3a3a;}
+
+  /* ---- Overlays ---- */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(10,5,4,0.88);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .overlay.hidden{display:none;}
+  .card{
+    background:linear-gradient(180deg,#3a2420,#241512);
+    border:1px solid var(--panel-edge);
+    border-radius:20px;
+    padding:26px 24px;
+    max-width:360px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,0.6);
+  }
+  .card h2{
+    margin:0 0 6px;
+    color:var(--accent);
+    font-size:26px;
+  }
+  .card .emoji-big{font-size:50px;margin-bottom:6px;}
+  .card p{color:var(--sub);font-size:14px;line-height:1.5;margin:10px 0 18px;}
+  .card .stats-row{
+    display:flex;
+    justify-content:space-around;
+    margin:14px 0 20px;
+  }
+  .card .stats-row div{display:flex;flex-direction:column;}
+  .card .stats-row b{font-size:22px;color:var(--text);}
+  .card .stats-row span{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  .big-btn{
+    display:inline-block;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+    color:#2b1a00;
+    border:none;
+    font-weight:800;
+    font-size:16px;
+    padding:14px 34px;
+    border-radius:30px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #b4570f, 0 8px 16px rgba(0,0,0,0.4);
+  }
+  .big-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b4570f;}
+
+  footer{
+    text-align:center;
+    color:#7a5a4d;
+    font-size:11px;
+    margin-top:auto;
+    padding-top:10px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>🍔 Stacked<span>!</span></h1>
+    <div class="hud">
+      <div class="stat"><b id="scoreVal">0</b>score</div>
+      <div class="stat"><b id="comboVal">x1</b>combo</div>
+      <div class="hearts" id="heartsVal">❤️❤️❤️</div>
+    </div>
+  </header>
+
+  <div class="panel" id="ticketPanel">
+    <div class="ticket-head">
+      <span class="label">Order Ticket</span>
+      <span class="level" id="levelVal">Level 1</span>
+    </div>
+    <div class="timerBar"><div class="timerFill" id="timerFill"></div></div>
+    <div class="ticketStack" id="ticketStack"></div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="panel" id="buildPanel">
+    <div class="stackWrap" id="stackWrap">
+      <div class="placeholder" id="placeholderMsg">Tap ingredients below, bottom bun first ⤵</div>
+    </div>
+    <div class="plate"></div>
+  </div>
+
+  <div class="panel">
+    <div id="palette"></div>
+    <div class="controls">
+      <button class="ctrl-btn" id="undoBtn">↩ Undo</button>
+      <button class="ctrl-btn" id="clearBtn">✕ Clear</button>
+    </div>
+  </div>
+
+  <footer>3 wrong or expired orders and the diner closes. Match the order, bottom to top.</footer>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <div class="emoji-big">🍔</div>
+    <h2>Stacked!</h2>
+    <p>Read the order ticket, then tap ingredients in the <b>exact order</b> — bottom bun to top bun — before the clock runs out. Chain correct orders for bigger combos. Three mistakes and it's closing time!</p>
+    <button class="big-btn" id="startBtn">Start Shift</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overOverlay">
+  <div class="card">
+    <div class="emoji-big" id="overEmoji">🔔</div>
+    <h2>Diner's Closed!</h2>
+    <div class="stats-row">
+      <div><b id="finalScore">0</b><span>Score</span></div>
+      <div><b id="finalCombo">0</b><span>Best Combo</span></div>
+      <div><b id="finalLevel">1</b><span>Level</span></div>
+    </div>
+    <button class="big-btn" id="againBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var INGREDIENTS = [
+    { id:'bunB',    name:'Bottom Bun', emoji:'🍞', color:'#e3a24d', radius:'6px 6px 26px 26px' },
+    { id:'patty',   name:'Patty',      emoji:'🥩', color:'#8a5a3c', radius:'4px' },
+    { id:'cheese',  name:'Cheese',     emoji:'🧀', color:'#f7c948', radius:'2px' },
+    { id:'lettuce', name:'Lettuce',    emoji:'🥬', color:'#7cc46b', radius:'10px' },
+    { id:'tomato',  name:'Tomato',     emoji:'🍅', color:'#e3654c', radius:'4px' },
+    { id:'onion',   name:'Onion',      emoji:'🧅', color:'#e6def0', radius:'4px' },
+    { id:'bacon',   name:'Bacon',      emoji:'🥓', color:'#c0453a', radius:'4px' },
+    { id:'pickle',  name:'Pickle',     emoji:'🥒', color:'#8fbf4a', radius:'4px' },
+    { id:'egg',     name:'Egg',        emoji:'🍳', color:'#f9e79f', radius:'6px' },
+    { id:'bunT',    name:'Top Bun',    emoji:'🍞', color:'#e3a24d', radius:'26px 26px 6px 6px' }
+  ];
+  var FILLINGS = INGREDIENTS.filter(function(i){ return i.id!=='bunB' && i.id!=='bunT'; });
+  var BY_ID = {};
+  INGREDIENTS.forEach(function(i){ BY_ID[i.id]=i; });
+
+  var els = {
+    score: document.getElementById('scoreVal'),
+    combo: document.getElementById('comboVal'),
+    hearts: document.getElementById('heartsVal'),
+    level: document.getElementById('levelVal'),
+    timerFill: document.getElementById('timerFill'),
+    ticketStack: document.getElementById('ticketStack'),
+    stackWrap: document.getElementById('stackWrap'),
+    placeholder: document.getElementById('placeholderMsg'),
+    palette: document.getElementById('palette'),
+    undoBtn: document.getElementById('undoBtn'),
+    clearBtn: document.getElementById('clearBtn'),
+    toast: document.getElementById('toast'),
+    ticketPanel: document.getElementById('ticketPanel'),
+    buildPanel: document.getElementById('buildPanel'),
+    startOverlay: document.getElementById('startOverlay'),
+    startBtn: document.getElementById('startBtn'),
+    overOverlay: document.getElementById('overOverlay'),
+    againBtn: document.getElementById('againBtn'),
+    finalScore: document.getElementById('finalScore'),
+    finalCombo: document.getElementById('finalCombo'),
+    finalLevel: document.getElementById('finalLevel'),
+    overEmoji: document.getElementById('overEmoji')
+  };
+
+  var state = {
+    score:0, combo:0, bestCombo:0, lives:3, level:1, ordersDone:0,
+    ticket:[], stack:[], timeLeft:0, ticketTotal:0, timerHandle:null,
+    running:false, locked:false
+  };
+
+  // ---------- Audio (tiny synth, created lazily) ----------
+  var actx = null;
+  function beep(freq, dur, type, vol){
+    try{
+      if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+      var o = actx.createOscillator();
+      var g = actx.createGain();
+      o.type = type||'sine';
+      o.frequency.value = freq;
+      g.gain.value = vol||0.08;
+      o.connect(g); g.connect(actx.destination);
+      var now = actx.currentTime;
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + (dur||0.15));
+      o.start(now);
+      o.stop(now + (dur||0.15)+0.02);
+    }catch(e){ /* audio not available, ignore */ }
+  }
+  function sfxTap(){ beep(520,0.06,'square',0.05); }
+  function sfxGood(){ beep(660,0.12,'triangle',0.09); setTimeout(function(){beep(880,0.16,'triangle',0.08);},90); }
+  function sfxBad(){ beep(160,0.25,'sawtooth',0.08); }
+  function sfxOver(){ beep(220,0.3,'sawtooth',0.07); setTimeout(function(){beep(140,0.4,'sawtooth',0.07);},180); }
+
+  // ---------- Helpers ----------
+  function rand(n){ return Math.floor(Math.random()*n); }
+
+  function ticketLenForLevel(level){
+    var len = 3 + Math.floor((level-1)/1.5);
+    return Math.min(9, len);
+  }
+  function ticketTimeForLevel(level){
+    return Math.max(5500, 13500 - (level-1)*650);
+  }
+
+  function generateTicket(){
+    var len = ticketLenForLevel(state.level);
+    var midCount = Math.max(1, len-2);
+    var order = ['bunB'];
+    var lastId = null;
+    for(var i=0;i<midCount;i++){
+      var pick;
+      do{ pick = FILLINGS[rand(FILLINGS.length)].id; } while(pick===lastId && FILLINGS.length>1);
+      order.push(pick);
+      lastId = pick;
+    }
+    order.push('bunT');
+    return order;
+  }
+
+  function renderLayerNode(ingId, mini){
+    var ing = BY_ID[ingId];
+    var div = document.createElement('div');
+    div.className = 'layer' + (mini? ' mini':'');
+    div.style.background = ing.color;
+    div.style.borderRadius = ing.radius;
+    div.textContent = ing.emoji;
+    return div;
+  }
+
+  function renderTicket(){
+    els.ticketStack.innerHTML = '';
+    state.ticket.forEach(function(id){
+      els.ticketStack.appendChild(renderLayerNode(id, true));
+    });
+  }
+
+  function renderStack(){
+    els.stackWrap.innerHTML = '';
+    if(state.stack.length===0){
+      els.stackWrap.appendChild(els.placeholder);
+      return;
+    }
+    state.stack.forEach(function(id){
+      els.stackWrap.appendChild(renderLayerNode(id, false));
+    });
+  }
+
+  function renderHud(){
+    els.score.textContent = state.score;
+    els.combo.textContent = 'x' + comboMultiplier(state.combo);
+    els.level.textContent = 'Level ' + state.level;
+    var h = '';
+    for(var i=0;i<3;i++){ h += (i < state.lives ? '❤️' : '<span class="dead">❤️</span>'); }
+    els.hearts.innerHTML = h;
+  }
+
+  function comboMultiplier(combo){
+    return 1 + Math.min(4, Math.floor(combo/3));
+  }
+
+  function showToast(msg, cls){
+    els.toast.textContent = msg;
+    els.toast.className = 'toast show ' + cls;
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){
+      els.toast.className = 'toast ' + cls;
+    }, 1100);
+  }
+
+  function buildPalette(){
+    els.palette.innerHTML = '';
+    INGREDIENTS.forEach(function(ing){
+      var btn = document.createElement('button');
+      btn.className = 'ing-btn';
+      btn.style.background = ing.color;
+      btn.innerHTML = ing.emoji + '<small>' + ing.name + '</small>';
+      btn.addEventListener('click', function(){ onTapIngredient(ing.id); });
+      els.palette.appendChild(btn);
+    });
+  }
+
+  function onTapIngredient(id){
+    if(!state.running || state.locked) return;
+    if(state.stack.length >= state.ticket.length) return;
+    state.stack.push(id);
+    renderStack();
+    sfxTap();
+    if(state.stack.length === state.ticket.length){
+      evaluateOrder();
+    }
+  }
+
+  function evaluateOrder(){
+    var match = true;
+    for(var i=0;i<state.ticket.length;i++){
+      if(state.stack[i] !== state.ticket[i]){ match=false; break; }
+    }
+    if(match){ onOrderSuccess(); } else { onOrderFail('Wrong stack!'); }
+  }
+
+  function onOrderSuccess(){
+    state.locked = true;
+    stopTimer();
+    state.combo += 1;
+    state.bestCombo = Math.max(state.bestCombo, state.combo);
+    var mult = comboMultiplier(state.combo);
+    var timeBonus = Math.round(state.timeLeft/60);
+    var points = Math.round((50 + state.level*8 + timeBonus) * mult);
+    state.score += points;
+    state.ordersDone += 1;
+    state.level = 1 + Math.floor(state.ordersDone/3);
+    showToast('+' + points + '  Order up! x' + mult, 'good');
+    els.buildPanel.classList.add('pulseGood');
+    sfxGood();
+    renderHud();
+    setTimeout(function(){
+      els.buildPanel.classList.remove('pulseGood');
+      nextTicket();
+    }, 550);
+  }
+
+  function onOrderFail(reason){
+    state.locked = true;
+    stopTimer();
+    state.combo = 0;
+    state.lives -= 1;
+    showToast(reason, 'bad');
+    els.buildPanel.classList.add('shake');
+    sfxBad();
+    renderHud();
+    setTimeout(function(){
+      els.buildPanel.classList.remove('shake');
+      if(state.lives <= 0){
+        endGame();
+      } else {
+        nextTicket();
+      }
+    }, 500);
+  }
+
+  function nextTicket(){
+    state.stack = [];
+    state.ticket = generateTicket();
+    renderTicket();
+    renderStack();
+    renderHud();
+    startTimer();
+    state.locked = false;
+  }
+
+  function startTimer(){
+    state.ticketTotal = ticketTimeForLevel(state.level);
+    state.timeLeft = state.ticketTotal;
+    updateTimerBar();
+    stopTimer();
+    var last = Date.now();
+    state.timerHandle = setInterval(function(){
+      var now = Date.now();
+      var dt = now - last;
+      last = now;
+      state.timeLeft -= dt;
+      if(state.timeLeft <= 0){
+        state.timeLeft = 0;
+        updateTimerBar();
+        stopTimer();
+        if(!state.locked) onOrderFail('Order expired!');
+        return;
+      }
+      updateTimerBar();
+    }, 100);
+  }
+
+  function stopTimer(){
+    if(state.timerHandle){ clearInterval(state.timerHandle); state.timerHandle=null; }
+  }
+
+  function updateTimerBar(){
+    var pct = Math.max(0, state.timeLeft / state.ticketTotal) * 100;
+    els.timerFill.style.width = pct + '%';
+    if(pct < 25){
+      els.timerFill.style.background = 'linear-gradient(90deg,#e63946,#fb5607)';
+    } else if(pct < 55){
+      els.timerFill.style.background = 'linear-gradient(90deg,#fb5607,var(--accent))';
+    } else {
+      els.timerFill.style.background = 'linear-gradient(90deg,#4caf50,var(--accent))';
+    }
+  }
+
+  function startGame(){
+    state.score=0; state.combo=0; state.bestCombo=0; state.lives=3;
+    state.level=1; state.ordersDone=0; state.stack=[]; state.locked=false;
+    state.running = true;
+    els.startOverlay.classList.add('hidden');
+    els.overOverlay.classList.add('hidden');
+    renderHud();
+    nextTicket();
+  }
+
+  function endGame(){
+    state.running = false;
+    stopTimer();
+    sfxOver();
+    els.finalScore.textContent = state.score;
+    els.finalCombo.textContent = state.bestCombo;
+    els.finalLevel.textContent = state.level;
+    els.overEmoji.textContent = state.score > 800 ? '🏆' : '🔔';
+    els.overOverlay.classList.remove('hidden');
+  }
+
+  els.undoBtn.addEventListener('click', function(){
+    if(!state.running || state.locked) return;
+    if(state.stack.length===0) return;
+    state.stack.pop();
+    renderStack();
+    sfxTap();
+  });
+  els.clearBtn.addEventListener('click', function(){
+    if(!state.running || state.locked) return;
+    state.stack = [];
+    renderStack();
+  });
+  els.startBtn.addEventListener('click', startGame);
+  els.againBtn.addEventListener('click', startGame);
+
+  buildPalette();
+  renderHud();
+})();
+</script>
+</body>
+</html>
